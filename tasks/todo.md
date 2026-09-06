@@ -11,8 +11,8 @@
 - [x] 7. Implement `@finity/mandate-compiler`: EIP-712 data and Ledger display model.
 - [x] 8. Implement `@finity/policy-engine`: ordered fail-closed evaluation and policy hash.
 - [x] 9. Implement and test `MandateRegistry.sol` locally; prepare testnet deployment.
-- [ ] 10. Implement `@finity/provider-sdk` and the two demo service skeletons.
-- [ ] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access.
+- [x] 10. Implement `@finity/provider-sdk` and the two demo service skeletons.
+- [x] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access.
 - [ ] 12. Implement `@finity/vault-worker` with Key Ring isolation, egress, injection, and redaction.
 - [ ] 13. Implement `@finity/commerce-adapter` with x402 challenge binding.
 - [ ] 14. Implement `@finity/negotiator`, `@finity/capability`, and `@finity/trace-builder`.
@@ -41,20 +41,34 @@
 - [x] `pnpm -r build` passes.
 - [x] `pnpm -r typecheck` passes.
 - [x] `pnpm -r test` passes.
-- [ ] Secrets/canaries are absent from source, fixtures, logs, and session artifacts.
+- [x] Secrets/canaries are absent from source, fixtures, logs, and session artifacts.
 - [x] Pure packages have no I/O, clock, or network imports.
-- [ ] Required docs are current: VERIFIED, HW_TODO, DX_FEEDBACK, DECISIONS, BLOCKERS.
-- [ ] Git diff contains only scoped changes and all phase branches/commits are pushed where possible.
+- [x] Required docs are current: VERIFIED, HW_TODO, DX_FEEDBACK, DECISIONS, BLOCKERS.
+- [x] Git diff contains only scoped changes and all phase branches/commits are pushed where possible.
 
 ## Review
 
 ### Changed
 
+- `@finity/provider-sdk`: signed manifests, deterministic quotes/usage receipts, x402 Express payment middleware, and fail-closed facilitator configuration.
+- `services/hello-weather` and `services/summarize-lite`: paid Hedera service skeletons with deterministic handlers and quote rules.
+- `@finity/registry-client`: viem MandateRegistry adapter, Hiero HCS writer, and same-origin mirror-node reader.
+- `docs/VERIFIED.md` and `docs/DECISIONS.md`: provider/registry API evidence and HCS-14 packaging decision.
+
 ### Verified
+
+- Provider, service, and registry package builds, typechecks, and focused tests pass.
+- Full monorepo build/typecheck/test pass; scoped secret and pure-core scans are clean.
+- No HCS write or testnet contract transaction was claimed without funded credentials and a deployed address.
 
 ### Risks
 
+- Physical Ledger, funded Hedera credentials, live contract address, HCS writes, and Blocky402 settlement remain unverified.
+- HCS-14 package installation is deferred because its published workspace dependency is unresolved.
+
 ### Follow-ups
+
+- Continue with `broker/runtime` later: vault isolation, commerce adapter, negotiator, capability, trace builder, daemon, and local E2E.
 
 ### Unresolved questions
 
