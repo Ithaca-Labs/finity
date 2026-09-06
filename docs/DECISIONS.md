@@ -23,3 +23,9 @@
 - Date: 2026-09-07
 - Decision: Hardhat's default simulated network uses chain ID 296 and the registry uses optimizer + viaIR.
 - Reason: This catches Hedera-domain signing mismatches locally; viaIR is required for the intentionally complete EIP-712 hash function under Solidity 0.8.24's stack limit.
+
+## ADR-005: Defer HCS-14 identity dependency until packaging is fixed
+
+- Date: 2026-09-07
+- Decision: The provider/registry phase does not install or wrap `@hol-org/standards-sdk@0.1.186`; HCS-14 identity integration remains a later module item.
+- Reason: The inspected published package declares `@hashgraphonline/standards-sdk@workspace:*`, which is unresolved in this monorepo and makes `pnpm install` fail. No replacement package or invented fallback was added. The live HCS-14 API remains recorded in ADR-002 for the identity phase.

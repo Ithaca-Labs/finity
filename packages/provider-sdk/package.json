@@ -2,6 +2,16 @@
   "name": "@finity/provider-sdk",
   "version": "0.1.0",
   "type": "module",
+  "dependencies": {
+    "@finity/schemas": "workspace:*",
+    "@x402/core": "2.25.0",
+    "@x402/express": "2.25.0",
+    "@x402/hedera": "2.25.0",
+    "express": "5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.5"
+  },
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" }
 }
