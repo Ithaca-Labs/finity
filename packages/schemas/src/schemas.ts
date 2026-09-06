@@ -205,11 +205,15 @@ export const policySnapshotSchema = z.object({
   displayValid: z.boolean(),
   agentUaid: nonEmpty,
   brokerAddress: evmAddress,
+  providerAllowed: z.boolean(),
   providerAccount: hederaAccountId,
   serviceId: nonEmpty,
   methodId: nonEmpty,
   quote: quoteSchema,
   manifest: serviceManifestSchema,
+  manifestSignatureValid: z.boolean(),
+  quoteSignatureValid: z.boolean(),
+  quoteNonceReused: z.boolean(),
   requestDataClass: z.number().int().min(0).max(2),
   policyHash: bytes32,
   currentPeriodConsumed: integerString,
@@ -236,4 +240,3 @@ export const brokerBundleSchema = z.object({
   brokerUaid: nonEmpty,
 });
 export type BrokerBundle = z.infer<typeof brokerBundleSchema>;
-

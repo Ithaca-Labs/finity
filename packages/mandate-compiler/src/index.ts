@@ -1,11 +1,19 @@
-import { agentMandateSchema, type AgentMandate, type Hash } from "@finity/schemas";
+import {
+  agentMandateSchema,
+  formatDisplay,
+  formatPeriodDisplay,
+  formatUntilDisplay,
+  type AgentMandate,
+  type Hash,
+} from "@finity/schemas";
 import { hashTypedData } from "viem";
 
 export const MANDATE_DOMAIN_NAME = "FinityMandate" as const;
 export const MANDATE_DOMAIN_VERSION = "1" as const;
 export const MANDATE_CHAIN_ID = 296 as const;
-export const HBAR_TINYBARS_PER_HBAR = 100_000_000n;
 export const MANDATE_DERIVATION_PATH = "44'/60'/0'/0/0" as const;
+
+export { formatDisplay } from "@finity/schemas";
 
 export const agentMandateTypes = [
   { name: "agent", type: "string" },
@@ -98,36 +106,6 @@ export type CompiledMandate = {
   deviceDisplayModel: DeviceDisplayModel;
 };
 
-function formatHbar(amount: string): string {
-  const value = BigInt(amount);
-  const major = value / HBAR_TINYBARS_PER_HBAR;
-  const minor = (value % HBAR_TINYBARS_PER_HBAR).toString().padStart(8, "0");
-  const compactMinor = minor.replace(/0+$/, "");
-  const displayMinor = compactMinor.length < 2 ? compactMinor.padEnd(2, "0") : compactMinor;
-  return `${major.toString()}.${displayMinor} HBAR`;
-}
-
-export function formatDisplay(amount: string, asset: string): string {
-  return asset === "HBAR" ? formatHbar(amount) : `${amount} ${asset}`;
-}
-
-function formatDuration(seconds: string): string {
-  const value = BigInt(seconds);
-  if (value % 3600n === 0n) return `${value / 3600n}h`;
-  return `${value}s`;
-}
-
-function formatPeriod(amount: string, asset: string, periodSeconds: string): string {
-  return `${formatDisplay(amount, asset)} per ${formatDuration(periodSeconds)}`;
-}
-
-function formatUntil(unixSeconds: number): string {
-  const date = new Date(unixSeconds * 1000);
-  if (!Number.isFinite(date.getTime())) throw new RangeError("validUntil is not a valid UNIX timestamp");
-  const iso = date.toISOString();
-  return `${iso.slice(0, 16).replace("T", " ")} UTC`;
-}
-
 function assertOptionalText(name: string, actual: string | undefined, expected: string): void {
   if (actual !== undefined && actual !== expected) {
     throw new Error(`${name} does not match the compiler display format`);
@@ -177,9 +155,9 @@ export function compile(choices: MandateChoices): CompiledMandate {
   }
 
   const maxPerRequestText = formatDisplay(parsedChoices.maxPerRequest, parsedChoices.asset);
-  const maxPerPeriodText = formatPeriod(parsedChoices.maxPerPeriod, parsedChoices.asset, parsedChoices.periodSeconds);
+  const maxPerPeriodText = formatPeriodDisplay(parsedChoices.maxPerPeriod, parsedChoices.asset, parsedChoices.periodSeconds);
   const maxLifetimeText = `${formatDisplay(parsedChoices.maxLifetime, parsedChoices.asset)} total`;
-  const validUntilText = formatUntil(parsedChoices.validUntil);
+  const validUntilText = formatUntilDisplay(parsedChoices.validUntil);
   assertOptionalText("maxPerRequestText", choices.maxPerRequestText, maxPerRequestText);
   assertOptionalText("maxPerPeriodText", choices.maxPerPeriodText, maxPerPeriodText);
   assertOptionalText("maxLifetimeText", choices.maxLifetimeText, maxLifetimeText);
