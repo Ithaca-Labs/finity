@@ -123,6 +123,38 @@ importers:
 
   packages/verifier: {}
 
+  services/hello-weather:
+    dependencies:
+      '@finity/provider-sdk':
+        specifier: workspace:*
+        version: link:../../packages/provider-sdk
+      '@finity/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
+    devDependencies:
+      '@types/express':
+        specifier: 5.0.5
+        version: 5.0.5
+
+  services/summarize-lite:
+    dependencies:
+      '@finity/provider-sdk':
+        specifier: workspace:*
+        version: link:../../packages/provider-sdk
+      '@finity/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
+    devDependencies:
+      '@types/express':
+        specifier: 5.0.5
+        version: 5.0.5
+
 packages:
 
   '@adraffy/ens-normalize@1.10.1':
