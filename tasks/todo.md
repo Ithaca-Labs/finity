@@ -2,11 +2,11 @@
 
 ## Plan
 
-- [ ] 1. Verify Node, pnpm, wallet-cli, Pi, and required Ledger skills.
-- [ ] 2. Probe Blocky402 `/supported`, Hedera mirror, and Hashio chain ID.
-- [ ] 3. Verify package APIs from installed READMEs and type definitions.
+- [x] 1. Verify Node, pnpm, wallet-cli, Pi, and required Ledger skills.
+- [x] 2. Probe Blocky402 `/supported`, Hedera mirror, and Hashio chain ID.
+- [x] 3. Verify package APIs from installed READMEs and type definitions.
 - [ ] 4. Resolve CLI, Key Ring enrollment, node-hid, HCS-14, and x402 verification items.
-- [ ] 5. Scaffold the pnpm TypeScript monorepo, package scripts, CI, and environment template.
+- [x] 5. Scaffold the pnpm TypeScript monorepo, package scripts, CI, and environment template.
 - [ ] 6. Implement `@finity/schemas`: canonical JSON, hashes, schemas, and state reducers.
 - [ ] 7. Implement `@finity/mandate-compiler`: EIP-712 data and Ledger display model.
 - [ ] 8. Implement `@finity/policy-engine`: ordered fail-closed evaluation and policy hash.
@@ -38,9 +38,9 @@
 
 ## Verification
 
-- [ ] `pnpm -r build` passes.
-- [ ] `pnpm -r typecheck` passes.
-- [ ] `pnpm -r test` passes.
+- [x] `pnpm -r build` passes.
+- [x] `pnpm -r typecheck` passes.
+- [x] `pnpm -r test` passes.
 - [ ] Secrets/canaries are absent from source, fixtures, logs, and session artifacts.
 - [ ] Pure packages have no I/O, clock, or network imports.
 - [ ] Required docs are current: VERIFIED, HW_TODO, DX_FEEDBACK, DECISIONS, BLOCKERS.
