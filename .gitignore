@@ -14,4 +14,6 @@ vendor/
 *.enc
 *.log
 .DS_Store
-
+contracts/artifacts/
+contracts/cache/
+contracts/types/

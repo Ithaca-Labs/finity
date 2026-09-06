@@ -7,6 +7,10 @@ export default defineConfig({
     profiles: {
       default: {
         version: "0.8.24",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+          viaIR: true,
+        },
       },
       production: {
         version: "0.8.24",
@@ -15,14 +19,16 @@ export default defineConfig({
             enabled: true,
             runs: 200,
           },
+          viaIR: true,
         },
       },
     },
   },
   networks: {
-    hardhatMainnet: {
+    default: {
       type: "edr-simulated",
       chainType: "l1",
+      chainId: 296,
     },
     hederaTestnet: {
       type: "http",

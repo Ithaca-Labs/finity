@@ -2,7 +2,7 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node", "mocha"]
   },
-  "include": ["hardhat.config.ts", "scripts/**/*.ts", "test/**/*.ts"]
+  "include": ["hardhat.config.ts", "scripts/**/*.ts", "test/**/*.ts", "types/**/*.d.ts"]
 }
