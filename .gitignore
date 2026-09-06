@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.agents/
+skills-lock.json
+vendor/
+.finity/
+*.db
+*.db-shm
+*.db-wal
+*.enc
+*.log
+.DS_Store
+
