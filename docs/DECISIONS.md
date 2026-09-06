@@ -3,7 +3,7 @@
 ## ADR-001: Phase branches and focused commits
 
 - Date: 2026-09-07
-- Decision: Build on domain-oriented phase branches (`codex/foundation/scaffold`, `codex/core/policy`, `codex/hedera/providers`, `codex/broker/runtime`, `codex/ledger/integration`, `codex/verification/evidence`, and `codex/release/judge-ready`), with each spec completion criterion in its own focused commit and each phase pushed before merge.
+- Decision: Build on domain-oriented phase branches (`foundation/scaffold`, `core/policy`, `hedera/providers`, `broker/runtime`, `ledger/integration`, `verification/evidence`, and `release/judge-ready`), with each spec completion criterion in its own focused commit and each phase pushed before merge.
 - Reason: Preserve bisectable milestones and prevent a single unreviewable project commit.
 
 ## ADR-002: Live HCS-14 API controls implementation
