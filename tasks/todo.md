@@ -7,10 +7,10 @@
 - [x] 3. Verify package APIs from installed READMEs and type definitions.
 - [ ] 4. Resolve CLI, Key Ring enrollment, node-hid, HCS-14, and x402 verification items.
 - [x] 5. Scaffold the pnpm TypeScript monorepo, package scripts, CI, and environment template.
-- [ ] 6. Implement `@finity/schemas`: canonical JSON, hashes, schemas, and state reducers.
-- [ ] 7. Implement `@finity/mandate-compiler`: EIP-712 data and Ledger display model.
-- [ ] 8. Implement `@finity/policy-engine`: ordered fail-closed evaluation and policy hash.
-- [ ] 9. Implement and test `MandateRegistry.sol` locally; prepare testnet deployment.
+- [x] 6. Implement `@finity/schemas`: canonical JSON, hashes, schemas, and state reducers.
+- [x] 7. Implement `@finity/mandate-compiler`: EIP-712 data and Ledger display model.
+- [x] 8. Implement `@finity/policy-engine`: ordered fail-closed evaluation and policy hash.
+- [x] 9. Implement and test `MandateRegistry.sol` locally; prepare testnet deployment.
 - [ ] 10. Implement `@finity/provider-sdk` and the two demo service skeletons.
 - [ ] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access.
 - [ ] 12. Implement `@finity/vault-worker` with Key Ring isolation, egress, injection, and redaction.
@@ -27,13 +27,13 @@
 
 ## Branches and commit cadence
 
-- `codex/foundation/scaffold`: steps 1–5; merge only after empty workspace build/test is green.
-- `codex/core/policy`: steps 6–9; merge only after pure-core and contract tests are green.
-- `codex/hedera/providers`: steps 10–11; merge after gated testnet evidence or documented blocker.
-- `codex/broker/runtime`: steps 12–16; merge after local E2E and adversarial checks.
-- `codex/ledger/integration`: steps 17–18; merge with physical-hardware items explicitly marked.
-- `codex/verification/evidence`: steps 19–20; merge after evidence and verifier checks.
-- `codex/release/judge-ready`: steps 21–22; merge after full QA and clean diff review.
+- `foundation/scaffold`: steps 1–5; merge only after empty workspace build/test is green.
+- `core/policy`: steps 6–9; merge only after pure-core and contract tests are green.
+- `hedera/providers`: steps 10–11; merge after gated testnet evidence or documented blocker.
+- `broker/runtime`: steps 12–16; merge after local E2E and adversarial checks.
+- `ledger/integration`: steps 17–18; merge with physical-hardware items explicitly marked.
+- `verification/evidence`: steps 19–20; merge after evidence and verifier checks.
+- `release/judge-ready`: steps 21–22; merge after full QA and clean diff review.
 - Each completed step gets its own focused commit; each phase branch is pushed before merge.
 
 ## Verification
@@ -42,7 +42,7 @@
 - [x] `pnpm -r typecheck` passes.
 - [x] `pnpm -r test` passes.
 - [ ] Secrets/canaries are absent from source, fixtures, logs, and session artifacts.
-- [ ] Pure packages have no I/O, clock, or network imports.
+- [x] Pure packages have no I/O, clock, or network imports.
 - [ ] Required docs are current: VERIFIED, HW_TODO, DX_FEEDBACK, DECISIONS, BLOCKERS.
 - [ ] Git diff contains only scoped changes and all phase branches/commits are pushed where possible.
 

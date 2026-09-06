@@ -1,0 +1,20 @@
+{
+  "name": "@finity/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "hardhat compile",
+    "typecheck": "tsc --noEmit",
+    "test": "hardhat test",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "3.0.7",
+    "@types/mocha": "10.0.10",
+    "ethers": "6.17.0",
+    "hardhat": "3.15.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.0"
+  }
+}

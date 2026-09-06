@@ -71,9 +71,42 @@ Inspected from exact npm tarballs and declarations before dependent code:
 - `@ledgerhq/device-transport-kit-node-hid@1.0.1`: `NodeHidTransport`, `nodeHidTransportFactory`, and `nodeHidIdentifier` from the package root.
 - `json-canonicalize@3.0.0`: `canonicalize(value, allowCircular?)` from the package root; returns a canonical JSON string.
 - `viem@2.56.3`: used for EIP-712 hashing/recovery and JSON-RPC clients; exact call sites will be recorded when implemented.
+- `@finity/policy-engine` build emits `dist/POLICY_HASH`; current deterministic build descriptor hash is `0x37501b231d9111797415c034aeb2875598ff583b38c025326c97e7e7649453a6`.
+
+## Contract toolchain
+
+Verified from npm metadata and the installed package READMEs/types:
+
+```text
+hardhat -> 3.15.0
+@nomicfoundation/hardhat-toolbox-mocha-ethers -> 3.0.7
+@nomicfoundation/hardhat-ethers -> 4.0.15 (toolbox peer)
+ethers -> 6.17.0
+@nomicfoundation/hardhat-network-helpers -> 3.0.11 (toolbox peer)
+solc -> 0.8.24 (Hardhat WASM compiler)
+```
+
+Hardhat 3 uses `defineConfig` from `hardhat/config`, the `plugins` array, and
+`network.create()` in Mocha tests. The local simulated network is configured
+with chain ID 296 so its EIP-712 digest matches the Hedera testnet domain.
+The registry compiles with optimizer + viaIR because the canonical mandate
+hash contains the complete clear-signing field set and otherwise exceeds the
+Solidity stack limit.
+
+Verified commands:
+
+```text
+pnpm --filter @finity/contracts build -> compiled MandateRegistry.sol
+pnpm --filter @finity/contracts typecheck -> pass
+pnpm --filter @finity/contracts test -> 5 passing
+```
+
+The test suite cross-checks the contract's EIP-712 struct/domain digest against
+ethers 6.17.0 and covers registration, broker authorization, caps,
+reservation finalization/release/timeout, expiry, revocation, trace topic
+assignment, and one-time max-per-request amendments.
 
 ## Pending live/hardware verification
 
 - Physical Ledger genuine-check, DMK Node HID permissions, Ethereum app clear-signing rendering, and signer output remain unverified.
 - Hedera account creation/faucet limits, Hashio deployment behavior, and funded testnet settlement IDs remain unverified.
-
