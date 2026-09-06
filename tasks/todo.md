@@ -7,9 +7,9 @@
 - [x] 3. Verify package APIs from installed READMEs and type definitions.
 - [ ] 4. Resolve CLI, Key Ring enrollment, node-hid, HCS-14, and x402 verification items.
 - [x] 5. Scaffold the pnpm TypeScript monorepo, package scripts, CI, and environment template.
-- [ ] 6. Implement `@finity/schemas`: canonical JSON, hashes, schemas, and state reducers.
-- [ ] 7. Implement `@finity/mandate-compiler`: EIP-712 data and Ledger display model.
-- [ ] 8. Implement `@finity/policy-engine`: ordered fail-closed evaluation and policy hash.
+- [x] 6. Implement `@finity/schemas`: canonical JSON, hashes, schemas, and state reducers.
+- [x] 7. Implement `@finity/mandate-compiler`: EIP-712 data and Ledger display model.
+- [x] 8. Implement `@finity/policy-engine`: ordered fail-closed evaluation and policy hash.
 - [ ] 9. Implement and test `MandateRegistry.sol` locally; prepare testnet deployment.
 - [ ] 10. Implement `@finity/provider-sdk` and the two demo service skeletons.
 - [ ] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access.
@@ -42,7 +42,7 @@
 - [x] `pnpm -r typecheck` passes.
 - [x] `pnpm -r test` passes.
 - [ ] Secrets/canaries are absent from source, fixtures, logs, and session artifacts.
-- [ ] Pure packages have no I/O, clock, or network imports.
+- [x] Pure packages have no I/O, clock, or network imports.
 - [ ] Required docs are current: VERIFIED, HW_TODO, DX_FEEDBACK, DECISIONS, BLOCKERS.
 - [ ] Git diff contains only scoped changes and all phase branches/commits are pushed where possible.
 

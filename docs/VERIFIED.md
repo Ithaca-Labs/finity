@@ -71,9 +71,9 @@ Inspected from exact npm tarballs and declarations before dependent code:
 - `@ledgerhq/device-transport-kit-node-hid@1.0.1`: `NodeHidTransport`, `nodeHidTransportFactory`, and `nodeHidIdentifier` from the package root.
 - `json-canonicalize@3.0.0`: `canonicalize(value, allowCircular?)` from the package root; returns a canonical JSON string.
 - `viem@2.56.3`: used for EIP-712 hashing/recovery and JSON-RPC clients; exact call sites will be recorded when implemented.
+- `@finity/policy-engine` build emits `dist/POLICY_HASH`; current deterministic build descriptor hash is `0x37501b231d9111797415c034aeb2875598ff583b38c025326c97e7e7649453a6`.
 
 ## Pending live/hardware verification
 
 - Physical Ledger genuine-check, DMK Node HID permissions, Ethereum app clear-signing rendering, and signer output remain unverified.
 - Hedera account creation/faucet limits, Hashio deployment behavior, and funded testnet settlement IDs remain unverified.
-

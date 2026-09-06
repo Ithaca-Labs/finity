@@ -45,9 +45,10 @@ importers:
       '@finity/schemas':
         specifier: workspace:*
         version: link:../schemas
-      viem:
-        specifier: 2.56.3
-        version: 2.56.3(typescript@7.0.2)(zod@3.25.76)
+    devDependencies:
+      '@finity/mandate-compiler':
+        specifier: workspace:*
+        version: link:../mandate-compiler
 
   packages/provider-sdk: {}
 
