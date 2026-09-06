@@ -24,6 +24,7 @@
 - [ ] 20. Implement `@finity/verifier` and tamper/insufficient-disclosure checks.
 - [ ] 21. Build `pnpm demo`, README architecture/payment docs, and judge-facing evidence.
 - [ ] 22. Run full QA, secret-leak checks, review diffs, push/merge phase branches, and record risks.
+- [x] 23. Reproduce and fix CI ordering for generated contract types; verify the remote checks.
 
 ## Branches and commit cadence
 
