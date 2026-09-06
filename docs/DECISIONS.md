@@ -11,3 +11,15 @@
 - Date: 2026-09-07
 - Decision: Use the verified `@hol-org/standards-sdk` re-exported HCS-14 API (`canonicalizeAgentData`, `createUaid`, or `HCS14Client`) when identity code is added.
 - Reason: The inspected 0.1.186 declarations do not expose the older `resolveAgent`/`registerAgent` API described in the initial spec note.
+
+## ADR-003: Registry mirrors the compiler's complete EIP-712 field set
+
+- Date: 2026-09-07
+- Decision: `MandateRegistry` hashes the full `AgentMandate` field list, including the human-readable display strings, with domain chain ID 296 and the deployed contract address.
+- Reason: The contract digest must be independently cross-checkable against `@finity/mandate-compiler` and must reject any signature over a different display value.
+
+## ADR-004: Local contract tests use chain ID 296
+
+- Date: 2026-09-07
+- Decision: Hardhat's default simulated network uses chain ID 296 and the registry uses optimizer + viaIR.
+- Reason: This catches Hedera-domain signing mismatches locally; viaIR is required for the intentionally complete EIP-712 hash function under Solidity 0.8.24's stack limit.
