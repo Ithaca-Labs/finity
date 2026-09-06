@@ -27,13 +27,13 @@
 
 ## Branches and commit cadence
 
-- `codex/day0/verify-scaffold`: steps 1–5; merge only after empty workspace build/test is green.
-- `codex/day1/pure-core`: steps 6–9; merge only after pure-core and contract tests are green.
-- `codex/day2/hedera`: steps 10–11; merge after gated testnet evidence or documented blocker.
-- `codex/day3/broker`: steps 12–16; merge after local E2E and adversarial checks.
-- `codex/day4/ledger`: steps 17–18; merge with physical-hardware items explicitly marked.
-- `codex/day5/verification`: steps 19–20; merge after evidence and verifier checks.
-- `codex/day6/polish`: steps 21–22; merge after full QA and clean diff review.
+- `codex/foundation/scaffold`: steps 1–5; merge only after empty workspace build/test is green.
+- `codex/core/policy`: steps 6–9; merge only after pure-core and contract tests are green.
+- `codex/hedera/providers`: steps 10–11; merge after gated testnet evidence or documented blocker.
+- `codex/broker/runtime`: steps 12–16; merge after local E2E and adversarial checks.
+- `codex/ledger/integration`: steps 17–18; merge with physical-hardware items explicitly marked.
+- `codex/verification/evidence`: steps 19–20; merge after evidence and verifier checks.
+- `codex/release/judge-ready`: steps 21–22; merge after full QA and clean diff review.
 - Each completed step gets its own focused commit; each phase branch is pushed before merge.
 
 ## Verification
