@@ -2,6 +2,10 @@
   "name": "@finity/policy-engine",
   "version": "0.1.0",
   "type": "module",
+  "dependencies": {
+    "@finity/schemas": "workspace:*",
+    "viem": "2.56.3"
+  },
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" }
 }

@@ -2,6 +2,11 @@
   "name": "@finity/schemas",
   "version": "0.1.0",
   "type": "module",
+  "dependencies": {
+    "json-canonicalize": "3.0.0",
+    "viem": "2.56.3",
+    "zod": "3.25.76"
+  },
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" }
 }
