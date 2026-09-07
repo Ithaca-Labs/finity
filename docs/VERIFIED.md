@@ -151,3 +151,9 @@ here only after a funded testnet run.
 
 - Physical Ledger genuine-check, DMK Node HID permissions, Ethereum app clear-signing rendering, and signer output remain unverified.
 - Hedera account creation/faucet limits, Hashio deployment behavior, and funded testnet settlement IDs remain unverified.
+
+## Day 3 implementation notes
+
+`@x402/fetch@2.25.0` declarations confirm that `wrapFetchWithPayment(fetch, client)` accepts an `x402Client`; `@x402/hedera@2.25.0` declarations confirm `createClientHederaSigner(accountId, PrivateKey, { network })` and `ExactHederaScheme`. The commerce adapter uses these exact signatures only after separately validating the 402 requirements against the policy-authorized quote.
+
+`better-sqlite3@12.6.2` and `@types/better-sqlite3@7.6.13` are pinned for the finityd purchase store. pnpm did not run its native build script in this workspace, so an actual on-disk SQLite runtime check is pending trusted developer approval; no persistence success is claimed yet.

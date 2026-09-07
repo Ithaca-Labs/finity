@@ -2,6 +2,26 @@
   "name": "@finity/finityd",
   "version": "0.1.0",
   "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" }
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@finity/capability": "workspace:*",
+    "@finity/policy-engine": "workspace:*",
+    "@finity/schemas": "workspace:*",
+    "@finity/trace-builder": "workspace:*",
+    "better-sqlite3": "12.6.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13"
+  }
 }

@@ -6,4 +6,4 @@
 - `HW-UNVERIFIED`: Run DMK Node HID discovery/connect/signing with Ethereum app open.
 - `HW-UNVERIFIED`: Photograph Ledger clear-signing fields and record exact string/uint rendering in `docs/dx/`.
 - `HW-UNVERIFIED`: Verify macOS/Linux Node HID permissions and required udev rules.
-
+- `HW-UNVERIFIED`: Connect `vault-worker`'s Key Ring decrypt seam to the OS-keychain password reader and exercise it with a real encrypted Broker Bundle; inspect only its public spend-account identifier/checksum.

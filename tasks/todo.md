@@ -13,10 +13,10 @@
 - [x] 9. Implement and test `MandateRegistry.sol` locally; prepare testnet deployment.
 - [x] 10. Implement `@finity/provider-sdk`, runnable x402 provider entry points, signed-manifest publishing, and the gated paid-request client.
 - [x] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access, including canonical service-manifest submission.
-- [ ] 12. Implement `@finity/vault-worker` with Key Ring isolation, egress, injection, and redaction.
-- [ ] 13. Implement `@finity/commerce-adapter` with x402 challenge binding.
-- [ ] 14. Implement `@finity/negotiator`, `@finity/capability`, and `@finity/trace-builder`.
-- [ ] 15. Implement `@finity/finityd` HTTP API and reducer-backed SQLite orchestration.
+- [~] 12. Implement `@finity/vault-worker` with Key Ring isolation, egress, injection, and redaction.
+- [~] 13. Implement `@finity/commerce-adapter` with x402 challenge binding.
+- [~] 14. Implement `@finity/negotiator`, `@finity/capability`, and `@finity/trace-builder`.
+- [~] 15. Implement `@finity/finityd` HTTP API and reducer-backed SQLite orchestration.
 - [ ] 16. Add local end-to-end flow and gated Hedera testnet payment flow.
 - [ ] 17. Add Ledger setup and mandate-signing interfaces, marking hardware-unverified paths.
 - [ ] 18. Add `@finity/pi-package`, the buyer skill, tool blocker, and wrapper CLI.
@@ -39,6 +39,17 @@
 The unchecked items are the Day 2 build-spec completion criterion. They cannot
 be truthfully marked complete until funded testnet credentials and public
 provider URLs are configured outside this repository.
+
+## Day 3 status — security primitives started, end-to-end remains blocked on Day 2 evidence
+
+- [x] Single-use capability minting/lease guard, canonical trace envelopes, and unit tests.
+- [x] Vault request allowlist, redirect blocking, scoped credential injection, and redaction tests.
+- [x] x402 challenge-to-quote binding before retry/signing and the mismatched-`payTo` adversarial test.
+- [x] Localhost bearer-token API and reducer-backed SQLite purchase store implementation.
+- [ ] Wire the existing registry/negotiator/provider clients into the injected `finityd` executor.
+- [ ] Finish the exact Key Ring OS-keychain reader and run a hardware-gated decrypt test.
+- [ ] Run native `better-sqlite3` build approval in the project’s trusted developer environment, then test durable on-disk state.
+- [ ] Run F4 against deployed Day 2 services and record the real HCS trace/payment evidence.
 
 ## Branches and commit cadence
 

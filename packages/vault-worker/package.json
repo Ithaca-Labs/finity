@@ -2,6 +2,23 @@
   "name": "@finity/vault-worker",
   "version": "0.1.0",
   "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" }
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@finity/schemas": "workspace:*",
+    "undici": "7.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1"
+  }
 }
