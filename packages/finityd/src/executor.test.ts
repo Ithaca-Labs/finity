@@ -223,20 +223,46 @@ describe("createIntentExecutor", () => {
     expect(events.map((event) => event.type)).toEqual(["DISCOVERED", "FAILED_QUOTE"]);
   });
 
-  it("refuses and stops before reservation when policy fails closed", async () => {
-    const deps = makeDeps({ buildSnapshot: (input) => ({ ...baseSnapshot(input), providerAllowed: false }) });
+  it("refuses and stops before reservation when policy fails closed, but still signs a receipt and commits a DECISION envelope", async () => {
+    const envelopes: HcsEnvelope[] = [];
+    const deps = makeDeps({
+      buildSnapshot: (input) => ({ ...baseSnapshot(input), providerAllowed: false }),
+      submitTrace: async (envelope) => { envelopes.push(envelope); return undefined; },
+    });
     const { events, run } = drive(deps, makeIntent());
     await run;
     expect(events.map((event) => event.type)).toEqual(["DISCOVERED", "QUOTED", "EVALUATING", "REFUSED"]);
     const refused = events.find((event) => event.type === "REFUSED");
     expect(refused?.extra).toMatchObject({ refusal: { decision: "REFUSED", reasonCodes: ["PROVIDER_NOT_ALLOWED"] } });
+    expect((refused?.extra as { refusal?: { receiptId?: string } } | undefined)?.refusal?.receiptId).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(envelopes.map((envelope) => envelope.t)).toEqual(["DECISION"]);
+    expect(envelopes[0]?.p).toBe(`0x${"00".repeat(32)}`);
+    expect(deps.mandateStore.get(mandateId)?.lastReceiptHash).toBe(envelopes[0]?.h);
   });
 
-  it("escalates and stops before reservation when only a limit fails", async () => {
+  it("escalates and stops before reservation when only a limit fails, also signing a receipt", async () => {
     const deps = makeDeps({ buildSnapshot: (input) => ({ ...baseSnapshot(input), quote: { ...input.quote, amount: "5000001" } }) });
     const { events, run } = drive(deps, makeIntent());
     await run;
     expect(events.map((event) => event.type)).toEqual(["DISCOVERED", "QUOTED", "EVALUATING", "ESCALATION_REQUIRED"]);
+    const escalated = events.find((event) => event.type === "ESCALATION_REQUIRED");
+    expect((escalated?.extra as { refusal?: { receiptId?: string } } | undefined)?.refusal?.receiptId).toMatch(/^0x[0-9a-f]{64}$/);
+  });
+
+  it("chains a second purchase's DECISION off the first purchase's, regardless of the first's outcome", async () => {
+    const deps = makeDeps({ buildSnapshot: (input) => ({ ...baseSnapshot(input), providerAllowed: false }) });
+    const first = drive(deps, makeIntent());
+    await first.run;
+    const afterFirstRefusal = deps.mandateStore.get(mandateId)?.lastReceiptHash;
+    expect(afterFirstRefusal).not.toBe(`0x${"00".repeat(32)}`);
+
+    deps.buildSnapshot = baseSnapshot;
+    const envelopes: HcsEnvelope[] = [];
+    deps.submitTrace = async (envelope) => { envelopes.push(envelope); return undefined; };
+    const second = drive(deps, makeIntent());
+    await second.run;
+    expect(envelopes[0]?.t).toBe("DECISION");
+    expect(envelopes[0]?.p).toBe(afterFirstRefusal);
   });
 
   it("releases the reservation and stops at FAILED_PAYMENT when the provider never settles", async () => {

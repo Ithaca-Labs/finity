@@ -165,25 +165,12 @@ export function createIntentExecutor(deps: PurchaseDependencies) {
     const snapshot = deps.buildSnapshot({ mandate, manifest, quote: selectedQuote, requestDataClass: intent.dataClass, registryRecord, now });
     const decision = evaluate(snapshot);
 
-    if (decision.decision === "REFUSED") {
-      transition({ type: "REFUSED" }, { refusal: decision });
-      return;
-    }
-    if (decision.decision === "ESCALATION_REQUIRED") {
-      transition({ type: "ESCALATION_REQUIRED" }, { refusal: decision });
-      return;
-    }
-    transition({ type: "AUTHORIZED" });
-
-    let reservationId: Hash;
-    try {
-      reservationId = await deps.reserve(intent.mandateId, decision.reservationRequest?.amount ?? selectedQuote.amount);
-    } catch {
-      transition({ type: "FAILED_RESERVATION" });
-      return;
-    }
-    transition({ type: "RESERVED" });
-
+    // Every decision - REFUSED, ESCALATION_REQUIRED, or AUTHORIZED - gets a
+    // signed receipt and an HCS DECISION commitment (spec F5: a refusal is
+    // still a signed, traceable event, not silence). The mandate's
+    // hash-chain tip advances here regardless of outcome, so a later
+    // purchase's DECISION correctly links to this one even if this one was
+    // refused.
     const decisionReceipt = await buildDecisionReceipt(
       {
         correlationId: purchase.correlationId,
@@ -196,16 +183,36 @@ export function createIntentExecutor(deps: PurchaseDependencies) {
         quoteHash: hashCanonicalJson(selectedQuote),
         manifestHash: selectedQuote.manifestHash,
         evaluatedLimits: decision.evaluatedLimits,
-        reservationId,
         at: now,
         prevReceiptHash: mandateRecord.lastReceiptHash,
       },
       deps.signReceipt,
     );
-    await deps.submitTrace?.(buildEnvelope({
+    const decisionEnvelope = buildEnvelope({
       type: "DECISION", correlationId: purchase.correlationId, receiptHash: decisionReceipt.receiptId as Hash,
       previousReceiptHash: mandateRecord.lastReceiptHash, mandateId: intent.mandateId,
-    }));
+    });
+    await deps.submitTrace?.(decisionEnvelope);
+    deps.mandateStore.recordReceiptHash(intent.mandateId, decisionEnvelope.h as Hash);
+
+    if (decision.decision === "REFUSED") {
+      transition({ type: "REFUSED" }, { refusal: { ...decision, receiptId: decisionReceipt.receiptId } });
+      return;
+    }
+    if (decision.decision === "ESCALATION_REQUIRED") {
+      transition({ type: "ESCALATION_REQUIRED" }, { refusal: { ...decision, receiptId: decisionReceipt.receiptId } });
+      return;
+    }
+    transition({ type: "AUTHORIZED" });
+
+    let reservationId: Hash;
+    try {
+      reservationId = await deps.reserve(intent.mandateId, decision.reservationRequest?.amount ?? selectedQuote.amount);
+    } catch {
+      transition({ type: "FAILED_RESERVATION" });
+      return;
+    }
+    transition({ type: "RESERVED" });
 
     const capability = await mintCapability(
       {
@@ -236,6 +243,7 @@ export function createIntentExecutor(deps: PurchaseDependencies) {
       previousReceiptHash: decisionReceipt.receiptId as Hash, mandateId: intent.mandateId,
     });
     await deps.submitTrace?.(paymentEnvelope);
+    deps.mandateStore.recordReceiptHash(intent.mandateId, paymentEnvelope.h as Hash);
 
     let result: unknown;
     try {
@@ -251,6 +259,7 @@ export function createIntentExecutor(deps: PurchaseDependencies) {
       previousReceiptHash: paymentEnvelope.h as Hash, mandateId: intent.mandateId,
     });
     await deps.submitTrace?.(usageEnvelope);
+    deps.mandateStore.recordReceiptHash(intent.mandateId, usageEnvelope.h as Hash);
 
     try {
       await deps.finalize(reservationId, selectedQuote.amount);
