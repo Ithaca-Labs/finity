@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { hostname, homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -281,6 +281,12 @@ async function handleMandate(args: string[], ctx: ExtensionCommandContext): Prom
       registryClient,
       createTraceTopic: (memo) => hcsWriter.createTopic(memo),
     });
+    // finityd's MandateStore needs the full signed mandate content, not just
+    // an ID: MandateRegistry.record() only exposes consumption/status
+    // on-chain, never the original allowedServices/allowedMethods/asset
+    // text (see @finity/finityd's MandateStore doc comment).
+    await mkdir(join(home, "mandates"), { recursive: true });
+    await writeFile(join(home, "mandates", `${registered.mandateId}.json`), `${JSON.stringify(registered.signedMandate, null, 2)}\n`, "utf8");
     await saveActiveMandate(join(home, "active-mandate.json"), { mandateId: registered.mandateId, agentUaid: agentIdentity.uaid, brokerUaid: identity.broker.uaid });
     ctx.ui.notify(`Mandate registered: ${registered.mandateId}. Trace topic: ${registered.traceTopicId}.`, "info");
   } finally {

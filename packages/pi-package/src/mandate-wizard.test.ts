@@ -67,6 +67,7 @@ describe("registerMandateOnChain", () => {
       setTraceTopicTx: FAKE_SET_TRACE_TX,
     });
     expect(result.mandateId).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(result.signedMandate).toMatchObject({ agent: "did:aid:buyer", signature: FAKE_SIGNATURE, mandateId: result.mandateId });
   });
 
   it("never registers on-chain when the device signature is declined", async () => {

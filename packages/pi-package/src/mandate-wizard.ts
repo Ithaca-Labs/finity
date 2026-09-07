@@ -1,6 +1,6 @@
 import { compile, type CompiledMandate, type MandateChoices } from "@finity/mandate-compiler";
 import type { RegistryClient } from "@finity/registry-client";
-import type { Hash } from "@finity/schemas";
+import type { Hash, SignedAgentMandate } from "@finity/schemas";
 
 export type MandateSigner = (typedData: CompiledMandate["typedData"]) => Promise<`0x${string}`>;
 export type TraceTopicCreator = (memo: string) => Promise<{ topicId: string; transactionId: string }>;
@@ -14,6 +14,7 @@ export type RegisterMandateInput = {
 
 export type RegisteredMandate = {
   mandateId: Hash;
+  signedMandate: SignedAgentMandate;
   deviceDisplayModel: CompiledMandate["deviceDisplayModel"];
   registrationTx: Hash;
   traceTopicId: string;
@@ -37,6 +38,7 @@ export async function registerMandateOnChain(input: RegisterMandateInput): Promi
   const setTraceTopicTx = await input.registryClient.setTraceTopic(compiled.mandateId, topic.topicId);
   return {
     mandateId: compiled.mandateId,
+    signedMandate: { ...compiled.canonicalMandate, signature, mandateId: compiled.mandateId },
     deviceDisplayModel: compiled.deviceDisplayModel,
     registrationTx,
     traceTopicId: topic.topicId,
