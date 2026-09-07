@@ -3,3 +3,6 @@ packages:
   - contracts
   - services/*
   - apps/*
+
+onlyBuiltDependencies:
+  - better-sqlite3

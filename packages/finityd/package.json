@@ -16,12 +16,16 @@
   },
   "dependencies": {
     "@finity/capability": "workspace:*",
+    "@finity/commerce-adapter": "workspace:*",
+    "@finity/negotiator": "workspace:*",
     "@finity/policy-engine": "workspace:*",
+    "@finity/registry-client": "workspace:*",
     "@finity/schemas": "workspace:*",
     "@finity/trace-builder": "workspace:*",
     "better-sqlite3": "12.6.2"
   },
   "devDependencies": {
+    "@finity/mandate-compiler": "workspace:*",
     "@types/better-sqlite3": "7.6.13"
   }
 }

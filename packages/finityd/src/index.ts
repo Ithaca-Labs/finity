@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { randomBytes, randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import { reducePurchase, type PurchaseEvent, type PurchaseState } from "@finity/schemas";
+import { reducePurchase, type Hash, type PurchaseEvent, type PurchaseState } from "@finity/schemas";
 
 export const INTENT_ROUTE_ALLOWLIST = new Set([
   "POST /v1/intents", "GET /v1/services", "POST /v1/quotes", "POST /v1/escalations",
@@ -9,17 +9,25 @@ export const INTENT_ROUTE_ALLOWLIST = new Set([
 ]);
 
 export type Intent = {
-  agentUaid: string; serviceHint?: string; methodId?: string;
+  mandateId: Hash; agentUaid: string; serviceHint?: string; methodId?: string;
   requestClass: { unit: string; units: string }; payloadRef: string; dataClass: number;
   constraints?: { maxLatencyMs?: number; preferCheapest?: boolean };
 };
 export type Purchase = { correlationId: string; state: PurchaseState; intent: Intent; result?: unknown; refusal?: unknown; updatedAt: number };
-export type IntentExecutor = (purchase: Purchase, transition: (event: PurchaseEvent) => Purchase) => Promise<void>;
+export type Transition = (event: PurchaseEvent, extra?: Pick<Purchase, "result" | "refusal">) => Purchase;
+export type IntentExecutor = (purchase: Purchase, transition: Transition) => Promise<void>;
 
 function parseIntent(value: unknown): Intent {
   const data = value as Partial<Intent>;
   const dataClass = data?.dataClass;
-  if (!data || typeof data.agentUaid !== "string" || !data.agentUaid || typeof data.payloadRef !== "string" || !data.payloadRef || !data.requestClass || typeof data.requestClass.unit !== "string" || !/^(0|[1-9][0-9]*)$/.test(data.requestClass.units ?? "") || typeof dataClass !== "number" || !Number.isInteger(dataClass) || dataClass < 0 || dataClass > 2) {
+  if (
+    !data
+    || typeof data.mandateId !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(data.mandateId)
+    || typeof data.agentUaid !== "string" || !data.agentUaid
+    || typeof data.payloadRef !== "string" || !data.payloadRef
+    || !data.requestClass || typeof data.requestClass.unit !== "string" || !/^(0|[1-9][0-9]*)$/.test(data.requestClass.units ?? "")
+    || typeof dataClass !== "number" || !Number.isInteger(dataClass) || dataClass < 0 || dataClass > 2
+  ) {
     throw new Error("invalid intent");
   }
   return data as Intent;
@@ -74,7 +82,10 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
       if (key === "GET /v1/health") return json(response, 200, { status: "ok" });
       if (key === "POST /v1/intents") {
         const purchase = store.create(parseIntent(await readBody(request)));
-        if (options.executor) void options.executor(purchase, (event) => store.transition(purchase.correlationId, event)).catch(() => store.transition(purchase.correlationId, { type: "FAILED_EVALUATION" }));
+        if (options.executor) {
+          void options.executor(purchase, (event, extra) => store.transition(purchase.correlationId, event, extra))
+            .catch(() => store.transition(purchase.correlationId, { type: "FAILED_EVALUATION" }));
+        }
         return json(response, 202, { correlationId: purchase.correlationId, status: purchase.state });
       }
       return json(response, 501, { error: "day2_dependency_unavailable" });
@@ -83,3 +94,5 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
   server.listen(options.port ?? 0, options.host ?? "127.0.0.1");
   return { token, server, close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())) };
 }
+
+export * from "./executor.js";

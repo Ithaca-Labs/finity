@@ -95,9 +95,18 @@ importers:
       '@finity/capability':
         specifier: workspace:*
         version: link:../capability
+      '@finity/commerce-adapter':
+        specifier: workspace:*
+        version: link:../commerce-adapter
+      '@finity/negotiator':
+        specifier: workspace:*
+        version: link:../negotiator
       '@finity/policy-engine':
         specifier: workspace:*
         version: link:../policy-engine
+      '@finity/registry-client':
+        specifier: workspace:*
+        version: link:../registry-client
       '@finity/schemas':
         specifier: workspace:*
         version: link:../schemas
@@ -108,6 +117,9 @@ importers:
         specifier: 12.6.2
         version: 12.6.2
     devDependencies:
+      '@finity/mandate-compiler':
+        specifier: workspace:*
+        version: link:../mandate-compiler
       '@types/better-sqlite3':
         specifier: 7.6.13
         version: 7.6.13
