@@ -1,0 +1,9 @@
+{
+  "_note": "mandateId is filled in by scripts/finityd-intent.ts from the compiled mandate fixture, not read from this file.",
+  "agentUaid": "did:aid:finity:buyer-demo",
+  "serviceHint": "hello-weather@1",
+  "methodId": "weather.current",
+  "requestClass": { "unit": "call", "units": "1" },
+  "payloadRef": "city:Kolkata",
+  "dataClass": 0
+}

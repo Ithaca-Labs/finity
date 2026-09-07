@@ -8,9 +8,18 @@ importers:
 
   .:
     devDependencies:
+      '@finity/finityd':
+        specifier: workspace:*
+        version: link:packages/finityd
       '@finity/hello-weather':
         specifier: workspace:*
         version: link:services/hello-weather
+      '@finity/mandate-compiler':
+        specifier: workspace:*
+        version: link:packages/mandate-compiler
+      '@finity/policy-engine':
+        specifier: workspace:*
+        version: link:packages/policy-engine
       '@finity/provider-sdk':
         specifier: workspace:*
         version: link:packages/provider-sdk

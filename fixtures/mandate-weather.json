@@ -1,0 +1,18 @@
+{
+  "_note": "Day 3 placeholder mandate. `signature` is not a real Ledger signature: registering this on-chain will fail with InvalidSignature() until Day 4 produces a real device-signed AgentMandate. scripts/finityd-intent.ts overrides broker, spendAccount, policyHash, verifyingContract, validFrom, and validUntil at runtime from live config rather than trusting stale checked-in values, so only the durable business choices below matter here.",
+  "agent": "did:aid:finity:buyer-demo",
+  "allowedServices": "hello-weather@1",
+  "allowedMethods": "weather.current",
+  "asset": "HBAR",
+  "maxPerRequest": "5000000",
+  "maxPerPeriod": "500000000",
+  "periodSeconds": "86400",
+  "maxLifetime": "2000000000",
+  "maxUnitsPerRequest": "0",
+  "quoteMaxAgeSeconds": "120",
+  "dataClass": 0,
+  "escalationRule": "anything above per-request cap needs my Ledger",
+  "nonce": "1",
+  "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": "0x1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+}
