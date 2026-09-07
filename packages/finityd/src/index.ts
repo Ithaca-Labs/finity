@@ -1,7 +1,10 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { randomBytes, randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import { reducePurchase, type Hash, type PurchaseEvent, type PurchaseState } from "@finity/schemas";
+import { discover, quote, type QuoteFetcher } from "@finity/negotiator";
+import type { MirrorFetcher } from "@finity/registry-client";
+import { reducePurchase, requestClassSchema, type Hash, type PurchaseEvent, type PurchaseState } from "@finity/schemas";
+import type { MandateStore } from "./executor.js";
 
 export const INTENT_ROUTE_ALLOWLIST = new Set([
   "POST /v1/intents", "GET /v1/services", "POST /v1/quotes", "POST /v1/escalations",
@@ -69,8 +72,18 @@ async function readBody(request: IncomingMessage): Promise<unknown> {
 
 export type Finityd = { token: string; server: Server; close(): Promise<void> };
 
+/** Backs GET /v1/services and POST /v1/quotes with the same mandate-scoped discovery/negotiation the purchase executor uses. */
+export type ServicesDependencies = {
+  mandateStore: MandateStore;
+  topicId: string;
+  mirrorNodeUrl?: string;
+  mirrorFetcher?: MirrorFetcher;
+  quoteFetcher?: QuoteFetcher;
+  now?(): number;
+};
+
 /** Starts a localhost-only, bearer-protected API. No route can decrypt, sign, or broadcast arbitrary caller data. */
-export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; token?: string; host?: "127.0.0.1" | "::1"; port?: number } = {}): Finityd {
+export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; token?: string; host?: "127.0.0.1" | "::1"; port?: number } = {}): Finityd {
   const store = options.store ?? new PurchaseStore(); const token = options.token ?? randomBytes(32).toString("base64url");
   const server = createServer(async (request, response) => {
     try {
@@ -87,6 +100,46 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
             .catch(() => store.transition(purchase.correlationId, { type: "FAILED_EVALUATION" }));
         }
         return json(response, 202, { correlationId: purchase.correlationId, status: purchase.state });
+      }
+      if (key === "GET /v1/services") {
+        if (!options.services) return json(response, 501, { error: "day2_dependency_unavailable" });
+        const mandateId = url.searchParams.get("mandateId");
+        if (!mandateId) return json(response, 400, { error: "mandateId is required" });
+        const record = options.services.mandateStore.get(mandateId as Hash);
+        if (!record) return json(response, 404, { error: "mandate_not_found" });
+        try {
+          const manifests = await discover(
+            { allowedServices: record.mandate.allowedServices, allowedMethods: record.mandate.allowedMethods },
+            { topicId: options.services.topicId, mirrorNodeUrl: options.services.mirrorNodeUrl, fetcher: options.services.mirrorFetcher },
+          );
+          return json(response, 200, { manifests });
+        } catch {
+          return json(response, 502, { error: "discovery_failed" });
+        }
+      }
+      if (key === "POST /v1/quotes") {
+        if (!options.services) return json(response, 501, { error: "day2_dependency_unavailable" });
+        const body = (await readBody(request)) as { mandateId?: string; serviceId?: string; methodId?: string; requestClass?: unknown };
+        if (typeof body.mandateId !== "string" || typeof body.serviceId !== "string" || typeof body.methodId !== "string") {
+          return json(response, 400, { error: "invalid_request" });
+        }
+        const requestClass = requestClassSchema.safeParse(body.requestClass);
+        if (!requestClass.success) return json(response, 400, { error: "invalid_request_class" });
+        const record = options.services.mandateStore.get(body.mandateId as Hash);
+        if (!record) return json(response, 404, { error: "mandate_not_found" });
+        try {
+          const manifests = await discover(
+            { allowedServices: record.mandate.allowedServices, allowedMethods: record.mandate.allowedMethods, serviceHint: body.serviceId },
+            { topicId: options.services.topicId, mirrorNodeUrl: options.services.mirrorNodeUrl, fetcher: options.services.mirrorFetcher },
+          );
+          const manifest = manifests[0];
+          if (!manifest) return json(response, 404, { error: "service_not_found" });
+          const now = options.services.now?.() ?? Math.floor(Date.now() / 1000);
+          const offeredQuote = await quote(manifest, body.methodId, requestClass.data, { now, fetcher: options.services.quoteFetcher });
+          return json(response, 200, { quotes: [offeredQuote] });
+        } catch {
+          return json(response, 502, { error: "quote_failed" });
+        }
       }
       return json(response, 501, { error: "day2_dependency_unavailable" });
     } catch { return json(response, 400, { error: "invalid_request" }); }
