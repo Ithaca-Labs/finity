@@ -342,3 +342,43 @@ Not run, and not claimed: `wallet-cli genuine-check`/`ring init` against a
 physical device, DMK `signTypedData` against a physical device, `/finity
 setup` end to end, `/finity mandate new` end to end, and any purchase via
 the `finity_*` tools against a real `finityd`. See `docs/HW_TODO.md`.
+
+## Day 5 execution status
+
+Real, verified: viem exports `recoverAddress`, `recoverPublicKey`,
+`recoverTypedDataAddress`, and `hashMessage` (used by `@finity/verifier`'s
+checks). Directly tested that:
+
+- `recoverAddress({ hash, signature })` correctly recovers the signer of a
+  **raw**-digest `sign({ hash, privateKey, to: "hex" })` signature (no
+  EIP-191/712 wrapping) - the exact scheme `@finity/finityd`'s
+  `signBrokerHash` already used since Day 3/4 for capability and receipt
+  signatures, now actually checked against for the first time.
+- `recoverPublicKey({ hash: hashMessage(canonicalJson), signature })`
+  correctly recovers a provider's declared `signingKey` from an EIP-191
+  `account.signMessage()` signature over the canonical JSON - the scheme
+  ADR-006 specified in Day 2 for manifests/quotes, unchecked by anything
+  until `@finity/verifier`.
+- `recoverTypedDataAddress` correctly recovers the Principal's address
+  from a mandate re-compiled with `@finity/mandate-compiler`'s `compile()`
+  and signed with `account.signTypedData(typedData)`.
+
+All three round-trips are exercised with real viem test-account signatures
+in `packages/verifier/src/checks.test.ts`, not fixture hex strings.
+
+```text
+pnpm -r build -> pass (18 of 19 workspace projects have a build script;
+  adds @finity/verifier's checks/verify/cli build)
+pnpm -r typecheck -> pass
+pnpm typecheck -> pass
+pnpm -r test -> pass (5 contract, 8 schemas, 2 capability, 20 compiler,
+  2 commerce-adapter, 6 provider, 14 trace-builder, 2 vault-worker,
+  5 registry, 50 policy, 22 negotiator, 48 verifier, 64 finityd,
+  82 pi-package, 10 finity-cli, 1 per service - several of these are
+  doubled by the pre-existing dist/*.test.js pickup already noted above)
+```
+
+Not run, and not claimed: everything already listed as not run above,
+plus `/finity revoke`/`/finity escalations approve` signing on a physical
+device, and `finity-verify` against a real deployed `MandateRegistry`,
+mirror node, or settlement transaction. See `docs/HW_TODO.md`.

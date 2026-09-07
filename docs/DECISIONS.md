@@ -94,3 +94,40 @@
   and verified working before this was written. The cast documents a real
   gap in a third-party package's declarations rather than silently
   papering over it or inventing an unverified workaround.
+
+## ADR-010: every purchase decision signs a receipt, not just AUTHORIZED
+
+- Date: 2026-09-07
+- Decision: `@finity/finityd`'s executor now builds and signs a
+  DecisionReceipt and commits an HCS DECISION envelope for REFUSED and
+  ESCALATION_REQUIRED outcomes too, not only AUTHORIZED. The mandate's
+  hash-chain tip (`MandateStore.recordReceiptHash`) advances after every
+  envelope emitted during a purchase, not just at RECONCILED.
+- Reason: FINITY_BUILD_SPEC.md's F5 refusal flow is explicit - "Policy
+  Engine returns REFUSED ... -> signed refusal receipt -> HCS DECISION
+  commitment" - and `POST /v1/escalations {receiptId}` needs a receiptId
+  to reference, which nothing produced for an escalation before this.
+  The original Day 3 design only signed a receipt after RESERVED (with a
+  real reservationId baked in); `reservationId` was already optional in
+  the schema, so building the receipt right after `evaluate()` for all
+  three outcomes needed no schema change. Discovered while wiring
+  escalations end to end for Day 5, not anticipated at Day 3.
+
+## ADR-011: escalation approval and revocation use a fresh, timestamp-based nonce
+
+- Date: 2026-09-07
+- Decision: `/finity revoke` and `approveEscalation()` sign their
+  Revocation/MandateAmendment with `nonce: String(Date.now())`, not a
+  value taken from anywhere else in the system.
+- Reason: `MandateRegistry.sol` scopes `usedNonces` per principal across
+  *all* signed artifacts (registration, revocation, amendment) as one
+  namespace. policy-engine's `ProposedAmendment.nonce` echoes the
+  original mandate's own registration nonce (`nonce: mandate.nonce`),
+  which the contract already marked used when that mandate was
+  registered - signing an amendment with it as-is reverts with
+  `NonceAlreadyUsed`. policy-engine is a pure package (no I/O/clock, a
+  Day 1 invariant) and genuinely cannot know what nonce is safe to use,
+  so this is not a bug to fix there; the caller, which does have a clock,
+  supplies a fresh one instead. Found while wiring the escalation
+  approval flow end to end for Day 5, documented rather than silently
+  worked around.

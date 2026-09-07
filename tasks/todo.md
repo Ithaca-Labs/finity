@@ -20,8 +20,8 @@
 - [x] 16. Add local end-to-end flow and gated Hedera testnet payment flow.
 - [x] 17. Add Ledger setup and mandate-signing interfaces, marking hardware-unverified paths.
 - [x] 18. Add `@finity/pi-package`, the buyer skill, tool blocker, and wrapper CLI.
-- [ ] 19. Add refusal, escalation, revocation, expiry, kill-switch, and recovery paths.
-- [ ] 20. Implement `@finity/verifier` and tamper/insufficient-disclosure checks.
+- [x] 19. Add refusal, escalation, revocation, expiry, kill-switch, and recovery paths.
+- [x] 20. Implement `@finity/verifier` and tamper/insufficient-disclosure checks.
 - [ ] 21. Build `pnpm demo`, README architecture/payment docs, and judge-facing evidence.
 - [ ] 22. Run full QA, secret-leak checks, review diffs, push/merge phase branches, and record risks.
 - [x] 23. Reproduce and fix CI ordering for generated contract types; verify the remote checks.
@@ -165,6 +165,67 @@ completion against a `finityd` that isn't running without crashing;
 default `finity` mode correctly detects no `finityd` is running, starts
 it, and fails closed with a clear message after a bounded 5-second wait
 rather than hanging, when no Broker Bundle has been sealed yet.
+
+## Day 5 status — boundaries and evidence: code complete, tested without hardware
+
+- [x] Every decision (REFUSED, ESCALATION_REQUIRED, AUTHORIZED - not just
+  AUTHORIZED as Day 3/4 had it) now signs a DecisionReceipt and commits an
+  HCS DECISION envelope, matching the build spec's F5 refusal flow
+  exactly. The mandate's hash-chain tip advances after every envelope, not
+  just at RECONCILED, so a refused purchase no longer orphans the chain
+  for whatever comes after it. Found and fixed while wiring escalations,
+  which need a receiptId to reference and had none before this.
+- [x] Kill switch: `POST /v1/intents` refuses with 503 while
+  `~/.finity/kill-switch` exists, `GET /v1/health` reports it, `/finity
+  kill on|off` toggles the file directly (no signing - it's a local
+  safety net). Verified for real against the installed `pi` CLI.
+- [x] `mandate-compiler`: `compileRevocation`/`compileAmendment`, EIP-712
+  typed data for the two other Ledger-signed artifacts
+  `MandateRegistry.sol` accepts, with field order copied directly from
+  `contracts/test/MandateRegistry.ts`'s own already-passing fixtures.
+- [x] `/finity revoke <mandateId>`: real - signs a Revocation on the
+  Ledger, calls `registryClient.revoke()`. A revoked mandate's on-chain
+  status already flowed through to `MANDATE_INACTIVE` via Day 3/4's
+  `createLiveDependencies`; this closes the loop with a real signing path.
+- [x] Escalations, fully wired: `finity_request_escalation` (fixed a bug -
+  it was passing `correlationId` where finityd expects the
+  `refusal.receiptId`) → `EscalationStore` (`POST`/`GET /v1/escalations`,
+  a new `POST /v1/escalations/:id/resolve`) → `/finity escalations
+  approve|reject <id>` → `approveEscalation()` signs a MandateAmendment
+  (with a *fresh* nonce - `ProposedAmendment.nonce` just echoes the
+  mandate's own already-used registration nonce, a policy-engine quirk
+  found while wiring this) → `registryClient.amend()` → the successor
+  mandate is persisted and registered live with the running `finityd` via
+  a new `POST /v1/mandates` (also backs a newly-real `GET /v1/mandates/:id`,
+  both Day 3 stubs until now).
+- [x] `packages/finityd/src/executor.test.ts` and `index.test.ts` cover
+  the build spec's exact Day 5 scenarios by name: 1 authorized, 2
+  refusals (PRICE_LIMIT_EXCEEDED → escalation, SERVICE_NOT_ALLOWED →
+  terminal), 1 escalation approved then the retried purchase succeeds
+  against the successor mandate, 1 escalation rejected, 1 revoked mandate
+  → MANDATE_INACTIVE.
+- [x] `@finity/verifier`: real signature verification, for the first time
+  anywhere in this codebase - mandate (EIP-712, `recoverTypedDataAddress`),
+  broker receipt signature (raw digest, `recoverAddress`, matching
+  `signBrokerHash`'s actual scheme), manifest/quote (EIP-191,
+  `recoverPublicKey`, per Day 2's ADR-006, unchecked by anything until
+  now). Plus receipt-hash integrity, live-policy-hash comparison,
+  on-chain registry state, HCS trace inclusion, and settlement-transaction
+  checks. `finity-verify --receipt <file> --mandate <id> --registry-address
+  <addr>` (plus optional `--mandate-file`/`--manifest-file`/`--quote-file`/
+  `--settlement-tx`), exiting 0/1/2 for verified/insufficient_disclosure/
+  invalid.
+- [ ] `finity-verify` run against a real deployed registry, a real mirror
+  node, and a real settlement transaction - untested without live
+  infrastructure, same blocker as every other network-dependent piece.
+- [ ] DMK `signTypedData` for Revocation/MandateAmendment against a
+  physical device (the typed-data construction is verified against the
+  contract's own test fixtures; the device round-trip is not).
+
+"Expiry" and "recovery" (also named in step 19) needed no new work:
+mandate expiry was already enforced by policy-engine's `MANDATE_EXPIRED`
+check since Day 1, and the Broker Bundle recovery test was already built
+in Day 4 (`verifyBrokerBundleRecovery`).
 
 ## Branches and commit cadence
 
