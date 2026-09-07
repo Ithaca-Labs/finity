@@ -2,6 +2,18 @@
   "name": "@finity/verifier",
   "version": "0.1.0",
   "type": "module",
+  "bin": { "finity-verify": "./dist/cli.js" },
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" }
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": {
+    "@finity/mandate-compiler": "workspace:*",
+    "@finity/policy-engine": "workspace:*",
+    "@finity/registry-client": "workspace:*",
+    "@finity/schemas": "workspace:*",
+    "@finity/trace-builder": "workspace:*",
+    "viem": "2.56.3"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1"
+  }
 }
