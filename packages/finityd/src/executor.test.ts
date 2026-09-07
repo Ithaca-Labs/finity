@@ -275,3 +275,73 @@ describe("createIntentExecutor", () => {
     expect(released).toBe(`0x${"dd".repeat(32)}`);
   });
 });
+
+// Matches FINITY_BUILD_SPEC.md step 17/19's exact Day 5 "done when" scenarios:
+// 1 authorized, 2 refusals (PRICE_LIMIT_EXCEEDED -> escalation; SERVICE_NOT_ALLOWED
+// -> terminal), 1 escalation approved then the purchase succeeds, 1 escalation
+// rejected, 1 revocation after which finity_purchase returns MANDATE_INACTIVE.
+describe("Day 5 boundary scenarios", () => {
+  it("authorizes a valid purchase through to RECONCILED (the 1 authorized case)", async () => {
+    const { events, run } = drive(makeDeps(), makeIntent());
+    await run;
+    expect(events.at(-1)?.type).toBe("RECONCILED");
+  });
+
+  it("SERVICE_NOT_ALLOWED refuses terminally - not escalatable, since it isn't a limit failure", async () => {
+    const deps = makeDeps({ buildSnapshot: (input) => ({ ...baseSnapshot(input), mandate: { ...baseSnapshot(input).mandate, allowedServices: "other-service@1" } }) });
+    const { events, run } = drive(deps, makeIntent());
+    await run;
+    expect(events.map((event) => event.type)).toEqual(["DISCOVERED", "QUOTED", "EVALUATING", "REFUSED"]);
+    const refused = events.find((event) => event.type === "REFUSED");
+    expect(refused?.extra).toMatchObject({ refusal: { decision: "REFUSED", reasonCodes: ["SERVICE_NOT_ALLOWED"] } });
+  });
+
+  it("PRICE_LIMIT_EXCEEDED escalates rather than refusing terminally", async () => {
+    const deps = makeDeps({ buildSnapshot: (input) => ({ ...baseSnapshot(input), quote: { ...input.quote, amount: "5000001" } }) });
+    const { events, run } = drive(deps, makeIntent());
+    await run;
+    const escalated = events.find((event) => event.type === "ESCALATION_REQUIRED");
+    expect(escalated).toBeDefined();
+    expect((escalated?.extra as { refusal?: { reasonCodes?: string[] } } | undefined)?.refusal?.reasonCodes).toEqual(["PRICE_LIMIT_EXCEEDED"]);
+  });
+
+  it("an approved escalation's successor mandate lets a retried purchase succeed", async () => {
+    // Simulates what /finity escalations approve produces: a successor
+    // mandate with only maxPerRequest raised, loaded into the MandateStore
+    // the way POST /v1/mandates does after approveEscalation() signs and
+    // registers it - this test is finityd-side only, no signing involved.
+    const successorCompiled = compile({
+      agent: "did:aid:buyer", broker, spendAccount: "0.0.123",
+      allowedServices: "hello-weather@1", allowedMethods: "weather.current", asset: "HBAR",
+      maxPerRequest: "6000000", maxPerPeriod: "500000000", periodSeconds: "86400", maxLifetime: "2000000000",
+      maxUnitsPerRequest: "0", validFrom, validUntil, quoteMaxAgeSeconds: "120", dataClass: 0,
+      escalationRule: "anything above per-request cap needs my Ledger", policyHash: POLICY_HASH,
+      nonce: "2", predecessor: mandateId, verifyingContract: "0x2222222222222222222222222222222222222222",
+    });
+    const successorMandateId = successorCompiled.mandateId;
+    const successorMandate: SignedAgentMandate = { ...successorCompiled.canonicalMandate, signature: `0x${"aa".repeat(65)}`, mandateId: successorMandateId };
+
+    const deps = makeDeps({
+      buildSnapshot: (input) => ({ ...baseSnapshot(input), quote: { ...input.quote, amount: "5000001" } }),
+    });
+    const first = drive(deps, makeIntent());
+    await first.run;
+    expect(first.events.at(-1)?.type).toBe("ESCALATION_REQUIRED");
+
+    deps.mandateStore.set(successorMandateId, successorMandate);
+    deps.buildSnapshot = baseSnapshot;
+    const second = drive(deps, makeIntent({ mandateId: successorMandateId }));
+    await second.run;
+    expect(second.events.at(-1)?.type).toBe("RECONCILED");
+  });
+
+  it("a revoked mandate refuses with MANDATE_INACTIVE (the revocation case)", async () => {
+    const revokedRecord: RegistryRecord = { ...activeRegistryRecord, status: 4 };
+    const deps = makeDeps({ registryRecord: async () => revokedRecord });
+    const { events, run } = drive(deps, makeIntent());
+    await run;
+    const refused = events.find((event) => event.type === "REFUSED");
+    expect(refused).toBeDefined();
+    expect((refused?.extra as { refusal?: { reasonCodes?: string[] } } | undefined)?.refusal?.reasonCodes).toContain("MANDATE_INACTIVE");
+  });
+});

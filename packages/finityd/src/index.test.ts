@@ -325,6 +325,16 @@ describe("finityd HTTP API escalation routes", () => {
     expect(await listed.json()).toEqual({ escalations: [] });
   });
 
+  it("a rejected escalation (the Principal declining) also leaves the pending list, with REJECTED recorded", async () => {
+    const { url, headers } = await startWithEscalatedPurchase();
+    const created = await fetch(`${url}/v1/escalations`, { method: "POST", headers, body: JSON.stringify({ receiptId: `0x${"aa".repeat(32)}` }) });
+    const { escalationId } = (await created.json()) as { escalationId: string };
+
+    const resolved = await fetch(`${url}/v1/escalations/${escalationId}/resolve`, { method: "POST", headers, body: JSON.stringify({ status: "REJECTED" }) });
+    expect(await resolved.json()).toMatchObject({ escalationId, status: "REJECTED" });
+    expect(await (await fetch(`${url}/v1/escalations`, { headers })).json()).toEqual({ escalations: [] });
+  });
+
   it("404s resolving an unknown escalation and 400s an invalid status", async () => {
     const { url, headers } = await startWithEscalatedPurchase();
     const missing = await fetch(`${url}/v1/escalations/${crypto.randomUUID()}/resolve`, { method: "POST", headers, body: JSON.stringify({ status: "APPROVED" }) });
