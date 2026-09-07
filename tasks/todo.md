@@ -13,11 +13,11 @@
 - [x] 9. Implement and test `MandateRegistry.sol` locally; prepare testnet deployment.
 - [x] 10. Implement `@finity/provider-sdk`, runnable x402 provider entry points, signed-manifest publishing, and the gated paid-request client.
 - [x] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access, including canonical service-manifest submission.
-- [~] 12. Implement `@finity/vault-worker` with Key Ring isolation, egress, injection, and redaction.
-- [~] 13. Implement `@finity/commerce-adapter` with x402 challenge binding.
-- [~] 14. Implement `@finity/negotiator`, `@finity/capability`, and `@finity/trace-builder`.
-- [~] 15. Implement `@finity/finityd` HTTP API and reducer-backed SQLite orchestration.
-- [ ] 16. Add local end-to-end flow and gated Hedera testnet payment flow.
+- [x] 12. Implement `@finity/vault-worker` with Key Ring isolation, egress, injection, and redaction.
+- [x] 13. Implement `@finity/commerce-adapter` with x402 challenge binding.
+- [x] 14. Implement `@finity/negotiator`, `@finity/capability`, and `@finity/trace-builder`.
+- [x] 15. Implement `@finity/finityd` HTTP API and reducer-backed SQLite orchestration.
+- [x] 16. Add local end-to-end flow and gated Hedera testnet payment flow.
 - [ ] 17. Add Ledger setup and mandate-signing interfaces, marking hardware-unverified paths.
 - [ ] 18. Add `@finity/pi-package`, the buyer skill, tool blocker, and wrapper CLI.
 - [ ] 19. Add refusal, escalation, revocation, expiry, kill-switch, and recovery paths.
@@ -40,16 +40,43 @@ The unchecked items are the Day 2 build-spec completion criterion. They cannot
 be truthfully marked complete until funded testnet credentials and public
 provider URLs are configured outside this repository.
 
-## Day 3 status — security primitives started, end-to-end remains blocked on Day 2 evidence
+## Day 3 status — code complete and locally proven; testnet evidence remains blocked on Day 2/4
 
 - [x] Single-use capability minting/lease guard, canonical trace envelopes, and unit tests.
 - [x] Vault request allowlist, redirect blocking, scoped credential injection, and redaction tests.
 - [x] x402 challenge-to-quote binding before retry/signing and the mismatched-`payTo` adversarial test.
 - [x] Localhost bearer-token API and reducer-backed SQLite purchase store implementation.
-- [ ] Wire the existing registry/negotiator/provider clients into the injected `finityd` executor.
+- [x] `@finity/negotiator`: `discover()` over the registry HCS topic, `quote()` against a provider’s quote endpoint, deterministic `select()`.
+- [x] `@finity/trace-builder`: test coverage for the existing envelope/hash-chain functions, plus `buildDecisionReceipt` for the broker’s signed receipt.
+- [x] Wire the existing registry/negotiator/provider clients into the injected `finityd` executor (`createIntentExecutor`): the full F4 state machine (discovery → quote → policy evaluation → on-chain reservation → capability-scoped payment → delivery → reconciliation) runs end to end against injected fakes, hash-chaining a DECISION/PAYMENT/USAGE/RECONCILED trace envelope after each step.
+- [x] Local end-to-end flow: `packages/finityd/src/executor.test.ts` drives the pipeline to `RECONCILED` (and separately exercises refusal, escalation, discovery/quote failure, and payment failure) without a network, registry contract, or Ledger.
+- [x] Gated Hedera testnet payment flow: `pnpm finityd intent --file fixtures/intent-weather.json` (`scripts/finityd-intent.ts`), refusing unless `FINITY_TESTNET=1`, mirroring Day 2’s `testnet:paid`. Not run — see below.
+- [x] Run native `better-sqlite3` build approval (`pnpm-workspace.yaml`’s `onlyBuiltDependencies`), then test durable on-disk state across a real file reopen.
 - [ ] Finish the exact Key Ring OS-keychain reader and run a hardware-gated decrypt test.
-- [ ] Run native `better-sqlite3` build approval in the project’s trusted developer environment, then test durable on-disk state.
-- [ ] Run F4 against deployed Day 2 services and record the real HCS trace/payment evidence.
+- [ ] Run `pnpm finityd` against deployed Day 2 services with a real, Ledger-signed, on-chain-registered mandate, and record the real HCS trace/payment evidence.
+
+Two gaps surfaced by wiring the executor for real are intentionally left
+open rather than papered over, and are called out inline in
+`scripts/finityd-intent.ts`:
+
+- `ServiceManifest` has no client-facing resource path for a paid method
+  (only `quoteEndpoint`/`healthEndpoint`), so a buyer cannot derive the
+  paid HTTP path from the manifest alone. The gated script hardcodes a
+  path per known Day 2 service as a stand-in.
+- Mandate/quote/manifest signature verification and on-chain principal
+  recovery have no decided scheme anywhere in this codebase yet. The
+  executor’s `SnapshotBuilder` is an injected seam for this reason: the
+  gated script’s builder trusts every signature unconditionally, which is
+  honest only because `@finity/verifier` (step 20) has not been built.
+
+The remaining Day 3 item — real testnet evidence — cannot be truthfully
+marked complete without a funded broker account, a deployed
+`MandateRegistry`, the Day 2 services running at public HTTPS origins,
+and a mandate actually registered on-chain with a real Ledger signature
+(Day 4). Also unrelated to Day 3: this workspace’s test runners pick up
+compiled `dist/*.test.js` alongside `src/*.test.ts` in every package
+(no `vitest.config` excludes `dist`), silently doubling every test count
+reported by `pnpm -r test`. Pre-existing since Day 1, not fixed here.
 
 ## Branches and commit cadence
 

@@ -157,3 +157,88 @@ here only after a funded testnet run.
 `@x402/fetch@2.25.0` declarations confirm that `wrapFetchWithPayment(fetch, client)` accepts an `x402Client`; `@x402/hedera@2.25.0` declarations confirm `createClientHederaSigner(accountId, PrivateKey, { network })` and `ExactHederaScheme`. The commerce adapter uses these exact signatures only after separately validating the 402 requirements against the policy-authorized quote.
 
 `better-sqlite3@12.6.2` and `@types/better-sqlite3@7.6.13` are pinned for the finityd purchase store. pnpm did not run its native build script in this workspace, so an actual on-disk SQLite runtime check is pending trusted developer approval; no persistence success is claimed yet.
+
+## Day 3 execution status
+
+`better-sqlite3`'s native build script is now approved via `onlyBuiltDependencies`
+in `pnpm-workspace.yaml`; `pnpm install` fetched a prebuilt binary
+(`prebuild-install`, no local compiler toolchain needed) and
+`packages/finityd/src/index.test.ts` proves `PurchaseStore` persists across a
+close/reopen cycle against a real file path, not just `:memory:`.
+
+`@finity/negotiator` is implemented: `discover()` reads the registry HCS
+topic via `@finity/registry-client`'s `readTopicMessages` and keeps the
+newest manifest per mandate-allowed service; `quote()` requests a signed
+quote from a manifest's `quoteEndpoint` and validates it names the
+requested service/method before trusting it; `select()` is a pure,
+deterministic cheapest-quote pick with a service-ID tiebreak.
+
+`@finity/finityd`'s `createIntentExecutor` (`packages/finityd/src/executor.ts`)
+wires negotiator, `@finity/policy-engine`, `@finity/capability`,
+`@finity/commerce-adapter`, and `@finity/trace-builder` into the full F4
+purchase reducer: `INTENT → DISCOVERED → QUOTED → EVALUATING → AUTHORIZED
+→ RESERVED → PAID → DELIVERED → RECONCILED`, hash-chaining a
+DECISION/PAYMENT/USAGE/RECONCILED trace envelope after each externally
+visible step via `@finity/trace-builder`'s new `buildDecisionReceipt`.
+`packages/finityd/src/executor.test.ts` drives this to `RECONCILED` and
+separately to refusal, escalation, discovery failure, quote failure, and
+payment failure, entirely against injected fakes (no network, no registry
+contract, no Ledger). `MandateStore` holds each mandate's full off-chain
+content and hash-chain tip locally, because `MandateRegistry.record()`
+returns only consumption/status — not the original `allowedServices`/
+`allowedMethods`/`asset` text — so finityd cannot reconstruct a full
+mandate from on-chain state alone.
+
+Two decisions were made explicitly rather than guessed:
+
+- The executor takes an **injected `SnapshotBuilder`** rather than
+  performing mandate/quote/manifest signature verification itself. No
+  digest/recovery scheme for these has been decided or implemented
+  anywhere in this codebase; that decision belongs to `@finity/verifier`
+  (step 20). The gated script's builder trusts every signature
+  unconditionally and says so.
+- The mandate is **supplied to finityd directly** (a `MandateStore.set`
+  call from a CLI-loaded fixture/JSON file), not through a new HTTP
+  intake route. Mandate registration is Day 4's Ledger wizard's job; a
+  route ahead of that wizard would be built against an undecided
+  contract.
+
+`pnpm finityd intent --file fixtures/intent-weather.json`
+(`scripts/finityd-intent.ts`) runs one real F4 purchase against Hedera
+testnet, gated by `FINITY_TESTNET=1` exactly like Day 2's `testnet:paid`
+and `registry:seed`. It resolves the mandate via `@finity/mandate-compiler`'s
+`compile()` (overriding the deployment- and policy-version-specific
+fields — `broker`, `spendAccount`, `policyHash`, `verifyingContract`, the
+validity window — from live env/`POLICY_HASH` rather than trusting a
+stale checked-in fixture), builds a live `RegistryClient`, and extracts
+the reservation ID from the contract's `ReservationCreated` event log via
+viem's `decodeEventLog` — `RegistryClient.reserve()` only returns the
+write's transaction hash, not the reservation ID the contract computes.
+Broker Session Key signing for capabilities and decision receipts uses
+viem's `sign({ hash, privateKey, to: "hex" })`: a raw secp256k1 signature
+over the commitment hash, matching the `signature` schema's 65-byte hex
+shape. It has not been run: it requires a funded broker account, the
+Day 2 services deployed at public HTTPS origins, a `MandateRegistry`
+deployment, and — because the checked-in mandate fixture's signature is a
+placeholder, not a real Ledger signature — a mandate actually registered
+on-chain by a real device-signed `AgentMandate` (Day 4). Running it
+against a live `hello-weather` will also currently fail at the payment
+step: `ServiceManifest` has no client-facing field for a paid method's
+HTTP path (only `quoteEndpoint`/`healthEndpoint`), so the script
+hardcodes `/weather` for `hello-weather@1:weather.current` as a stand-in
+rather than inventing a general resolution rule.
+
+```text
+pnpm -r build -> pass (17 packages)
+pnpm -r typecheck -> pass
+pnpm typecheck -> pass (adds scripts/finityd-intent.ts via tsconfig.scripts.json)
+pnpm -r test -> pass (5 contract, 8 schemas, 10 compiler, 50 policy, 6 provider,
+  5 registry, 2 vault-worker, 2 commerce-adapter, 2 capability, 14 trace-builder,
+  22 negotiator, 25 finityd, 1 per service)
+```
+
+Unrelated to Day 3 but discovered while verifying it: every package's
+`test` script picks up compiled `dist/*.test.js` alongside `src/*.test.ts`
+(no `vitest.config` excludes `dist`), so `pnpm -r test`'s reported test
+counts are doubled everywhere, not only in packages touched this phase.
+Pre-existing since Day 1; not fixed here.
