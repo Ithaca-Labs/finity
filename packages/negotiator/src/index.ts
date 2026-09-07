@@ -88,3 +88,23 @@ export async function quote(manifest: ServiceManifest, methodId: string, request
   }
   return parsed.data;
 }
+
+export type SelectConstraints = { preferCheapest?: boolean };
+
+/**
+ * Deterministic selection over already-fetched quotes. With preferCheapest
+ * (the default) the lowest amount wins, ties broken by service ID; otherwise
+ * the caller's own ordering is trusted and the first quote wins.
+ */
+export function select(quotes: Quote[], constraints: SelectConstraints = {}): Quote {
+  const [first] = quotes;
+  if (!first) throw new NegotiatorError("NO_QUOTES", "no eligible quotes were returned");
+  if (constraints.preferCheapest === false) return first;
+  const cheapest = quotes.reduce((best, candidate) => {
+    const amountDelta = BigInt(candidate.amount) - BigInt(best.amount);
+    if (amountDelta < 0n) return candidate;
+    if (amountDelta > 0n) return best;
+    return candidate.serviceId < best.serviceId ? candidate : best;
+  }, first);
+  return cheapest;
+}

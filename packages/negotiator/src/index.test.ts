@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ServiceManifest } from "@finity/schemas";
-import { NegotiatorError, discover, quote } from "./index.js";
+import type { Quote, ServiceManifest } from "@finity/schemas";
+import { NegotiatorError, discover, quote, select } from "./index.js";
 
 const helloWeather: ServiceManifest = {
   kind: "finity.manifest", version: 1, serviceId: "hello-weather@1",
@@ -62,7 +62,7 @@ describe("negotiator discover", () => {
   });
 });
 
-const validQuote = {
+const validQuote: Quote = {
   kind: "finity.quote", serviceId: "hello-weather@1", methodId: "weather.current",
   manifestHash: `0x${"a".repeat(64)}`, requestClass: { unit: "call", units: "1" },
   amount: "5000000", asset: "0.0.0", network: "hedera:testnet", payTo: "0.0.789",
@@ -102,5 +102,28 @@ describe("negotiator quote", () => {
     const fetcher = jsonFetcher({ error: "boom" }, 500);
     await expect(quote(helloWeather, "weather.current", { unit: "call", units: "1" }, { now: 1000, fetcher }))
       .rejects.toMatchObject({ code: "QUOTE_INVALID" } satisfies Partial<NegotiatorError>);
+  });
+});
+
+const cheap: Quote = { ...validQuote, serviceId: "hello-weather@1", amount: "1000000" };
+const expensive: Quote = { ...validQuote, serviceId: "summarize-lite@1", amount: "9000000" };
+const tie: Quote = { ...validQuote, serviceId: "aaa-cheapest@1", amount: "1000000" };
+
+describe("negotiator select", () => {
+  it("picks the cheapest quote by default", () => {
+    expect(select([expensive, cheap]).serviceId).toBe("hello-weather@1");
+  });
+
+  it("breaks ties deterministically by service ID", () => {
+    expect(select([cheap, tie]).serviceId).toBe("aaa-cheapest@1");
+    expect(select([tie, cheap]).serviceId).toBe("aaa-cheapest@1");
+  });
+
+  it("keeps the caller's ordering when preferCheapest is false", () => {
+    expect(select([expensive, cheap], { preferCheapest: false }).serviceId).toBe("summarize-lite@1");
+  });
+
+  it("throws NO_QUOTES on an empty list", () => {
+    expect(() => select([])).toThrow(NegotiatorError);
   });
 });
