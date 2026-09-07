@@ -22,7 +22,7 @@ if (process.env.FINITY_TESTNET !== "1") {
 
 const signer = createClientHederaSigner(
   required("FINITY_SPEND_ACCOUNT_ID"),
-  PrivateKey.fromString(required("FINITY_BROKER_SESSION_KEY")),
+  PrivateKey.fromStringECDSA(required("FINITY_BROKER_SESSION_KEY")),
   { network: "hedera:testnet" },
 );
 const client = new x402Client().register("hedera:testnet", new ExactHederaScheme(signer));

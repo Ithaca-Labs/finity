@@ -39,7 +39,7 @@ const mandateFixture = JSON.parse(readFileSync(mandatePath, "utf8")) as Record<s
 
 const brokerAddress = required("FINITY_BROKER_EVM_ADDRESS") as `0x${string}`;
 const brokerSessionKey = required("FINITY_BROKER_SESSION_KEY");
-const brokerEvmPrivateKey = `0x${PrivateKey.fromString(brokerSessionKey).toStringRaw()}` as `0x${string}`;
+const brokerEvmPrivateKey = `0x${PrivateKey.fromStringECDSA(brokerSessionKey).toStringRaw()}` as `0x${string}`;
 const spendAccountId = required("FINITY_SPEND_ACCOUNT_ID");
 const registryAddress = required("FINITY_REGISTRY_ADDRESS");
 const now = Math.floor(Date.now() / 1000);
