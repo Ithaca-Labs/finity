@@ -199,3 +199,5 @@ export function compile(choices: MandateChoices): CompiledMandate {
     },
   };
 }
+
+export * from "./revocation-amendment.js";
