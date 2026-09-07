@@ -99,6 +99,19 @@ importers:
         specifier: 2.25.0
         version: 2.25.0(ansi-regex@6.3.0)(ansi-styles@7.0.0)(bn.js@5.2.5)(bufferutil@4.1.0)(debug@4.4.3)(protobufjs@8.6.6)(react-native@0.87.1(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(utf-8-validate@5.0.10))(strip-ansi@7.2.0)(utf-8-validate@5.0.10)
 
+  packages/finity-cli:
+    dependencies:
+      '@finity/finityd':
+        specifier: workspace:*
+        version: link:../finityd
+      '@finity/pi-package':
+        specifier: workspace:*
+        version: link:../pi-package
+    devDependencies:
+      '@types/node':
+        specifier: 26.4.1
+        version: 26.4.1
+
   packages/finityd:
     dependencies:
       '@finity/capability':

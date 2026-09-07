@@ -1,0 +1,19 @@
+{
+  "name": "finity",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "finity": "./dist/bin/finity.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@finity/finityd": "workspace:*",
+    "@finity/pi-package": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1"
+  }
+}
