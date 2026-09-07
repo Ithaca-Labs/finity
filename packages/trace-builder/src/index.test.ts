@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hashCanonicalJson, type DecisionReceipt } from "@finity/schemas";
-import { assertTraceLink, buildEnvelope, receiptHash } from "./index.js";
+import { assertTraceLink, buildDecisionReceipt, buildEnvelope, decisionReceiptCommitment, receiptHash } from "./index.js";
 
 const mandateId = `0x${"01".repeat(32)}` as const;
 const zeroHash = `0x${"00".repeat(32)}` as const;
@@ -85,5 +85,24 @@ describe("assertTraceLink", () => {
       mandateId,
     });
     expect(() => assertTraceLink(envelope, `0x${"99".repeat(32)}`)).toThrow("does not link");
+  });
+});
+
+describe("buildDecisionReceipt", () => {
+  const { kind: _kind, receiptId: _receiptId, ...draft } = decision;
+
+  it("signs the exact commitment it computes", async () => {
+    const seen: string[] = [];
+    const receipt = await buildDecisionReceipt(draft, async (commitment) => {
+      seen.push(commitment);
+      return `0x${"11".repeat(65)}`;
+    });
+    expect(receipt.receiptId).toBe(decisionReceiptCommitment(draft));
+    expect(seen).toEqual([receipt.receiptId]);
+    expect(receipt.brokerSignature).toBe(`0x${"11".repeat(65)}`);
+  });
+
+  it("is deterministic: the same draft always commits to the same receiptId", () => {
+    expect(decisionReceiptCommitment(draft)).toBe(decisionReceiptCommitment({ ...draft }));
   });
 });
