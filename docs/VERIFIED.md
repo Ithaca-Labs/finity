@@ -242,3 +242,103 @@ Unrelated to Day 3 but discovered while verifying it: every package's
 (no `vitest.config` excludes `dist`), so `pnpm -r test`'s reported test
 counts are doubled everywhere, not only in packages touched this phase.
 Pre-existing since Day 1; not fixed here.
+
+## Day 4 execution status
+
+Toolchain re-verified in this workspace on 2026-09-07 (a fresh session; the
+Day 0 toolchain record above was from an earlier one):
+
+```text
+node --version -> v24.13.1
+npm i -g @ledgerhq/wallet-cli @earendil-works/pi-coding-agent -> installed cleanly
+wallet-cli --version -> {"ok":true,"data":{"type":"version","name":"wallet-cli","version":"2.1.0"}}
+pi --version -> 0.85.1
+```
+
+`@ledgerhq/device-management-kit@1.9.0`, `@ledgerhq/device-signer-kit-ethereum@1.18.0`
+(both already recorded), and `@ledgerhq/device-transport-kit-node-hid@1.0.1`
+install cleanly as workspace dependencies of `@finity/pi-package`.
+`node-hid`, `usb`, `keccak`, and `protobufjs`'s native build scripts are
+now approved (`pnpm-workspace.yaml`'s `onlyBuiltDependencies`) and built
+successfully via prebuilt binaries (`prebuild-install`/`node-gyp-build`,
+no local compiler toolchain needed) - no device was plugged in, so this
+confirms the bindings compile, not that HID access itself works.
+
+`@hashgraphonline/standards-sdk@0.1.186` (the package `@hol-org/standards-sdk`
+re-exports, per the existing "Package APIs" section) installs and works
+cleanly on its own; `@hol-org/standards-sdk@0.1.186` itself still declares
+`@hashgraphonline/standards-sdk: workspace:*` and still fails to install
+(ADR-005's blocker, re-checked, unchanged). See ADR-007.
+
+Real, verified DMK API surface (used by `signTypedDataOnDevice`, beyond
+what was already recorded): `new DeviceManagementKitBuilder().addTransport(nodeHidTransportFactory).build()`;
+`dmk.startDiscovering({ transport: nodeHidIdentifier })` returns
+`Observable<DiscoveredDevice>`; `dmk.connect({ device })` returns
+`Promise<DeviceSessionId>`; `signer.signTypedData(derivationPath, typedData)`
+returns `{ observable: Observable<DeviceActionState<Signature, Error,
+Intermediate>>, cancel() }` where `DeviceActionState` is a status-discriminated
+union (`DeviceActionStatus.Completed` carries `{ output: Signature }`,
+`.Error` carries `{ error }`); `Signature = { r: HexaString, s: HexaString,
+v: number }`.
+
+Real, verified: Hiero SDK's `PrivateKey.fromString(text)` is deprecated
+(prints a runtime warning) in favor of `fromStringECDSA(text)` for a raw
+hex-encoded ECDSA key or `fromStringDer(text)` for a DER-prefixed one.
+Directly tested: a raw viem `generatePrivateKey()` hex string round-trips
+identically through both `fromString` and `fromStringECDSA` -
+`toStringRaw()` matches, and the key derives the same EVM address via
+`privateKeyToAccount` as it does natively in viem. Fixed across
+`commerce-adapter`, `paid-testnet.ts`, and `finityd-intent.ts`.
+
+`@hashgraphonline/standards-sdk`'s HCS-14 API, tested directly:
+`canonicalizeAgentData(input)` returns `{ normalized: CanonicalAgentData,
+canonicalJson }`; `createUaid(canonicalData, { uid }?, { includeParams:
+true }?)` is `async` and returns a deterministic `uaid:aid:<hash>;uid=...;
+registry=...;nativeId=...` string (confirmed identical output across two
+calls with the same input). `CanonicalAgentData.skills` is `number[]`, not
+`string[]` as might be assumed from the field name alone. The package's
+own published `.d.ts` does not surface these names from its root export
+under TypeScript `nodenext` resolution even though they work correctly at
+runtime - see ADR-009.
+
+Real, verified failure discovered while building the Pi extension: pi
+0.85.1's extension loader (jiti) fails **any** extension with a *static*
+top-level import of `@ledgerhq/device-signer-kit-ethereum` anywhere in its
+module graph with `Cannot redefine property: module.exports` - confirmed
+by bisecting imports one at a time in a minimal test extension against the
+real installed CLI. A dynamic `import()` inside the function that needs it
+avoids the failure entirely. See ADR-008 and `docs/DX_FEEDBACK.md`.
+
+Verified for real without hardware, against the actual installed `pi`
+CLI: `pi --no-builtin-tools -e src/extensions/finity.ts -p "hello"` loads
+the full extension (all six `finity_*` tools, the `finity` command, the
+`tool_call` blocker) and completes a normal turn; loading the compiled
+`dist/extensions/finity.js` form works identically; adding
+`--skill ./skills/finity-buyer` loads without error; `/finity doctor` (a
+command, not requiring a model call to dispatch) runs to completion
+against a `finityd` that is not running, without crashing.
+`finity broker` (the wrapper bin's headless mode) correctly spawns
+`@finity/finityd`'s daemon and inherits its stderr (observed: a clear
+`ENOENT ... bundles/broker.enc` when no Broker Bundle has been sealed
+yet). Default `finity` mode correctly detects no `finityd` is running,
+attempts to start it, and fails closed with a clear message after a
+bounded 5-second wait rather than hanging.
+
+```text
+pnpm -r build -> pass (17 of 18 workspace projects have a build script;
+  adds @finity/pi-package's extension build and the new finity-cli package)
+pnpm -r typecheck -> pass
+pnpm typecheck -> pass
+pnpm -r test -> pass (5 contract, 8 schemas, 10 compiler, 50 policy,
+  6 provider, 5 registry, 2 vault-worker, 2 commerce-adapter, 2 capability,
+  14 trace-builder, 22 negotiator, 34 finityd, 35 pi-package, 5 finity-cli,
+  1 per service; several of these are already doubled by the pre-existing
+  dist/*.test.js pickup noted above, since pnpm -r test builds dist before
+  running - real counts are the ones stated here, halve what pnpm -r test
+  itself prints)
+```
+
+Not run, and not claimed: `wallet-cli genuine-check`/`ring init` against a
+physical device, DMK `signTypedData` against a physical device, `/finity
+setup` end to end, `/finity mandate new` end to end, and any purchase via
+the `finity_*` tools against a real `finityd`. See `docs/HW_TODO.md`.

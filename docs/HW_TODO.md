@@ -1,9 +1,11 @@
 # Hardware verification TODO
 
-- `HW-UNVERIFIED`: Run `wallet-cli genuine-check` with a physical Ledger on the dashboard.
-- `HW-UNVERIFIED`: Run `wallet-cli ring init` using the user-provisioned OS keychain secret; never place a password in agent input or logs.
+- `HW-UNVERIFIED`: Run `wallet-cli genuine-check` with a physical Ledger on the dashboard. Wired in `@finity/pi-package`'s `wallet-cli-ops.ts` (`/finity setup`'s first step) but never run.
+- `HW-UNVERIFIED`: Run `wallet-cli ring init` using the user-provisioned OS keychain secret; never place a password in agent input or logs. Wired the same way; `runSetupWizard` refuses to proceed to Broker Bundle sealing if this fails.
 - `HW-UNVERIFIED`: Complete and record second-host Key Ring recovery/enrollment.
-- `HW-UNVERIFIED`: Run DMK Node HID discovery/connect/signing with Ethereum app open.
+- `HW-UNVERIFIED`: Run DMK Node HID discovery/connect/signing with Ethereum app open (`@finity/pi-package`'s `signTypedDataOnDevice`). In particular, confirm the r/s/v → 65-byte-hex assembly in `assembleSignature` against a real device response — the v-below-27 normalization mirrors `MandateRegistry.sol`'s `_recover` but has never been checked against what the Ethereum app actually returns.
 - `HW-UNVERIFIED`: Photograph Ledger clear-signing fields and record exact string/uint rendering in `docs/dx/`.
-- `HW-UNVERIFIED`: Verify macOS/Linux Node HID permissions and required udev rules.
-- `HW-UNVERIFIED`: Connect `vault-worker`'s Key Ring decrypt seam to the OS-keychain password reader and exercise it with a real encrypted Broker Bundle; inspect only its public spend-account identifier/checksum.
+- `HW-UNVERIFIED`: Verify Node HID permissions on the actual target OS (macOS/Linux udev rules, or Windows driver access — this workspace is Windows; `node-hid`'s and `usb`'s native builds installed cleanly via prebuilt binaries here, but no device has been plugged in to confirm HID access itself).
+- `~PARTIAL`: `vault-worker`'s Key Ring decrypt seam is wired to the OS-keychain password reader (`WalletPassProvider` reading `WALLET_PASS` from the environment, never chosen/typed by the agent) and exercised for real against the installed wallet-cli 2.1.0 — but only the fail-closed path (`Ledger Key Ring not initialized`), since no ring has been initialized in this workspace. Running it against a *real* encrypted Broker Bundle, inspecting only its public spend-account identifier/checksum, still needs a physical device.
+- `HW-UNVERIFIED`: `/finity setup`'s Spend Account funding step (fund the Broker Session Key's EVM address, then enter the resulting Hedera account ID) has not been run against a real Hedera testnet auto-account-creation; the mirror-node alias→account-ID lookup this implies has not been verified in this codebase.
+- `HW-UNVERIFIED`: A mandate actually registered on-chain via `/finity mandate new` with a real Ledger signature, and `finity`'s buyer tools completing a purchase end to end against it.

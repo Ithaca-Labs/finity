@@ -41,3 +41,56 @@
 - Reason: These are Finity-native artifacts, not an x402 or EIP-712 standard
   schema. EIP-191 binds the exact canonical bytes while providing a concrete,
   independently recoverable signature format.
+
+## ADR-007: Resolve ADR-005 by depending on `@hashgraphonline/standards-sdk` directly
+
+- Date: 2026-09-07
+- Decision: `@finity/pi-package`'s HCS-14 identity code depends on
+  `@hashgraphonline/standards-sdk@0.1.186` directly, not the
+  `@hol-org/standards-sdk` wrapper.
+- Reason: `@hol-org/standards-sdk@0.1.186` still declares
+  `@hashgraphonline/standards-sdk: workspace:*` and still fails to install
+  in this monorepo (re-verified, ADR-005's blocker is unchanged). The
+  package it wraps and merely re-exports installs and works cleanly on its
+  own (`canonicalizeAgentData`, `createUaid`, `HCS14Client` all present and
+  exercised directly, per ADR-002). This is not a replacement package or an
+  invented fallback - it is the same code ADR-002 already verified,
+  reached without the broken wrapper. The published `.d.ts` for this
+  package has its own defect (see ADR-008's note on `identity.ts`'s type
+  assertion) that is unrelated to the packaging issue ADR-005 identified.
+
+## ADR-008: Ledger DMK packages are imported dynamically, not statically
+
+- Date: 2026-09-07
+- Decision: `@finity/pi-package`'s `ledger.ts` imports
+  `@ledgerhq/device-management-kit`, `@ledgerhq/device-transport-kit-node-hid`,
+  and `@ledgerhq/device-signer-kit-ethereum` with a dynamic `import()` inside
+  `signTypedDataOnDevice`, not static top-level imports.
+- Reason: Bisecting imports one at a time against the installed pi 0.85.1
+  CLI showed that pi's extension loader (jiti) fails to load **any**
+  extension with a *static* top-level import of
+  `@ledgerhq/device-signer-kit-ethereum` anywhere in its module graph,
+  with `Cannot redefine property: module.exports` -
+  `@ledgerhq/device-management-kit` and
+  `@ledgerhq/device-transport-kit-node-hid` alone did not trigger it.
+  Dynamic `import()` avoids the failure entirely (verified: the full
+  `finity.ts` extension loads cleanly under the real `pi` CLI with this
+  change) and only pays the load cost when a mandate is actually being
+  signed. Recorded as dev-tooling feedback in `docs/DX_FEEDBACK.md`.
+
+## ADR-009: mandate-wizard.ts's `identity.ts` type assertion for standards-sdk
+
+- Date: 2026-09-07
+- Decision: `identity.ts` imports `@hashgraphonline/standards-sdk` as a
+  namespace (`import * as standardsSdk`) and asserts the shape of
+  `canonicalizeAgentData`/`createUaid`/`CanonicalAgentData` with a
+  documented `as unknown as {...}` cast, instead of importing them by name.
+- Reason: The package's published `dist/es/index.d.ts` does not surface
+  these three names through its `export *` barrel chain under TypeScript's
+  `nodenext` module resolution (`hcs-14/sdk.d.ts` reaches into a
+  bundled-relative path, `../../node_modules/@hashgraph/sdk`, that does not
+  resolve, which appears to break the re-export even under `skipLibCheck`).
+  Runtime resolution is unaffected - both functions were called directly
+  and verified working before this was written. The cast documents a real
+  gap in a third-party package's declarations rather than silently
+  papering over it or inventing an unverified workaround.
