@@ -10,15 +10,28 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck && tsc -p tsconfig.scripts.json",
+    "test": "pnpm -r test && vitest run scripts",
     "lint": "pnpm -r lint",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "provider:weather": "tsx scripts/serve-hello-weather.ts",
+    "provider:summarize": "tsx scripts/serve-summarize-lite.ts",
+    "registry:seed": "tsx scripts/seed-registry.ts",
+    "testnet:paid": "tsx scripts/paid-testnet.ts"
   },
   "devDependencies": {
+    "@finity/hello-weather": "workspace:*",
+    "@finity/provider-sdk": "workspace:*",
+    "@finity/registry-client": "workspace:*",
+    "@finity/schemas": "workspace:*",
+    "@finity/summarize-lite": "workspace:*",
+    "@hiero-ledger/sdk": "2.87.0",
     "@types/node": "26.4.1",
+    "@x402/fetch": "2.25.0",
+    "@x402/hedera": "2.25.0",
     "tsx": "4.20.6",
     "typescript": "7.0.2",
+    "viem": "2.56.3",
     "vitest": "5.0.0"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRegistryClient, readTopicMessages, toContractMandate } from "./index.js";
+import { canonicalServiceManifestMessage, createRegistryClient, readTopicMessages, toContractMandate } from "./index.js";
 
 const mandate = {
   agent: "did:aid:buyer",
@@ -28,6 +28,27 @@ const mandate = {
 };
 
 describe("registry client", () => {
+  it("canonicalizes only schema-valid service manifests for HCS publication", () => {
+    const message = canonicalServiceManifestMessage({
+      kind: "finity.manifest",
+      version: 1,
+      serviceId: "weather@1",
+      provider: { uaid: "did:aid:provider", hederaAccount: "0.0.123", signingKey: "key" },
+      name: "Weather",
+      description: "Weather service",
+      baseUrl: "https://weather.example",
+      methods: [{ id: "weather.current", inputSchemaRef: "schema:in", outputSchemaRef: "schema:out", dataClassMax: 0 }],
+      pricing: { model: "fixed", unit: "call", asset: "0.0.0", network: "hedera:testnet" },
+      quoteEndpoint: "/quote",
+      payTo: "0.0.123",
+      receiptKey: "key",
+      healthEndpoint: "/health",
+      publishedAt: 1,
+      signature: `0x${"11".repeat(65)}`,
+    });
+    expect(message).toContain('"serviceId":"weather@1"');
+    expect(() => canonicalServiceManifestMessage({ kind: "finity.manifest" })).toThrow();
+  });
   it("converts schema values to contract ABI values", () => {
     const result = toContractMandate(mandate);
     expect(result.maxPerRequest).toBe(5000000n);

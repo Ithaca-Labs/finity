@@ -66,6 +66,7 @@ Inspected from exact npm tarballs and declarations before dependent code:
 - `@x402/fetch@2.25.0`: `wrapFetchWithPayment(fetch, client)` and `wrapFetchWithPaymentFromConfig(fetch, config)` from `@x402/fetch`.
 - `@x402/express@2.25.0`: `paymentMiddleware(routes, server, ...)`, `paymentMiddlewareFromConfig(routes, facilitatorClients, schemes, ...)`, and `ExpressAdapter` from `@x402/express`.
 - `@x402/hedera@2.25.0`: `ExactHederaScheme` from `@x402/hedera/exact/client` and `/exact/server`; `createClientHederaSigner(accountId, privateKey, config?)`, `createHederaClient(network, nodeUrl?)`, and Hiero primitives re-exported from `@x402/hedera`. The client signer takes a Hiero `PrivateKey` and an account ID.
+- `@x402/fetch@2.25.0`: `wrapFetchWithPayment(fetch, new x402Client().register("hedera:testnet", new ExactHederaScheme(signer)))` retries a 402 request with a payment payload. `x402HTTPClient.processResponse(response)` reports the post-payment settlement status. `PrivateKey` and `createClientHederaSigner` are imported from `@x402/hedera`, avoiding a direct SDK import in the payment client.
 - `@x402/core@2.25.0`: `HTTPFacilitatorClient({ url })`, `x402ResourceServer(facilitator).register(network, scheme)`, `RoutesConfig`, and `FacilitatorClient` from `@x402/core/server`.
 - `@hiero-ledger/sdk@2.87.0`: the package-root `Client` export is the Node client; `Client.forTestnet()` / `Client.forMainnet()` create clients, `setOperator(accountId, privateKey)` configures signing, and `TopicCreateTransaction({ topicMemo }).execute(client)` plus `TopicMessageSubmitTransaction({ topicId, message }).execute(client)` return responses whose `getReceipt(client)` confirms consensus. `privateKeyToAccount` is not a viem root export; it is imported from `viem/accounts`.
 - `@hol-org/standards-sdk@0.1.186`: published package re-exports `@hashgraphonline/standards-sdk`. The live declaration exposes `HCS14Client`, `canonicalizeAgentData(input)`, and overloaded `createUaid(existingDid, params?)` / `createUaid(canonicalAgentData, params?, options?)`. The canonical agent schema requires `registry`, `name`, `version`, `protocol`, `nativeId`, and `skills`; this supersedes the older `resolveAgent`/`registerAgent` assumption in the spec for v1 identity generation.
@@ -137,6 +138,14 @@ pnpm -r test -> pass (5 contract, 8 schemas, 10 compiler, 50 policy, 6 provider,
 scoped secret scan -> clean
 pure core I/O/system-clock scan -> clean
 ```
+
+## Day 2 execution status
+
+The repository now includes local provider launch commands, a signed-manifest
+registry seeder, and a real x402 payment client script. `registry:seed` and
+`testnet:paid` refuse unless `FINITY_TESTNET=1`; no HCS write or HBAR payment
+has been attempted from this workspace. Their transaction IDs must be recorded
+here only after a funded testnet run.
 
 ## Pending live/hardware verification
 

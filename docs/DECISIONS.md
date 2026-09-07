@@ -29,3 +29,15 @@
 - Date: 2026-09-07
 - Decision: The provider/registry phase does not install or wrap `@hol-org/standards-sdk@0.1.186`; HCS-14 identity integration remains a later module item.
 - Reason: The inspected published package declares `@hashgraphonline/standards-sdk@workspace:*`, which is unresolved in this monorepo and makes `pnpm install` fail. No replacement package or invented fallback was added. The live HCS-14 API remains recorded in ADR-002 for the identity phase.
+
+## ADR-006: Provider artifacts use EIP-191 signatures over JCS
+
+- Date: 2026-09-07
+- Decision: The Day 2 provider runtime signs the RFC 8785 canonical JSON string
+  for manifests, quotes, and usage receipts with viem `signMessage`; the
+  manifest records the corresponding secp256k1 public key. The verifier phase
+  will recover and compare the EIP-191 signer rather than treating a signature
+  string as self-authenticating.
+- Reason: These are Finity-native artifacts, not an x402 or EIP-712 standard
+  schema. EIP-191 binds the exact canonical bytes while providing a concrete,
+  independently recoverable signature format.

@@ -3,9 +3,11 @@ import {
   canonicalizeJson,
   hcsEnvelopeSchema,
   integerString,
+  serviceManifestSchema,
   signature as signatureSchema,
   type AgentMandate,
   type HcsEnvelope,
+  type ServiceManifest,
 } from "@finity/schemas";
 import {
   Client as HederaClient,
@@ -510,8 +512,13 @@ export type HcsWriterOptions = {
 export type HcsWriter = {
   createTopic(memo: string): Promise<{ topicId: string; transactionId: string }>;
   submitMessage(topicId: string, envelope: HcsEnvelope): Promise<string>;
+  submitServiceManifest(topicId: string, manifest: ServiceManifest): Promise<string>;
   close(): void;
 };
+
+export function canonicalServiceManifestMessage(manifest: unknown): string {
+  return canonicalizeJson(serviceManifestSchema.parse(manifest));
+}
 
 export function createHcsWriter(options: HcsWriterOptions): HcsWriter {
   if (!options.operatorId || !options.privateKey) throw new Error("HCS operator credentials are required");
@@ -528,6 +535,13 @@ export function createHcsWriter(options: HcsWriterOptions): HcsWriter {
     async submitMessage(topicId, envelope) {
       if (!topicId) throw new Error("topic ID is required");
       const message = canonicalizeJson(hcsEnvelopeSchema.parse(envelope));
+      const response = await new TopicMessageSubmitTransaction({ topicId, message }).execute(client);
+      await response.getReceipt(client);
+      return response.transactionId.toString();
+    },
+    async submitServiceManifest(topicId, manifest) {
+      if (!topicId) throw new Error("topic ID is required");
+      const message = canonicalServiceManifestMessage(manifest);
       const response = await new TopicMessageSubmitTransaction({ topicId, message }).execute(client);
       await response.getReceipt(client);
       return response.transactionId.toString();

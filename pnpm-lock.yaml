@@ -8,15 +8,42 @@ importers:
 
   .:
     devDependencies:
+      '@finity/hello-weather':
+        specifier: workspace:*
+        version: link:services/hello-weather
+      '@finity/provider-sdk':
+        specifier: workspace:*
+        version: link:packages/provider-sdk
+      '@finity/registry-client':
+        specifier: workspace:*
+        version: link:packages/registry-client
+      '@finity/schemas':
+        specifier: workspace:*
+        version: link:packages/schemas
+      '@finity/summarize-lite':
+        specifier: workspace:*
+        version: link:services/summarize-lite
+      '@hiero-ledger/sdk':
+        specifier: 2.87.0
+        version: 2.87.0(bn.js@5.2.5)
       '@types/node':
         specifier: 26.4.1
         version: 26.4.1
+      '@x402/fetch':
+        specifier: 2.25.0
+        version: 2.25.0
+      '@x402/hedera':
+        specifier: 2.25.0
+        version: 2.25.0(ansi-regex@6.2.2)(ansi-styles@6.2.3)(bn.js@5.2.5)(debug@4.4.1)(protobufjs@8.2.0)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))(strip-ansi@7.1.2)
       tsx:
         specifier: 4.20.6
         version: 4.20.6
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+      viem:
+        specifier: 2.56.3
+        version: 2.56.3(typescript@7.0.2)(zod@3.25.76)
       vitest:
         specifier: 5.0.0
         version: 5.0.0(@types/node@26.4.1)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.20.6))
@@ -84,7 +111,7 @@ importers:
         version: 2.25.0(ethers@6.17.0)(express@5.2.1)(typescript@7.0.2)
       '@x402/hedera':
         specifier: 2.25.0
-        version: 2.25.0(ansi-regex@6.2.2)(ansi-styles@6.2.3)(bn.js@5.2.5)(debug@4.4.1)(protobufjs@8.2.0)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))(strip-ansi@7.1.2)
+        version: 2.25.0(ansi-regex@6.3.0)(ansi-styles@7.0.0)(bn.js@5.2.5)(debug@4.4.3)(protobufjs@8.6.6)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))(strip-ansi@7.2.0)
       express:
         specifier: 5.2.1
         version: 5.2.1
@@ -1386,6 +1413,9 @@ packages:
 
   '@x402/extensions@2.25.0':
     resolution: {integrity: sha512-7gXpYoHX8CkQ4bwUfzx0GS6VQlx810+GiGOAYhwsbTtIZFt/ahz/5CjCs7qfoKYcgAWcVyvBCl9U3FYYBX01nA==}
+
+  '@x402/fetch@2.25.0':
+    resolution: {integrity: sha512-kpmxnMTjxZJD5r4yVhRDtCrBVfGhum+XwrUUUdffi3Y91eAm9ZiWCDNHLtahOS2kmuzTR2NPbbIoohZQJmQsxg==}
 
   '@x402/hedera@2.25.0':
     resolution: {integrity: sha512-mPtnyAtENqD3N/3i6ls1WhOCb1w/a2E5MQmePj4hVZWZO+YSUDY6BPGT9MQZbLGPmoNpUG5KfgKH1bYoTNGakA==}
@@ -3655,7 +3685,7 @@ snapshots:
   '@grpc/proto-loader@0.7.15':
     dependencies:
       lodash.camelcase: 4.3.0
-      long: 5.3.1
+      long: 5.3.2
       protobufjs: 7.6.6
       yargs: 17.7.3
 
@@ -3716,6 +3746,15 @@ snapshots:
       long: 5.3.1
       protobufjs: 8.6.6
       strip-ansi: 7.1.2
+
+  '@hiero-ledger/proto@2.31.0(ansi-regex@6.3.0)(ansi-styles@7.0.0)(debug@4.4.3)(protobufjs@8.6.6)(strip-ansi@7.2.0)':
+    dependencies:
+      ansi-regex: 6.3.0
+      ansi-styles: 7.0.0
+      debug: 4.4.3(supports-color@8.1.1)
+      long: 5.3.1
+      protobufjs: 8.6.6
+      strip-ansi: 7.2.0
 
   '@hiero-ledger/sdk@2.85.0(bn.js@5.2.5)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))':
     dependencies:
@@ -4480,9 +4519,31 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@x402/fetch@2.25.0':
+    dependencies:
+      '@x402/core': 2.25.0
+
   '@x402/hedera@2.25.0(ansi-regex@6.2.2)(ansi-styles@6.2.3)(bn.js@5.2.5)(debug@4.4.1)(protobufjs@8.2.0)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))(strip-ansi@7.1.2)':
     dependencies:
       '@hiero-ledger/proto': 2.31.0(ansi-regex@6.2.2)(ansi-styles@6.2.3)(debug@4.4.1)(protobufjs@8.2.0)(strip-ansi@7.1.2)
+      '@hiero-ledger/sdk': 2.85.0(bn.js@5.2.5)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))
+      '@x402/core': 2.25.0
+    transitivePeerDependencies:
+      - ansi-regex
+      - ansi-styles
+      - bn.js
+      - bufferutil
+      - debug
+      - expo-crypto
+      - protobufjs
+      - react-native
+      - strip-ansi
+      - supports-color
+      - utf-8-validate
+
+  '@x402/hedera@2.25.0(ansi-regex@6.3.0)(ansi-styles@7.0.0)(bn.js@5.2.5)(debug@4.4.3)(protobufjs@8.6.6)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))(strip-ansi@7.2.0)':
+    dependencies:
+      '@hiero-ledger/proto': 2.31.0(ansi-regex@6.3.0)(ansi-styles@7.0.0)(debug@4.4.3)(protobufjs@8.6.6)(strip-ansi@7.2.0)
       '@hiero-ledger/sdk': 2.85.0(bn.js@5.2.5)(react-native@0.87.1(@babel/core@7.29.7)(react@19.2.8))
       '@x402/core': 2.25.0
     transitivePeerDependencies:
@@ -5858,7 +5919,7 @@ snapshots:
   protobufjs@8.2.0:
     dependencies:
       '@types/node': 26.4.1
-      long: 5.3.1
+      long: 5.3.2
 
   protobufjs@8.6.6:
     dependencies:

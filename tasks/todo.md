@@ -11,8 +11,8 @@
 - [x] 7. Implement `@finity/mandate-compiler`: EIP-712 data and Ledger display model.
 - [x] 8. Implement `@finity/policy-engine`: ordered fail-closed evaluation and policy hash.
 - [x] 9. Implement and test `MandateRegistry.sol` locally; prepare testnet deployment.
-- [x] 10. Implement `@finity/provider-sdk` and the two demo service skeletons.
-- [x] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access.
+- [x] 10. Implement `@finity/provider-sdk`, runnable x402 provider entry points, signed-manifest publishing, and the gated paid-request client.
+- [x] 11. Implement `@finity/registry-client` for mirror, HCS, and Hashio access, including canonical service-manifest submission.
 - [ ] 12. Implement `@finity/vault-worker` with Key Ring isolation, egress, injection, and redaction.
 - [ ] 13. Implement `@finity/commerce-adapter` with x402 challenge binding.
 - [ ] 14. Implement `@finity/negotiator`, `@finity/capability`, and `@finity/trace-builder`.
@@ -25,6 +25,20 @@
 - [ ] 21. Build `pnpm demo`, README architecture/payment docs, and judge-facing evidence.
 - [ ] 22. Run full QA, secret-leak checks, review diffs, push/merge phase branches, and record risks.
 - [x] 23. Reproduce and fix CI ordering for generated contract types; verify the remote checks.
+
+## Day 2 status — code complete, live evidence pending
+
+- [x] Provider SDK and both provider services build, typecheck, and test locally.
+- [x] `pnpm provider:weather` and `pnpm provider:summarize` provide deployable x402 service entry points with signed runtime manifests.
+- [x] `pnpm registry:seed` creates an HCS service-registry topic and publishes both canonical signed manifests, guarded by `FINITY_TESTNET=1`.
+- [x] `pnpm testnet:paid` uses `@x402/fetch` with the Hedera exact scheme to make one paid request to each service, also guarded by `FINITY_TESTNET=1`.
+- [x] `pnpm build`, `pnpm typecheck`, and `pnpm test` pass after the Day 2 changes.
+- [ ] Deploy both services at public HTTPS origins; configure the required funded Hedera operator, provider, and Spend Account credentials locally.
+- [ ] Run the two guarded testnet commands and record the registry topic plus both Blocky402 settlement transaction IDs and HashScan links in `docs/VERIFIED.md`.
+
+The unchecked items are the Day 2 build-spec completion criterion. They cannot
+be truthfully marked complete until funded testnet credentials and public
+provider URLs are configured outside this repository.
 
 ## Branches and commit cadence
 
