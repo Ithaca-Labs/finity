@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, afterEach } from "vitest";
@@ -31,7 +31,7 @@ describe("finityd HTTP API", () => {
     running = startFinityd();
     const response = await fetch(`${await baseUrl(running)}/v1/health`, { headers: { authorization: `Bearer ${running.token}` } });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ok" });
+    expect(await response.json()).toEqual({ status: "ok", killSwitchActive: false });
   });
 
   it("threads the executor's result and refusal payloads back into the stored purchase", async () => {
@@ -64,6 +64,51 @@ describe("finityd HTTP API", () => {
     expect(fetched.status).toBe(200);
     const purchase = await fetched.json();
     expect(purchase).toMatchObject({ state: "REFUSED", refusal: { reasonCodes: ["SERVICE_NOT_ALLOWED"] } });
+  });
+});
+
+describe("kill switch", () => {
+  it("refuses new intents while the kill-switch file exists, and reports it in health, without touching existing purchases", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "finityd-kill-switch-"));
+    const killSwitchPath = join(dir, "kill-switch");
+    try {
+      let executorCalled = false;
+      running = startFinityd({ killSwitchPath, executor: async () => { executorCalled = true; } });
+      const url = await baseUrl(running);
+      const headers = { authorization: `Bearer ${running.token}` };
+
+      const healthBefore = await fetch(`${url}/v1/health`, { headers });
+      expect(await healthBefore.json()).toEqual({ status: "ok", killSwitchActive: false });
+
+      writeFileSync(killSwitchPath, "");
+      const healthDuring = await fetch(`${url}/v1/health`, { headers });
+      expect(await healthDuring.json()).toEqual({ status: "ok", killSwitchActive: true });
+
+      const blocked = await fetch(`${url}/v1/intents`, {
+        method: "POST",
+        headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({
+          mandateId: `0x${"01".repeat(32)}`, agentUaid: "did:aid:buyer", payloadRef: "ref://1",
+          requestClass: { unit: "call", units: "1" }, dataClass: 0,
+        }),
+      });
+      expect(blocked.status).toBe(503);
+      expect(await blocked.json()).toEqual({ error: "kill_switch_active" });
+      expect(executorCalled).toBe(false);
+
+      rmSync(killSwitchPath);
+      const allowed = await fetch(`${url}/v1/intents`, {
+        method: "POST",
+        headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({
+          mandateId: `0x${"01".repeat(32)}`, agentUaid: "did:aid:buyer", payloadRef: "ref://1",
+          requestClass: { unit: "call", units: "1" }, dataClass: 0,
+        }),
+      });
+      expect(allowed.status).toBe(202);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

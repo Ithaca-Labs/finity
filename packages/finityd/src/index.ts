@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { randomBytes, randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import Database from "better-sqlite3";
 import { discover, quote, type QuoteFetcher } from "@finity/negotiator";
 import type { MirrorFetcher } from "@finity/registry-client";
@@ -83,7 +84,7 @@ export type ServicesDependencies = {
 };
 
 /** Starts a localhost-only, bearer-protected API. No route can decrypt, sign, or broadcast arbitrary caller data. */
-export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; token?: string; host?: "127.0.0.1" | "::1"; port?: number } = {}): Finityd {
+export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
   const store = options.store ?? new PurchaseStore(); const token = options.token ?? randomBytes(32).toString("base64url");
   const server = createServer(async (request, response) => {
     try {
@@ -92,8 +93,12 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
       if (method === "GET" && /^\/v1\/intents\/[0-9a-f-]+$/i.test(url.pathname)) { const purchase = store.get(url.pathname.split("/").at(-1)!); return purchase ? json(response, 200, purchase) : json(response, 404, { error: "not_found" }); }
       if (method === "GET" && /^\/v1\/(mandates|receipts)\/[a-zA-Z0-9x.-]+$/.test(url.pathname)) return json(response, 501, { error: "day2_dependency_unavailable" });
       if (!INTENT_ROUTE_ALLOWLIST.has(key)) return json(response, 404, { error: "route_not_allowed" });
-      if (key === "GET /v1/health") return json(response, 200, { status: "ok" });
+      if (key === "GET /v1/health") {
+        const killSwitchActive = Boolean(options.killSwitchPath && existsSync(options.killSwitchPath));
+        return json(response, 200, { status: "ok", killSwitchActive });
+      }
       if (key === "POST /v1/intents") {
+        if (options.killSwitchPath && existsSync(options.killSwitchPath)) return json(response, 503, { error: "kill_switch_active" });
         const purchase = store.create(parseIntent(await readBody(request)));
         if (options.executor) {
           void options.executor(purchase, (event, extra) => store.transition(purchase.correlationId, event, extra))

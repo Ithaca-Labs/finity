@@ -1,9 +1,10 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { hostname, homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
+import { compileRevocation } from "@finity/mandate-compiler";
 import { POLICY_HASH } from "@finity/policy-engine";
 import { loadActiveMandate, saveActiveMandate, type ActiveMandate } from "../active-mandate.js";
 import { explainRefusal, pollPurchase } from "../buyer-tools.js";
@@ -166,7 +167,7 @@ export default function finityExtension(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("finity", {
-    description: "Finity setup, mandate, and diagnostics commands (setup | mandate new|list|show | escalations | revoke <id> | trace <mandateId> | doctor)",
+    description: "Finity setup, mandate, and diagnostics commands (setup | mandate new|list|show | escalations | revoke <id> | trace <mandateId> | doctor | kill on|off)",
     handler: async (args, ctx) => {
       const [subcommand, ...rest] = (args ?? "").trim().split(/\s+/).filter(Boolean);
       try {
@@ -187,10 +188,13 @@ export default function finityExtension(pi: ExtensionAPI) {
             handleTrace(rest, ctx);
             return;
           case "revoke":
-            ctx.ui.notify("Mandate revocation (a fresh Ledger signature) is not implemented yet.", "info");
+            await handleRevoke(rest, ctx);
+            return;
+          case "kill":
+            await handleKillSwitch(rest, ctx);
             return;
           default:
-            ctx.ui.notify("Usage: /finity setup | mandate new|list|show | escalations | revoke <id> | trace <mandateId> | doctor", "info");
+            ctx.ui.notify("Usage: /finity setup | mandate new|list|show | escalations | revoke <id> | trace <mandateId> | doctor | kill on|off", "info");
         }
       } catch (error) {
         ctx.ui.notify(`/finity ${subcommand ?? ""} failed: ${(error as Error).message}`, "error");
@@ -322,4 +326,59 @@ function handleTrace(args: string[], ctx: ExtensionCommandContext): void {
     `Read MandateRegistry.record(${mandateId}).traceTopic from the registry (FINITY_REGISTRY_ADDRESS) and open https://hashscan.io/testnet/topic/<that topic ID>. Automatic lookup is not wired yet.`,
     "info",
   );
+}
+
+/** `/finity revoke <mandateId>`: an emergency stop, signed on the Ledger (FINITY_BUILD_SPEC.md step 17/19). */
+async function handleRevoke(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+  const active = await loadActiveMandate(join(finityHome(), "active-mandate.json"));
+  const mandateId = (args[0] ?? active?.mandateId) as `0x${string}` | undefined;
+  if (!mandateId) {
+    ctx.ui.notify("Usage: /finity revoke <mandateId> (or set an active mandate first with /finity mandate new)", "info");
+    return;
+  }
+  const registryAddress = process.env.FINITY_REGISTRY_ADDRESS;
+  if (!registryAddress) {
+    ctx.ui.notify("FINITY_REGISTRY_ADDRESS must be set.", "error");
+    return;
+  }
+  const reason = await ctx.ui.input("Revoke mandate", `Reason for revoking mandate ${mandateId} (shown on your Ledger screen):`);
+  if (!reason) {
+    ctx.ui.notify("Revocation cancelled: no reason provided.", "info");
+    return;
+  }
+  const confirmed = await ctx.ui.confirm("Revoke mandate", `This immediately and permanently revokes mandate ${mandateId}. Review the fields on your Ledger before approving.`);
+  if (!confirmed) return;
+
+  // The contract scopes nonces per principal, not per mandate, and this
+  // codebase has no nonce registry to pick the next sequential one from -
+  // a millisecond timestamp is a pragmatic, effectively-unique choice for a
+  // rare, human-triggered action like this.
+  const { typedData, canonicalRevocation } = compileRevocation({
+    mandateId, nonce: String(Date.now()), reason, verifyingContract: registryAddress as `0x${string}`,
+  });
+  const signature = await signTypedDataOnDevice({
+    derivationPath: "44'/60'/0'/0/0",
+    typedData: { ...typedData, types: { Revocation: [...typedData.types.Revocation] } },
+  });
+  const registryClient = createRegistryClient({ contractAddress: registryAddress, rpcUrl: process.env.FINITY_RPC_URL });
+  await registryClient.revoke({ ...canonicalRevocation, mandateId: canonicalRevocation.mandateId as `0x${string}` }, signature);
+  ctx.ui.notify(`Mandate ${mandateId} revoked.`, "info");
+}
+
+/** `/finity kill on|off`: a broker-level emergency stop that needs no device, no network, and no signature - a file finityd checks before accepting any new intent. */
+async function handleKillSwitch(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+  const path = join(finityHome(), "kill-switch");
+  const [action] = args;
+  if (action === "on") {
+    await mkdir(finityHome(), { recursive: true });
+    await writeFile(path, `activated ${new Date().toISOString()}\n`, "utf8");
+    ctx.ui.notify("Kill switch activated: finityd will refuse all new purchases until this is cleared.", "info");
+    return;
+  }
+  if (action === "off") {
+    await rm(path, { force: true });
+    ctx.ui.notify("Kill switch cleared.", "info");
+    return;
+  }
+  ctx.ui.notify("Usage: /finity kill on|off", "info");
 }
