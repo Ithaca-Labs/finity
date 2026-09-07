@@ -1,7 +1,6 @@
-import { DeviceActionStatus, DeviceManagementKitBuilder } from "@ledgerhq/device-management-kit";
-import { nodeHidIdentifier, nodeHidTransportFactory } from "@ledgerhq/device-transport-kit-node-hid";
-import { SignerEthBuilder, type Signature, type TypedData } from "@ledgerhq/device-signer-kit-ethereum";
-import { firstValueFrom } from "rxjs";
+import type { DeviceActionStatus as DeviceActionStatusType, DeviceManagementKitBuilder as DeviceManagementKitBuilderType } from "@ledgerhq/device-management-kit";
+import type { nodeHidIdentifier as nodeHidIdentifierType, nodeHidTransportFactory as nodeHidTransportFactoryType } from "@ledgerhq/device-transport-kit-node-hid";
+import type { SignerEthBuilder as SignerEthBuilderType, Signature, TypedData } from "@ledgerhq/device-signer-kit-ethereum";
 
 export class LedgerSigningError extends Error {
   constructor(
@@ -41,6 +40,14 @@ export type SignTypedDataOnDeviceOptions = {
  * Connects to the first Ledger found over USB HID, opens the Ethereum app's
  * EIP-712 signing flow, and returns the assembled 65-byte signature.
  *
+ * The Ledger DMK packages are imported dynamically rather than statically:
+ * pi's extension loader (jiti) fails every extension that has a *static*
+ * top-level import of @ledgerhq/device-signer-kit-ethereum anywhere in its
+ * module graph with "Cannot redefine property: module.exports" - confirmed
+ * by bisecting imports directly against the installed pi 0.85.1 CLI.
+ * Dynamic import() avoids it entirely and only pays the load cost when a
+ * mandate is actually being signed.
+ *
  * HW-UNVERIFIED (docs/HW_TODO.md): never run against a physical device in
  * this environment. The discover -> connect -> sign -> disconnect sequence
  * follows the verified DMK API surface (VERIFIED.md), but the device
@@ -48,6 +55,13 @@ export type SignTypedDataOnDeviceOptions = {
  * normalization above have not been exercised for real.
  */
 export async function signTypedDataOnDevice(options: SignTypedDataOnDeviceOptions): Promise<`0x${string}`> {
+  const [{ DeviceActionStatus, DeviceManagementKitBuilder }, { nodeHidIdentifier, nodeHidTransportFactory }, { SignerEthBuilder }, { firstValueFrom }] = await Promise.all([
+    import("@ledgerhq/device-management-kit") as Promise<{ DeviceActionStatus: typeof DeviceActionStatusType; DeviceManagementKitBuilder: typeof DeviceManagementKitBuilderType }>,
+    import("@ledgerhq/device-transport-kit-node-hid") as Promise<{ nodeHidIdentifier: typeof nodeHidIdentifierType; nodeHidTransportFactory: typeof nodeHidTransportFactoryType }>,
+    import("@ledgerhq/device-signer-kit-ethereum") as Promise<{ SignerEthBuilder: typeof SignerEthBuilderType }>,
+    import("rxjs"),
+  ]);
+
   const dmk = new DeviceManagementKitBuilder().addTransport(nodeHidTransportFactory).build();
   try {
     const discovered = await Promise.race([
