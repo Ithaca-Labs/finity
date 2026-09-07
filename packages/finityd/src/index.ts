@@ -4,12 +4,16 @@ import { existsSync } from "node:fs";
 import Database from "better-sqlite3";
 import { discover, quote, type QuoteFetcher } from "@finity/negotiator";
 import type { MirrorFetcher } from "@finity/registry-client";
-import { reducePurchase, requestClassSchema, type Hash, type PurchaseEvent, type PurchaseState } from "@finity/schemas";
+import { reducePurchase, requestClassSchema, signedAgentMandateSchema, type Hash, type PurchaseEvent, type PurchaseState } from "@finity/schemas";
+import { EscalationStore, type ProposedAmendment } from "./escalation-store.js";
 import type { MandateStore } from "./executor.js";
+
+export { EscalationStore } from "./escalation-store.js";
+export type { Escalation, EscalationStatus, ProposedAmendment } from "./escalation-store.js";
 
 export const INTENT_ROUTE_ALLOWLIST = new Set([
   "POST /v1/intents", "GET /v1/services", "POST /v1/quotes", "POST /v1/escalations",
-  "GET /v1/escalations", "GET /v1/health",
+  "GET /v1/escalations", "GET /v1/health", "POST /v1/mandates",
 ]);
 
 export type Intent = {
@@ -53,6 +57,11 @@ export class PurchaseStore {
     const row = this.db.prepare("SELECT * FROM purchases WHERE id = ?").get(id) as { id: string; state: PurchaseState; intent: string; result: string | null; refusal: string | null; updated_at: number } | undefined;
     return row && { correlationId: row.id, state: row.state, intent: JSON.parse(row.intent), ...(row.result ? { result: JSON.parse(row.result) } : {}), ...(row.refusal ? { refusal: JSON.parse(row.refusal) } : {}), updatedAt: row.updated_at };
   }
+  /** Full scan; fine for a single-broker local store. Used to find a purchase by the receiptId inside its refusal, which has no index of its own. */
+  list(): Purchase[] {
+    const rows = this.db.prepare("SELECT id FROM purchases").all() as { id: string }[];
+    return rows.map((row) => this.get(row.id)).filter((purchase): purchase is Purchase => purchase !== undefined);
+  }
   transition(id: string, event: PurchaseEvent, extra: Pick<Purchase, "result" | "refusal"> = {}): Purchase {
     const current = this.get(id); if (!current) throw new Error("purchase not found");
     const state = reducePurchase(current.state, event); const updatedAt = Math.floor(Date.now() / 1000);
@@ -84,14 +93,27 @@ export type ServicesDependencies = {
 };
 
 /** Starts a localhost-only, bearer-protected API. No route can decrypt, sign, or broadcast arbitrary caller data. */
-export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
+export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; escalations?: EscalationStore; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
   const store = options.store ?? new PurchaseStore(); const token = options.token ?? randomBytes(32).toString("base64url");
+  const escalations = options.escalations ?? new EscalationStore();
   const server = createServer(async (request, response) => {
     try {
       const method = request.method ?? "GET"; const url = new URL(request.url ?? "/", "http://localhost"); const key = `${method} ${url.pathname}`;
       if (request.headers.authorization !== `Bearer ${token}`) return json(response, 401, { error: "unauthorized" });
       if (method === "GET" && /^\/v1\/intents\/[0-9a-f-]+$/i.test(url.pathname)) { const purchase = store.get(url.pathname.split("/").at(-1)!); return purchase ? json(response, 200, purchase) : json(response, 404, { error: "not_found" }); }
-      if (method === "GET" && /^\/v1\/(mandates|receipts)\/[a-zA-Z0-9x.-]+$/.test(url.pathname)) return json(response, 501, { error: "day2_dependency_unavailable" });
+      if (method === "GET" && /^\/v1\/receipts\/[a-zA-Z0-9x.-]+$/.test(url.pathname)) return json(response, 501, { error: "day2_dependency_unavailable" });
+      if (method === "GET" && /^\/v1\/mandates\/0x[0-9a-fA-F]{64}$/.test(url.pathname)) {
+        if (!options.services) return json(response, 501, { error: "day2_dependency_unavailable" });
+        const record = options.services.mandateStore.get(url.pathname.split("/").at(-1) as Hash);
+        return record ? json(response, 200, record.mandate) : json(response, 404, { error: "mandate_not_found" });
+      }
+      if (method === "POST" && /^\/v1\/escalations\/[0-9a-f-]+\/resolve$/i.test(url.pathname)) {
+        const escalationId = url.pathname.split("/").at(-2)!;
+        const body = (await readBody(request)) as { status?: string };
+        if (body.status !== "APPROVED" && body.status !== "REJECTED") return json(response, 400, { error: "invalid_status" });
+        const resolved = escalations.resolve(escalationId, body.status);
+        return resolved ? json(response, 200, resolved) : json(response, 404, { error: "escalation_not_found" });
+      }
       if (!INTENT_ROUTE_ALLOWLIST.has(key)) return json(response, 404, { error: "route_not_allowed" });
       if (key === "GET /v1/health") {
         const killSwitchActive = Boolean(options.killSwitchPath && existsSync(options.killSwitchPath));
@@ -145,6 +167,35 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
         } catch {
           return json(response, 502, { error: "quote_failed" });
         }
+      }
+      if (key === "POST /v1/escalations") {
+        const body = (await readBody(request)) as { receiptId?: string };
+        if (typeof body.receiptId !== "string") return json(response, 400, { error: "invalid_request" });
+        const purchase = store.list().find((candidate) => (candidate.refusal as { receiptId?: string } | undefined)?.receiptId === body.receiptId);
+        if (!purchase) return json(response, 404, { error: "receipt_not_found" });
+        const refusal = purchase.refusal as { decision?: string; proposedAmendment?: unknown } | undefined;
+        if (refusal?.decision !== "ESCALATION_REQUIRED" || !refusal.proposedAmendment) return json(response, 400, { error: "not_escalatable" });
+        const escalation = escalations.create({
+          correlationId: purchase.correlationId, mandateId: purchase.intent.mandateId,
+          receiptId: body.receiptId as Hash, proposedAmendment: refusal.proposedAmendment as ProposedAmendment,
+        });
+        return json(response, 200, { escalationId: escalation.escalationId, proposal: escalation.proposedAmendment });
+      }
+      if (key === "GET /v1/escalations") return json(response, 200, { escalations: escalations.listPending() });
+      if (key === "POST /v1/mandates") {
+        // Loads a mandate into the live MandateStore without a restart - needed
+        // after /finity mandate new or an approved escalation's successor
+        // mandate. Same trust level as the whole bearer-token-gated local API
+        // and the ~/.finity/mandates/*.json files this daemon already loads
+        // unverified at boot: no real signature/on-chain verification gates
+        // this either, since that scheme is still undecided (@finity/verifier's
+        // job). Not a new privilege beyond what already holding the token or
+        // filesystem access implies, but worth tightening once that scheme exists.
+        if (!options.services) return json(response, 501, { error: "day2_dependency_unavailable" });
+        const parsed = signedAgentMandateSchema.safeParse(await readBody(request));
+        if (!parsed.success) return json(response, 400, { error: "invalid_mandate" });
+        options.services.mandateStore.set(parsed.data.mandateId as Hash, parsed.data);
+        return json(response, 201, { mandateId: parsed.data.mandateId });
       }
       return json(response, 501, { error: "day2_dependency_unavailable" });
     } catch { return json(response, 400, { error: "invalid_request" }); }

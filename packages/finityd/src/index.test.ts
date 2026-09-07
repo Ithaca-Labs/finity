@@ -226,3 +226,113 @@ describe("PurchaseStore on-disk persistence", () => {
     }
   });
 });
+
+describe("finityd HTTP API mandates routes", () => {
+  it("returns 501 for GET/POST /v1/mandates when no services dependencies are configured", async () => {
+    running = startFinityd();
+    const headers = { authorization: `Bearer ${running.token}` };
+    const url = await baseUrl(running);
+    expect((await fetch(`${url}/v1/mandates/${compiled.mandateId}`, { headers })).status).toBe(501);
+    expect((await fetch(`${url}/v1/mandates`, { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: "{}" })).status).toBe(501);
+  });
+
+  it("loads a mandate via POST and makes it immediately readable via GET, without a restart", async () => {
+    const mandateStore = new MandateStore();
+    running = startFinityd({ services: { mandateStore, topicId: "0.0.1" } });
+    const url = await baseUrl(running);
+    const headers = { authorization: `Bearer ${running.token}`, "content-type": "application/json" };
+
+    const before = await fetch(`${url}/v1/mandates/${compiled.mandateId}`, { headers });
+    expect(before.status).toBe(404);
+
+    const created = await fetch(`${url}/v1/mandates`, { method: "POST", headers, body: JSON.stringify(mandate) });
+    expect(created.status).toBe(201);
+    expect(await created.json()).toEqual({ mandateId: compiled.mandateId });
+    expect(mandateStore.get(compiled.mandateId)?.mandate).toEqual(mandate);
+
+    const after = await fetch(`${url}/v1/mandates/${compiled.mandateId}`, { headers });
+    expect(after.status).toBe(200);
+    expect(await after.json()).toEqual(mandate);
+  });
+
+  it("rejects a malformed mandate body", async () => {
+    running = startFinityd({ services: { mandateStore: new MandateStore(), topicId: "0.0.1" } });
+    const url = await baseUrl(running);
+    const headers = { authorization: `Bearer ${running.token}`, "content-type": "application/json" };
+    const response = await fetch(`${url}/v1/mandates`, { method: "POST", headers, body: JSON.stringify({ not: "a mandate" }) });
+    expect(response.status).toBe(400);
+  });
+});
+
+describe("finityd HTTP API escalation routes", () => {
+  const proposedAmendment = {
+    field: 0, newValue: "6000000", newValueText: "0.06 HBAR", scopeServiceId: "hello-weather@1",
+    oneTime: true, validUntil: 2_000_000_000, nonce: "1",
+  };
+
+  async function startWithEscalatedPurchase() {
+    running = startFinityd({
+      executor: async (purchase, transition) => {
+        transition({ type: "DISCOVERED" });
+        transition({ type: "QUOTED" });
+        transition({ type: "EVALUATING" });
+        transition(
+          { type: "ESCALATION_REQUIRED" },
+          { refusal: { decision: "ESCALATION_REQUIRED", reasonCodes: ["PRICE_LIMIT_EXCEEDED"], receiptId: `0x${"aa".repeat(32)}`, proposedAmendment } },
+        );
+      },
+    });
+    const url = await baseUrl(running);
+    const headers = { authorization: `Bearer ${running.token}`, "content-type": "application/json" };
+    const created = await fetch(`${url}/v1/intents`, {
+      method: "POST", headers,
+      body: JSON.stringify({
+        mandateId: `0x${"01".repeat(32)}`, agentUaid: "did:aid:buyer", payloadRef: "ref://1",
+        requestClass: { unit: "call", units: "1" }, dataClass: 0,
+      }),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    return { url, headers, correlationId: ((await created.json()) as { correlationId: string }).correlationId };
+  }
+
+  it("creates a pending escalation from an escalatable receipt, and lists it", async () => {
+    const { url, headers } = await startWithEscalatedPurchase();
+    const created = await fetch(`${url}/v1/escalations`, { method: "POST", headers, body: JSON.stringify({ receiptId: `0x${"aa".repeat(32)}` }) });
+    expect(created.status).toBe(200);
+    const { escalationId, proposal } = (await created.json()) as { escalationId: string; proposal: unknown };
+    expect(proposal).toEqual(proposedAmendment);
+
+    const listed = await fetch(`${url}/v1/escalations`, { headers });
+    expect(await listed.json()).toMatchObject({ escalations: [{ escalationId, status: "PENDING" }] });
+  });
+
+  it("404s for a receiptId that was never issued", async () => {
+    const { url, headers } = await startWithEscalatedPurchase();
+    const response = await fetch(`${url}/v1/escalations`, { method: "POST", headers, body: JSON.stringify({ receiptId: `0x${"ff".repeat(32)}` }) });
+    expect(response.status).toBe(404);
+  });
+
+  it("resolving an escalation removes it from the pending list", async () => {
+    const { url, headers } = await startWithEscalatedPurchase();
+    const created = await fetch(`${url}/v1/escalations`, { method: "POST", headers, body: JSON.stringify({ receiptId: `0x${"aa".repeat(32)}` }) });
+    const { escalationId } = (await created.json()) as { escalationId: string };
+
+    const resolved = await fetch(`${url}/v1/escalations/${escalationId}/resolve`, { method: "POST", headers, body: JSON.stringify({ status: "APPROVED" }) });
+    expect(resolved.status).toBe(200);
+    expect(await resolved.json()).toMatchObject({ escalationId, status: "APPROVED" });
+
+    const listed = await fetch(`${url}/v1/escalations`, { headers });
+    expect(await listed.json()).toEqual({ escalations: [] });
+  });
+
+  it("404s resolving an unknown escalation and 400s an invalid status", async () => {
+    const { url, headers } = await startWithEscalatedPurchase();
+    const missing = await fetch(`${url}/v1/escalations/${crypto.randomUUID()}/resolve`, { method: "POST", headers, body: JSON.stringify({ status: "APPROVED" }) });
+    expect(missing.status).toBe(404);
+
+    const created = await fetch(`${url}/v1/escalations`, { method: "POST", headers, body: JSON.stringify({ receiptId: `0x${"aa".repeat(32)}` }) });
+    const { escalationId } = (await created.json()) as { escalationId: string };
+    const badStatus = await fetch(`${url}/v1/escalations/${escalationId}/resolve`, { method: "POST", headers, body: JSON.stringify({ status: "MAYBE" }) });
+    expect(badStatus.status).toBe(400);
+  });
+});
