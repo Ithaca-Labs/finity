@@ -67,4 +67,25 @@ describe("FinitydClient", () => {
     expect(result).toEqual({ correlationId: "c1", status: "INTENT" });
     expect(JSON.parse(seenBody)).toMatchObject({ agentUaid: "did:aid:buyer" });
   });
+
+  it("resolveEscalation posts to the escalation's resolve path with the status", async () => {
+    let seenPath = "";
+    let seenBody = "";
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      seenPath = url;
+      seenBody = String(init?.body ?? "");
+      return new Response(JSON.stringify({ escalationId: "e1", status: "APPROVED" }), { status: 200 });
+    }) as typeof fetch;
+    const client = new FinitydClient({ baseUrl: "http://127.0.0.1:4000", token: "tok", fetchImpl });
+    const result = await client.resolveEscalation("e1", "APPROVED");
+    expect(result).toEqual({ escalationId: "e1", status: "APPROVED" });
+    expect(seenPath).toBe("http://127.0.0.1:4000/v1/escalations/e1/resolve");
+    expect(JSON.parse(seenBody)).toEqual({ status: "APPROVED" });
+  });
+
+  it("registerMandate posts the signed mandate to /v1/mandates", async () => {
+    const fetchImpl = fakeFetch(201, { mandateId: `0x${"01".repeat(32)}` });
+    const client = new FinitydClient({ baseUrl: "http://127.0.0.1:4000", token: "tok", fetchImpl });
+    expect(await client.registerMandate({ agent: "did:aid:buyer" })).toEqual({ mandateId: `0x${"01".repeat(32)}` });
+  });
 });

@@ -95,4 +95,16 @@ export class FinitydClient {
   listEscalations(): Promise<{ escalations: unknown[] }> {
     return this.request("GET", "/v1/escalations") as Promise<{ escalations: unknown[] }>;
   }
+
+  resolveEscalation(escalationId: string, status: "APPROVED" | "REJECTED"): Promise<Record<string, unknown>> {
+    return this.request("POST", `/v1/escalations/${encodeURIComponent(escalationId)}/resolve`, { status }) as Promise<Record<string, unknown>>;
+  }
+
+  getMandate(mandateId: string): Promise<Record<string, unknown> | undefined> {
+    return this.request("GET", `/v1/mandates/${encodeURIComponent(mandateId)}`) as Promise<Record<string, unknown> | undefined>;
+  }
+
+  registerMandate(signedMandate: Record<string, unknown>): Promise<{ mandateId: string }> {
+    return this.request("POST", "/v1/mandates", signedMandate) as Promise<{ mandateId: string }>;
+  }
 }
