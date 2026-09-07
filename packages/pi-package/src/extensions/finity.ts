@@ -6,8 +6,10 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { compileRevocation } from "@finity/mandate-compiler";
 import { POLICY_HASH } from "@finity/policy-engine";
+import type { SignedAgentMandate } from "@finity/schemas";
 import { loadActiveMandate, saveActiveMandate, type ActiveMandate } from "../active-mandate.js";
 import { explainRefusal, pollPurchase } from "../buyer-tools.js";
+import { approveEscalation, type ProposedAmendment } from "../escalation-wizard.js";
 import { FinitydClient, FinitydError, loadFinitydRuntimeInfo } from "../finityd-client.js";
 import { generateIdentity, loadIdentityFile, saveIdentityFile } from "../identity.js";
 import { registerMandateOnChain, type MandateSigner } from "../mandate-wizard.js";
@@ -146,7 +148,11 @@ export default function finityExtension(pi: ExtensionAPI) {
     promptSnippet: "Ask the Principal to approve a one-time mandate exception",
     parameters: Type.Object({ correlationId: Type.String({ description: "correlationId of a purchase in ESCALATION_REQUIRED state" }) }),
     async execute(_toolCallId, params) {
-      return toolResult(await (await finitydClient()).requestEscalation(params.correlationId));
+      const client = await finitydClient();
+      const purchase = await client.getIntent(params.correlationId);
+      const receiptId = (purchase.refusal as { receiptId?: string } | undefined)?.receiptId;
+      if (!receiptId) throw new Error(`Purchase ${params.correlationId} has no escalatable receipt (not in ESCALATION_REQUIRED state).`);
+      return toolResult(await client.requestEscalation(receiptId));
     },
   });
 
@@ -167,7 +173,7 @@ export default function finityExtension(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("finity", {
-    description: "Finity setup, mandate, and diagnostics commands (setup | mandate new|list|show | escalations | revoke <id> | trace <mandateId> | doctor | kill on|off)",
+    description: "Finity setup, mandate, and diagnostics commands (setup | mandate new|list|show | escalations [approve|reject <id>] | revoke <id> | trace <mandateId> | doctor | kill on|off)",
     handler: async (args, ctx) => {
       const [subcommand, ...rest] = (args ?? "").trim().split(/\s+/).filter(Boolean);
       try {
@@ -182,7 +188,7 @@ export default function finityExtension(pi: ExtensionAPI) {
             await handleDoctor(ctx);
             return;
           case "escalations":
-            await handleEscalations(ctx);
+            await handleEscalations(rest, ctx);
             return;
           case "trace":
             handleTrace(rest, ctx);
@@ -194,7 +200,7 @@ export default function finityExtension(pi: ExtensionAPI) {
             await handleKillSwitch(rest, ctx);
             return;
           default:
-            ctx.ui.notify("Usage: /finity setup | mandate new|list|show | escalations | revoke <id> | trace <mandateId> | doctor | kill on|off", "info");
+            ctx.ui.notify("Usage: /finity setup | mandate new|list|show | escalations [approve|reject <id>] | revoke <id> | trace <mandateId> | doctor | kill on|off", "info");
         }
       } catch (error) {
         ctx.ui.notify(`/finity ${subcommand ?? ""} failed: ${(error as Error).message}`, "error");
@@ -310,10 +316,83 @@ async function handleDoctor(ctx: ExtensionCommandContext): Promise<void> {
   ctx.ui.notify(active ? `Active mandate: ${active.mandateId}` : "No active mandate set.", "info");
 }
 
-async function handleEscalations(ctx: ExtensionCommandContext): Promise<void> {
+/** `/finity escalations [approve|reject <escalationId>]`: only the Principal can approve or reject - never a tool the LLM calls. */
+async function handleEscalations(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+  const [action, escalationId] = args;
   const client = await finitydClient();
-  const result = await client.listEscalations();
-  ctx.ui.notify(JSON.stringify(result), "info");
+
+  if (!action) {
+    ctx.ui.notify(JSON.stringify(await client.listEscalations()), "info");
+    return;
+  }
+  if (action !== "approve" && action !== "reject") {
+    ctx.ui.notify("Usage: /finity escalations [approve|reject <escalationId>]", "info");
+    return;
+  }
+  if (!escalationId) {
+    ctx.ui.notify(`Usage: /finity escalations ${action} <escalationId>`, "info");
+    return;
+  }
+  if (action === "reject") {
+    await client.resolveEscalation(escalationId, "REJECTED");
+    ctx.ui.notify(`Escalation ${escalationId} rejected.`, "info");
+    return;
+  }
+  await handleApproveEscalation(escalationId, client, ctx);
+}
+
+async function handleApproveEscalation(escalationId: string, client: FinitydClient, ctx: ExtensionCommandContext): Promise<void> {
+  const { escalations } = (await client.listEscalations()) as { escalations: Array<{ escalationId: string; mandateId: string; proposedAmendment: ProposedAmendment }> };
+  const escalation = escalations.find((candidate) => candidate.escalationId === escalationId);
+  if (!escalation) {
+    ctx.ui.notify(`No pending escalation ${escalationId}.`, "error");
+    return;
+  }
+  const registryAddress = process.env.FINITY_REGISTRY_ADDRESS;
+  if (!registryAddress) {
+    ctx.ui.notify("FINITY_REGISTRY_ADDRESS must be set.", "error");
+    return;
+  }
+  const home = finityHome();
+  const predecessorRaw = await readFile(join(home, "mandates", `${escalation.mandateId}.json`), "utf8").catch(() => undefined);
+  if (!predecessorRaw) {
+    ctx.ui.notify(`No local record of mandate ${escalation.mandateId}; cannot approve.`, "error");
+    return;
+  }
+  const predecessorMandate = JSON.parse(predecessorRaw) as SignedAgentMandate;
+
+  const confirmed = await ctx.ui.confirm(
+    "Approve escalation",
+    `Approve a one-time increase to ${escalation.proposedAmendment.newValueText} for ${escalation.proposedAmendment.scopeServiceId}? Review the fields on your Ledger before approving.`,
+  );
+  if (!confirmed) return;
+
+  const registryClient = createRegistryClient({ contractAddress: registryAddress, rpcUrl: process.env.FINITY_RPC_URL });
+  const result = await approveEscalation({
+    mandateId: escalation.mandateId as `0x${string}`,
+    predecessorMandate,
+    proposedAmendment: escalation.proposedAmendment,
+    registryClient,
+    verifyingContract: registryAddress as `0x${string}`,
+    sign: (typedData) =>
+      signTypedDataOnDevice({
+        derivationPath: "44'/60'/0'/0/0",
+        typedData: { ...typedData, types: { MandateAmendment: [...typedData.types.MandateAmendment] } },
+      }),
+  });
+
+  await mkdir(join(home, "mandates"), { recursive: true });
+  await writeFile(join(home, "mandates", `${result.successorMandateId}.json`), `${JSON.stringify(result.successorMandate, null, 2)}\n`, "utf8");
+  await client.registerMandate(result.successorMandate);
+
+  const activePath = join(home, "active-mandate.json");
+  const active = await loadActiveMandate(activePath);
+  if (active?.mandateId === escalation.mandateId) {
+    await saveActiveMandate(activePath, { ...active, mandateId: result.successorMandateId });
+  }
+
+  await client.resolveEscalation(escalationId, "APPROVED");
+  ctx.ui.notify(`Escalation approved. New mandate ${result.successorMandateId} is now active.`, "info");
 }
 
 function handleTrace(args: string[], ctx: ExtensionCommandContext): void {
