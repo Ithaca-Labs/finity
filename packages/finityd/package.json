@@ -22,7 +22,8 @@
     "@finity/registry-client": "workspace:*",
     "@finity/schemas": "workspace:*",
     "@finity/trace-builder": "workspace:*",
-    "better-sqlite3": "12.6.2"
+    "better-sqlite3": "12.6.2",
+    "viem": "2.56.3"
   },
   "devDependencies": {
     "@finity/mandate-compiler": "workspace:*",

@@ -149,3 +149,4 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
 }
 
 export * from "./executor.js";
+export * from "./live-dependencies.js";
