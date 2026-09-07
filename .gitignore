@@ -5,6 +5,7 @@ coverage/
 .env.*
 !.env.example
 .agents/
+.claude/
 skills-lock.json
 vendor/
 .finity/
