@@ -1,5 +1,8 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, afterEach } from "vitest";
-import { startFinityd, type Finityd } from "./index.js";
+import { PurchaseStore, startFinityd, type Finityd } from "./index.js";
 
 let running: Finityd | undefined;
 
@@ -59,5 +62,30 @@ describe("finityd HTTP API", () => {
     expect(fetched.status).toBe(200);
     const purchase = await fetched.json();
     expect(purchase).toMatchObject({ state: "REFUSED", refusal: { reasonCodes: ["SERVICE_NOT_ALLOWED"] } });
+  });
+});
+
+describe("PurchaseStore on-disk persistence", () => {
+  it("survives being reopened from the same file path", () => {
+    const dir = mkdtempSync(join(tmpdir(), "finityd-purchase-store-"));
+    const dbPath = join(dir, "purchases.sqlite");
+    try {
+      const first = new PurchaseStore(dbPath);
+      const purchase = first.create({
+        mandateId: `0x${"01".repeat(32)}`, agentUaid: "did:aid:buyer", payloadRef: "ref://1",
+        requestClass: { unit: "call", units: "1" }, dataClass: 0,
+      });
+      first.transition(purchase.correlationId, { type: "DISCOVERED" });
+      first.close();
+
+      const reopened = new PurchaseStore(dbPath);
+      try {
+        expect(reopened.get(purchase.correlationId)).toMatchObject({ state: "DISCOVERED" });
+      } finally {
+        reopened.close();
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
