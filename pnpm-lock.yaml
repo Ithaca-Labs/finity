@@ -156,6 +156,9 @@ importers:
       '@finity/mandate-compiler':
         specifier: workspace:*
         version: link:../mandate-compiler
+      '@finity/policy-engine':
+        specifier: workspace:*
+        version: link:../policy-engine
       '@finity/registry-client':
         specifier: workspace:*
         version: link:../registry-client
