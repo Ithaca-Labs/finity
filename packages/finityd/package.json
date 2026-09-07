@@ -8,6 +8,9 @@
       "import": "./dist/index.js"
     }
   },
+  "bin": {
+    "finityd": "./dist/daemon.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -22,6 +25,7 @@
     "@finity/registry-client": "workspace:*",
     "@finity/schemas": "workspace:*",
     "@finity/trace-builder": "workspace:*",
+    "@finity/vault-worker": "workspace:*",
     "better-sqlite3": "12.6.2",
     "viem": "2.56.3"
   },
