@@ -1,4 +1,5 @@
-import { serviceManifestSchema, type ServiceManifest } from "@finity/schemas";
+import { randomUUID } from "node:crypto";
+import { quoteSchema, serviceManifestSchema, type Quote, type RequestClass, type ServiceManifest } from "@finity/schemas";
 import { readTopicMessages, type MirrorFetcher } from "@finity/registry-client";
 
 export class NegotiatorError extends Error {
@@ -49,4 +50,41 @@ export async function discover(filter: DiscoveryFilter, options: DiscoveryOption
     if (!current || manifest.publishedAt > current.publishedAt) latest.set(manifest.serviceId, manifest);
   }
   return [...latest.values()];
+}
+
+export type QuoteFetcher = (input: string) => Promise<Response>;
+
+export type QuoteOptions = {
+  now: number;
+  windowSeconds?: number;
+  fetcher?: QuoteFetcher;
+};
+
+/**
+ * Requests a signed quote for one manifest method. The response is validated
+ * against the manifest before being trusted: the provider still signs the
+ * final numbers, but a quote for the wrong service or method is rejected here
+ * rather than reaching the policy engine.
+ */
+export async function quote(manifest: ServiceManifest, methodId: string, requestClass: RequestClass, options: QuoteOptions): Promise<Quote> {
+  if (!manifest.methods.some((method) => method.id === methodId)) {
+    throw new NegotiatorError("QUOTE_INVALID", "method is not present in the service manifest");
+  }
+  const fetcher = options.fetcher ?? fetch;
+  const url = new URL(manifest.quoteEndpoint, manifest.baseUrl);
+  url.searchParams.set("methodId", methodId);
+  url.searchParams.set("unit", requestClass.unit);
+  url.searchParams.set("units", requestClass.units);
+  url.searchParams.set("nonce", randomUUID());
+  url.searchParams.set("issuedAt", String(options.now));
+  url.searchParams.set("expiresAt", String(options.now + (options.windowSeconds ?? 60)));
+
+  const response = await fetcher(url.toString());
+  if (!response.ok) throw new NegotiatorError("QUOTE_INVALID", `quote endpoint returned HTTP ${response.status}`);
+  const parsed = quoteSchema.safeParse(await response.json());
+  if (!parsed.success) throw new NegotiatorError("QUOTE_INVALID", "quote endpoint returned a malformed quote");
+  if (parsed.data.serviceId !== manifest.serviceId || parsed.data.methodId !== methodId) {
+    throw new NegotiatorError("QUOTE_INVALID", "quote does not match the requested service or method");
+  }
+  return parsed.data;
 }

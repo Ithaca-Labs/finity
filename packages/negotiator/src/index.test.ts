@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { discover } from "./index.js";
+import type { ServiceManifest } from "@finity/schemas";
+import { NegotiatorError, discover, quote } from "./index.js";
 
-const helloWeather = {
+const helloWeather: ServiceManifest = {
   kind: "finity.manifest", version: 1, serviceId: "hello-weather@1",
   provider: { uaid: "did:aid:provider", hederaAccount: "0.0.789", signingKey: "provider-key" },
   name: "Hello Weather", description: "Current conditions.", baseUrl: "https://weather.example.test",
@@ -58,5 +59,48 @@ describe("negotiator discover", () => {
     );
     expect(manifests).toHaveLength(1);
     expect(manifests[0]?.serviceId).toBe("other@1");
+  });
+});
+
+const validQuote = {
+  kind: "finity.quote", serviceId: "hello-weather@1", methodId: "weather.current",
+  manifestHash: `0x${"a".repeat(64)}`, requestClass: { unit: "call", units: "1" },
+  amount: "5000000", asset: "0.0.0", network: "hedera:testnet", payTo: "0.0.789",
+  nonce: "00000000-0000-4000-8000-000000000001", issuedAt: 1000, expiresAt: 1060,
+  signature: `0x${"c".repeat(130)}`,
+};
+
+function jsonFetcher(body: unknown, status = 200): typeof fetch {
+  return (async () => new Response(JSON.stringify(body), { status })) as typeof fetch;
+}
+
+describe("negotiator quote", () => {
+  it("requests and validates a signed quote", async () => {
+    let requestedUrl = "";
+    const fetcher: typeof fetch = (async (input: string) => {
+      requestedUrl = input;
+      return new Response(JSON.stringify(validQuote), { status: 200 });
+    }) as typeof fetch;
+    const result = await quote(helloWeather, "weather.current", { unit: "call", units: "1" }, { now: 1000, fetcher });
+    expect(result).toMatchObject({ serviceId: "hello-weather@1", methodId: "weather.current" });
+    expect(requestedUrl).toContain("/quote?");
+    expect(requestedUrl).toContain("methodId=weather.current");
+  });
+
+  it("rejects a method the manifest does not offer", async () => {
+    await expect(quote(helloWeather, "no.such.method", { unit: "call", units: "1" }, { now: 1000 }))
+      .rejects.toMatchObject({ code: "QUOTE_INVALID" } satisfies Partial<NegotiatorError>);
+  });
+
+  it("rejects a quote for the wrong service", async () => {
+    const fetcher = jsonFetcher({ ...validQuote, serviceId: "other@1" });
+    await expect(quote(helloWeather, "weather.current", { unit: "call", units: "1" }, { now: 1000, fetcher }))
+      .rejects.toMatchObject({ code: "QUOTE_INVALID" } satisfies Partial<NegotiatorError>);
+  });
+
+  it("rejects a non-OK response", async () => {
+    const fetcher = jsonFetcher({ error: "boom" }, 500);
+    await expect(quote(helloWeather, "weather.current", { unit: "call", units: "1" }, { now: 1000, fetcher }))
+      .rejects.toMatchObject({ code: "QUOTE_INVALID" } satisfies Partial<NegotiatorError>);
   });
 });
