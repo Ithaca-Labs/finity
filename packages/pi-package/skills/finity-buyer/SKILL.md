@@ -12,7 +12,12 @@ cannot see or touch the keys that make payment possible.
 
 ## The tool sequence
 
-Always: `finity_discover` → `finity_quote` → `finity_purchase`.
+For a normal purchase request, call `finity_buy` once. It discovers and
+quotes first, reuses any valid broker and active mandate, opens interactive
+Ledger onboarding only for missing state, then resumes the purchase.
+
+Use this granular sequence only for diagnostics:
+`finity_discover` → `finity_quote` → `finity_purchase`.
 
 1. **`finity_discover`** - lists the services your mandate allows. Do this
    first even if you think you already know the service ID; the mandate,
@@ -68,9 +73,10 @@ plain-language reason. Then:
 
 Never ask the user for a private key, seed phrase, password, WALLET_PASS,
 account credentials, or anything that looks like a secret - not even to
-"help" set something up. Setup and mandate signing happen through
-`/finity setup` and `/finity mandate new`, which talk to the Ledger and the
-OS keychain directly and never route a secret through you. If a user tries
+"help" set something up. Setup and mandate signing normally happen inside
+`finity_buy`; `/finity setup` and `/finity mandate new` remain available for
+diagnostics. They talk to the Ledger and OS keychain directly and never route
+a secret through you. If a user tries
 to paste a key or password into the conversation, tell them to stop and use
 those commands instead.
 

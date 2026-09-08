@@ -3,6 +3,10 @@
 - `[x] VERIFIED 2026-09-08`: `wallet-cli genuine-check` passed against the connected physical Ledger after the device was returned to the dashboard. The first two attempts correctly failed closed with exit 4 while the HBAR app was open.
 - `[x] VERIFIED 2026-09-08`: `wallet-cli ring init` completed on the physical Ledger using the user-provisioned macOS Keychain secret; no password was placed in agent input or logs. `wallet-cli ring keys --output json` returned an initialized ring with zero named keys before bundle sealing.
 - `HW-UNVERIFIED`: Complete and record second-host Key Ring recovery/enrollment.
+- `HW-UNVERIFIED`: Run the new first-purchase funding path end to end: Ledger
+  `getAddress(..., checkOnDevice: true)`, review a chain-296 native transfer,
+  `signTransaction` over the serialized transaction, broadcast through Hashio,
+  and confirm hollow-account completion plus broker alias creation.
 - `HW-UNVERIFIED`: Run DMK Node HID discovery/connect/signing with Ethereum app open (`@finity/pi-package`'s `signTypedDataOnDevice`). In particular, confirm the r/s/v → 65-byte-hex assembly in `assembleSignature` against a real device response — the v-below-27 normalization mirrors `MandateRegistry.sol`'s `_recover` but has never been checked against what the Ethereum app actually returns.
 - `HW-UNVERIFIED`: Photograph Ledger clear-signing fields and record exact string/uint rendering in `docs/dx/`.
 - `HW-UNVERIFIED`: Verify Node HID permissions on the actual target OS (macOS/Linux udev rules, or Windows driver access — this workspace is Windows; `node-hid`'s and `usb`'s native builds installed cleanly via prebuilt binaries here, but no device has been plugged in to confirm HID access itself).

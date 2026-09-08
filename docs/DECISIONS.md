@@ -131,3 +131,29 @@
   supplies a fresh one instead. Found while wiring the escalation
   approval flow end to end for Day 5, documented rather than silently
   worked around.
+
+## ADR-012: first purchase is a resumable, reuse-first transaction
+
+- Date: 2026-09-09
+- Decision: Natural-language purchases use one `finity_buy` interface backed
+  by `ensureReadyForPurchase`. It reuses a sealed broker only with matching
+  public identity metadata, and reuses a mandate only when its local signed
+  content fits the request and Hedera reports it ACTIVE. Missing state is
+  provisioned incrementally. Public progress is stored in
+  `~/.finity/onboarding.json`; a fresh broker private key is immediately
+  Key-Ring-encrypted in a pending bundle and never written in plaintext.
+- Reason: A first-time user should not need to leave chat or manually discover
+  a Hedera account ID, while an established user must not regenerate keys,
+  move funds, or sign another mandate for every purchase.
+
+## ADR-013: finityd registers Ledger-signed mandates
+
+- Date: 2026-09-09
+- Decision: The Pi extension compiles the narrow mandate and obtains its
+  Ledger EIP-712 signature, then sends the public signed mandate to finityd's
+  bearer-protected `/v1/mandates/register` route. finityd uses its sealed
+  Broker Session Key for registry writes and its HCS operator for the trace
+  topic, verifies that the signed digest became ACTIVE, and loads the mandate.
+- Reason: Pi must not decrypt the Broker Session Key or inherit an arbitrary
+  transaction-signing primitive. Keeping registration in finityd preserves
+  the Buyer Agent/Broker trust boundary.

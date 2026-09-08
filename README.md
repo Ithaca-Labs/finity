@@ -39,12 +39,10 @@ Record the resulting topic and settlement transaction IDs in
 
 ## Day 4: Ledger setup, mandate signing, and the buyer agent
 
-`packages/pi-package` is the Pi extension (six `finity_*` tools, the
+`packages/pi-package` is the Pi extension (seven `finity_*` tools, the
 `/finity` command family, and the `finity-buyer` skill); `packages/finity-cli`
-is the `finity` wrapper bin non-developers install. Neither has been run
-against physical Ledger hardware in this repository - see `docs/HW_TODO.md`
-for exactly what remains `HW-UNVERIFIED` and `docs/VERIFIED.md`'s "Day 4
-execution status" for what has been verified without it.
+is the `finity` wrapper bin non-developers install. See `docs/HW_TODO.md`
+for the remaining physical-device checks.
 
 ```bash
 npm i -g @ledgerhq/wallet-cli @earendil-works/pi-coding-agent
@@ -52,9 +50,13 @@ pnpm --filter finity --filter @finity/pi-package --filter @finity/finityd build
 node packages/finity-cli/dist/bin/finity.js   # or, once published: finity
 ```
 
-`/finity setup` needs `WALLET_PASS` already set in your shell environment
-from your OS keychain before you run it - it is never typed into the
-agent. `/finity mandate new` needs `FINITY_REGISTRY_ADDRESS` and a mandate
-draft at `~/.finity/mandate-draft.json` (see `fixtures/mandate-weather.json`
-for the shape); it will ask your Ledger to sign, so review the fields on
-the device screen before approving.
+For normal use, ask Pi to buy something. `finity_buy` first validates and
+reuses an existing sealed broker and ACTIVE compatible mandate. If either is
+missing, the same chat flow creates and immediately Key-Ring-seals a broker
+key, asks the Ledger account to fund it, resolves the Hedera account ID,
+asks the Ledger to sign a one-purchase/one-hour mandate, starts `finityd`,
+and resumes the original purchase. Existing users see no setup prompts.
+
+On macOS the wrapper loads `WALLET_PASS` from Keychain service
+`ledger-wallet-cli`, account `default`; it never enters the chat. Manual
+`/finity setup` and `/finity mandate new` remain available for diagnostics.

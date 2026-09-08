@@ -13,16 +13,16 @@
 - [x] Resolve the funded broker alias to its Hedera account ID and finalize the sealed bundle.
 - [x] Build a narrow mandate interactively from the requested service and quote, sign/register it, and activate it.
 - [x] Start or reconnect to `finityd`, then resume the original purchase automatically.
-- [ ] Add tests for existing-state reuse, fresh setup, cancellation, restart/resume, and secret isolation.
-- [ ] Update verified APIs, decisions, hardware TODOs, and user documentation.
+- [x] Add tests for existing-state reuse, fresh setup, cancellation, restart/resume, and secret isolation.
+- [x] Update verified APIs, decisions, hardware TODOs, and user documentation.
 - [ ] Commit implementation milestones and merge the completed branch into `main`.
 
 ### Verification
 
-- [ ] Pi package build, typecheck, and tests pass.
-- [ ] Full workspace build, typecheck, and tests pass.
+- [x] Pi package build, typecheck, and tests pass.
+- [x] Full workspace build, typecheck, and tests pass.
 - [ ] Secret-pattern and diff checks pass.
-- [ ] Existing active setup reaches purchase without Ledger or Key Ring reprovisioning.
+- [x] Existing active setup reaches purchase without Ledger or Key Ring reprovisioning.
 - [ ] Fresh setup pauses only for explicit UI/device approvals and resumes the original intent.
 
 ### Review

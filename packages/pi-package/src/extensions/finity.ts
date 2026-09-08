@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { compileRevocation } from "@finity/mandate-compiler";
+import { compile, compileRevocation, type MandateChoices } from "@finity/mandate-compiler";
 import { POLICY_HASH } from "@finity/policy-engine";
 import type { SignedAgentMandate } from "@finity/schemas";
 import { loadActiveMandate, saveActiveMandate, type ActiveMandate } from "../active-mandate.js";
@@ -12,11 +12,12 @@ import { explainRefusal, pollPurchase } from "../buyer-tools.js";
 import { approveEscalation, type ProposedAmendment } from "../escalation-wizard.js";
 import { FinitydClient, FinitydError, loadFinitydRuntimeInfo } from "../finityd-client.js";
 import { generateIdentity, loadIdentityFile, saveIdentityFile } from "../identity.js";
-import { registerMandateOnChain, type MandateSigner } from "../mandate-wizard.js";
 import { runSetupWizard, type WizardUI } from "../setup-wizard.js";
 import { signTypedDataOnDevice } from "../ledger.js";
+import { ensureInteractivePurchaseReady } from "../interactive-onboarding.js";
 import { genuineCheck, ringInit } from "../wallet-cli-ops.js";
-import { createRegistryClient, createHcsWriter } from "@finity/registry-client";
+import { walletPassFromEnvironmentOrKeychain } from "../wallet-pass.js";
+import { createRegistryClient } from "@finity/registry-client";
 
 const REQUEST_UNITS = ["call", "char", "token", "row", "byte", "second"] as const;
 const BLOCKED_BUILTIN_TOOLS = new Set(["bash", "write", "edit"]);
@@ -26,7 +27,7 @@ function finityHome(): string {
 }
 
 async function walletPassFromEnv(): Promise<string> {
-  return process.env.WALLET_PASS ?? "";
+  return walletPassFromEnvironmentOrKeychain();
 }
 
 function wizardUiFrom(ctx: ExtensionContext): WizardUI {
@@ -57,6 +58,48 @@ export default function finityExtension(pi: ExtensionAPI) {
     if (BLOCKED_BUILTIN_TOOLS.has(event.toolName)) {
       return { block: true, reason: "Finity Agent has no shell: use the finity_* tools instead of bash/write/edit." };
     }
+  });
+
+  pi.registerTool({
+    name: "finity_buy",
+    label: "Buy via Finity",
+    description: "Completes a purchase, reusing a valid broker and mandate or interactively provisioning only missing authority.",
+    promptSnippet: "Buy a Finity service and onboard the Principal only when required",
+    promptGuidelines: [
+      "Use finity_buy directly for a user purchase request; it performs discovery, quoting, readiness checks, and purchase.",
+      "For current Kolkata weather use serviceId hello-weather@1, methodId weather.current, unit call, units 1, payloadRef weather.current:Kolkata, dataClass 0.",
+      "Never ask for a private key, password, seed phrase, or account ID.",
+    ],
+    parameters: Type.Object({
+      serviceId: Type.String({ description: "Exact Finity service ID, e.g. hello-weather@1" }),
+      methodId: Type.String({ description: "Exact method ID, e.g. weather.current" }),
+      unit: StringEnum(REQUEST_UNITS),
+      units: Type.String({ description: "Unsigned integer string, e.g. \"1\"" }),
+      payloadRef: Type.String({ description: "Opaque request reference, e.g. weather.current:Kolkata" }),
+      dataClass: Type.Integer({ minimum: 0, maximum: 2 }),
+      preferCheapest: Type.Optional(Type.Boolean()),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const daemonPath = process.env.FINITY_DAEMON_PATH;
+      if (!daemonPath) throw new Error("FINITY_DAEMON_PATH is unavailable; launch the agent through the finity CLI");
+      const ready = await ensureInteractivePurchaseReady({
+        ui: wizardUiFrom(ctx), home: finityHome(), daemonPath,
+        request: {
+          serviceId: params.serviceId, methodId: params.methodId,
+          requestClass: { unit: params.unit, units: params.units },
+          payloadRef: params.payloadRef, dataClass: params.dataClass, preferCheapest: params.preferCheapest,
+        },
+      });
+      const created = await ready.client.createIntent({
+        mandateId: ready.activeMandateId, agentUaid: ready.agentUaid,
+        serviceHint: params.serviceId, methodId: params.methodId,
+        requestClass: { unit: params.unit, units: params.units }, payloadRef: params.payloadRef,
+        dataClass: params.dataClass,
+        constraints: params.preferCheapest === undefined ? undefined : { preferCheapest: params.preferCheapest },
+      });
+      const purchase = await pollPurchase((id) => ready.client.getIntent(id), created.correlationId);
+      return toolResult({ purchase, onboarding: { reusedBroker: ready.reusedBroker, reusedMandate: ready.reusedMandate } });
+    },
   });
 
   pi.registerTool({
@@ -211,13 +254,6 @@ export default function finityExtension(pi: ExtensionAPI) {
 
 async function handleSetup(ctx: ExtensionCommandContext): Promise<void> {
   const home = finityHome();
-  if (!process.env.WALLET_PASS) {
-    const proceed = await ctx.ui.confirm(
-      "WALLET_PASS not set",
-      "Set WALLET_PASS in your shell environment from your OS keychain before continuing (never type it into this agent). Continue anyway?",
-    );
-    if (!proceed) return;
-  }
   const result = await runSetupWizard({
     ui: wizardUiFrom(ctx),
     genuineCheck,
@@ -273,44 +309,24 @@ async function handleMandate(args: string[], ctx: ExtensionCommandContext): Prom
   );
   if (!confirmed) return;
 
-  const sign: MandateSigner = (typedData) =>
-    signTypedDataOnDevice({
-      derivationPath: "44'/60'/0'/0/0",
-      typedData: { ...typedData, types: { AgentMandate: [...typedData.types.AgentMandate] } },
-    });
-  const registryClient = createRegistryClient({ contractAddress: registryAddress, rpcUrl: process.env.FINITY_RPC_URL });
-  const hcsWriter = createHcsWriter({
-    network: "hedera:testnet",
-    operatorId: process.env.HEDERA_OPERATOR_ID ?? "",
-    privateKey: process.env.HEDERA_OPERATOR_KEY ?? "",
+  const compiled = compile({
+    ...choices, agent: agentIdentity.uaid, policyHash: POLICY_HASH, verifyingContract: registryAddress,
+  } as MandateChoices);
+  const signature = await signTypedDataOnDevice({
+    derivationPath: "44'/60'/0'/0/0",
+    typedData: { ...compiled.typedData, types: { AgentMandate: [...compiled.typedData.types.AgentMandate] } },
   });
-  try {
-    const registered = await registerMandateOnChain({
-      choices: { ...choices, agent: agentIdentity.uaid, policyHash: POLICY_HASH, verifyingContract: registryAddress } as Parameters<typeof registerMandateOnChain>[0]["choices"],
-      sign,
-      registryClient,
-      createTraceTopic: (memo) => hcsWriter.createTopic(memo),
-      onProgress: (stage) => {
-        const messages = {
-          signature_received: "Ledger signature received. Registering the mandate on Hedera...",
-          mandate_registered: "Mandate registered. Creating its HCS trace topic...",
-          trace_topic_created: "Trace topic created. Binding it to the mandate...",
-          trace_topic_bound: "Mandate registration complete.",
-        } as const;
-        ctx.ui.notify(messages[stage], "info");
-      },
-    });
+  const signedMandate: SignedAgentMandate = { ...compiled.canonicalMandate, signature, mandateId: compiled.mandateId };
+  ctx.ui.notify("Ledger signature received. Registering the mandate through finityd...", "info");
+  const registered = await (await finitydClient()).registerMandateOnChain(signedMandate);
     // finityd's MandateStore needs the full signed mandate content, not just
     // an ID: MandateRegistry.record() only exposes consumption/status
     // on-chain, never the original allowedServices/allowedMethods/asset
     // text (see @finity/finityd's MandateStore doc comment).
     await mkdir(join(home, "mandates"), { recursive: true });
-    await writeFile(join(home, "mandates", `${registered.mandateId}.json`), `${JSON.stringify(registered.signedMandate, null, 2)}\n`, "utf8");
-    await saveActiveMandate(join(home, "active-mandate.json"), { mandateId: registered.mandateId, agentUaid: agentIdentity.uaid, brokerUaid: identity.broker.uaid });
-    ctx.ui.notify(`Mandate registered: ${registered.mandateId}. Trace topic: ${registered.traceTopicId}.`, "info");
-  } finally {
-    hcsWriter.close();
-  }
+  await writeFile(join(home, "mandates", `${compiled.mandateId}.json`), `${JSON.stringify(signedMandate, null, 2)}\n`, "utf8");
+  await saveActiveMandate(join(home, "active-mandate.json"), { mandateId: compiled.mandateId, agentUaid: agentIdentity.uaid, brokerUaid: identity.broker.uaid });
+  ctx.ui.notify(`Mandate registered: ${compiled.mandateId}. Trace topic: ${String(registered.traceTopicId ?? "pending")}.`, "info");
 }
 
 async function handleDoctor(ctx: ExtensionCommandContext): Promise<void> {
