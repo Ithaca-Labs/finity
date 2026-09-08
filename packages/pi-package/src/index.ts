@@ -6,4 +6,5 @@ export * from "./finityd-client.js";
 export * from "./identity.js";
 export * from "./ledger.js";
 export * from "./mandate-wizard.js";
+export * from "./purchase-readiness.js";
 export * from "./setup-wizard.js";

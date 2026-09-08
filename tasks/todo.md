@@ -4,9 +4,9 @@
 
 ### Plan
 
-- [ ] Checkpoint the already-verified runtime and payment fixes in focused commits.
-- [ ] Add one resumable onboarding module behind `ensureReadyForPurchase`.
-- [ ] Reuse a healthy existing broker bundle, spend account, active mandate, and daemon instead of reprovisioning.
+- [x] Checkpoint the already-verified runtime and payment fixes in focused commits.
+- [x] Add one resumable onboarding module behind `ensureReadyForPurchase`.
+- [x] Reuse a healthy existing broker bundle, spend account, active mandate, and daemon instead of reprovisioning.
 - [ ] Persist pending onboarding state without persisting plaintext broker keys.
 - [ ] Generate and Key-Ring-seal a fresh broker key before funding when no reusable broker exists.
 - [ ] Add Ledger Ethereum address verification and Hedera EVM funding transaction signing/broadcast.
