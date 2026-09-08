@@ -44,7 +44,7 @@
 #### Risks
 
 - Physical Ledger funding and mandate signing require the user/device and cannot be claimed from unit tests.
-- The currently running daemon predates settlement-header capture; restart it before the next live purchase to include the transaction ID in the PAYMENT envelope.
+- Rebuilt `main` daemon restarted successfully; the next PAYMENT envelope will include the decoded x402 settlement transaction ID.
 
 #### Follow-ups
 

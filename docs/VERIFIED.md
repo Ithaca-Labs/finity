@@ -632,3 +632,6 @@ x402 `PAYMENT-RESPONSE` header must be decoded to put its confirmed transaction
 ID into the PAYMENT envelope. The latter is unit-verified and applies after
 the rebuilt daemon is restarted; the live run above used the previously
 running daemon and therefore has no transaction ID in sequence 18.
+
+After merging, the old daemon was stopped and the rebuilt `main` daemon
+started successfully and passed its authenticated health check.
