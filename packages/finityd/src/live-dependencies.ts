@@ -3,7 +3,7 @@ import { POLICY_HASH } from "@finity/policy-engine";
 import type { ServiceManifest, SignedAgentMandate } from "@finity/schemas";
 import { decodeEventLog, type Hash } from "viem";
 import { sign } from "viem/accounts";
-import type { PaymentRequirementsSubset } from "@finity/commerce-adapter";
+import { settlementTransaction, type PaymentRequirementsSubset } from "@finity/commerce-adapter";
 import type { MandateStore, PurchaseDependencies } from "./executor.js";
 
 export type LiveDependenciesConfig = {
@@ -153,6 +153,7 @@ export function createLiveDependencies(config: LiveDependenciesConfig): LiveDepe
     brokerSessionKey: config.brokerSessionKey,
     brokerAddress: config.brokerAddress,
     parseChallenges: parsePaymentChallenges,
+    paymentTransaction: settlementTransaction,
     submitTrace: async (envelope) => {
       const record = await registryClient.readRecord(envelope.m as Hash);
       if (!record.traceTopic) return undefined;

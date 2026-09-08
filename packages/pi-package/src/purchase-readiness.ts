@@ -47,8 +47,8 @@ export function mandateAllows(mandate: SignedAgentMandate, request: PurchaseRequ
   if (!includes(mandate.allowedMethods, request.methodId)) return false;
   if (mandate.asset !== "HBAR") return false;
   if (request.dataClass > mandate.dataClass) return false;
-  if (request.unit !== "call" && BigInt(request.units) > BigInt(mandate.maxUnitsPerRequest)) return false;
-  if (request.unit === "call" && BigInt(request.units) > BigInt(mandate.maxUnitsPerRequest)) return false;
+  const maxUnits = BigInt(mandate.maxUnitsPerRequest);
+  if (maxUnits !== 0n && BigInt(request.units) > maxUnits) return false;
   if (request.amount !== undefined && BigInt(request.amount) > BigInt(mandate.maxPerRequest)) return false;
   return true;
 }

@@ -95,6 +95,9 @@ importers:
       '@finity/schemas':
         specifier: workspace:*
         version: link:../schemas
+      '@x402/core':
+        specifier: 2.25.0
+        version: 2.25.0
       '@x402/fetch':
         specifier: 2.25.0
         version: 2.25.0

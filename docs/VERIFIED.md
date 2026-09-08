@@ -589,3 +589,46 @@ transaction: 0.0.8260226-1788900863-017047227 (SUCCESS)
 Mirror Node reports `key: null`, confirming the account remains hollow until
 its first outbound EVM transaction is signed by the corresponding Ledger
 Ethereum key.
+
+## 2026-09-09 interactive onboarding API verification
+
+Installed `@ledgerhq/device-signer-kit-ethereum@1.18.0` declarations confirm:
+
+```text
+getAddress(derivationPath, { checkOnDevice: true, chainId: 296 })
+  -> device action output { address, publicKey, chainCode? }
+signTransaction(derivationPath, transaction: Uint8Array, options?)
+  -> device action output { r, s, v }
+```
+
+The Finity derivation path remains the fixed compiler constant
+`44'/60'/0'/0/0`; chat input cannot change it. Hashio represents native HBAR
+values in EVM transactions with 18-decimal EVM wei, so one tinybar is
+`10^10` EVM wei. Mirror Node account lookup by EVM alias returns the created
+numeric `0.0.x` account after funding.
+
+`finity_buy` now validates reusable local state plus live registry status,
+and finityd owns `/v1/mandates/register`; unit tests cover reuse, selective
+mandate replacement, fresh provisioning order, cancellation before signing,
+signature-v normalization, alias resolution, broker registration, restart
+metadata, and absence of secrets from resumable state.
+
+The reuse path was then exercised against the existing testnet setup without
+allowing any interactive confirmation callback:
+
+```text
+reusedBroker: true
+reusedMandate: true
+correlationId: 471ecdcf-de75-49ea-a4e2-2d00daeef3df
+state: RECONCILED
+result: { city: Kolkata, condition: clear, temperatureC: 28 }
+registry after: status=ACTIVE, reserved=0, lifetimeConsumed=15000000 tinybars
+HCS sequences 17-20: DECISION, PAYMENT, USAGE, RECONCILED
+```
+
+This run exposed two trace-readability gaps that are now fixed: Mirror Node
+currently includes `chunk_info` with `total=1` for ordinary messages, and the
+x402 `PAYMENT-RESPONSE` header must be decoded to put its confirmed transaction
+ID into the PAYMENT envelope. The latter is unit-verified and applies after
+the rebuilt daemon is restarted; the live run above used the previously
+running daemon and therefore has no transaction ID in sequence 18.

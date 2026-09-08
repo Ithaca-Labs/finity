@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CommerceError, assertAuthorizedChallenge } from "./index.js";
+import { encodePaymentResponseHeader } from "@x402/core/http";
+import { CommerceError, assertAuthorizedChallenge, settlementTransaction } from "./index.js";
 import type { Quote } from "@finity/schemas";
 
 const quote: Quote = {
@@ -10,5 +11,11 @@ const quote: Quote = {
 describe("commerce adapter", () => {
   it("rejects a challenge that changes payTo", () => {
     expect(() => assertAuthorizedChallenge({ scheme: "exact", network: "hedera:testnet", amount: "5000000", asset: "0.0.0", payTo: "0.0.999", extra: { feePayer: "0.0.1" } }, quote)).toThrow(CommerceError);
+  });
+
+  it("extracts the x402 settlement transaction", () => {
+    const encoded = encodePaymentResponseHeader({ success: true, transaction: "0.0.1-1-2", network: "hedera:testnet", payer: "0.0.2" });
+    const response = new Response("ok", { headers: { "PAYMENT-RESPONSE": encoded } });
+    expect(settlementTransaction(response)).toBe("0.0.1-1-2");
   });
 });

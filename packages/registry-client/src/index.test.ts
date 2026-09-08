@@ -111,6 +111,19 @@ describe("registry client", () => {
     expect(result.map((message) => message.message)).toEqual(["first", "second"]);
   });
 
+  it("accepts Mirror Node chunk_info total=1 as an unchunked message", async () => {
+    const fetcher = async () => new Response(JSON.stringify({
+      messages: [{
+        consensus_timestamp: "1.0", sequence_number: 1,
+        message: Buffer.from("hello").toString("base64"),
+        chunk_info: { initial_transaction_id: { account_id: "0.0.1", transaction_valid_start: "1.0" }, number: 1, total: 1 },
+      }],
+      links: { next: null },
+    }), { status: 200 });
+    const result = await readTopicMessages("0.0.1", { mirrorNodeUrl: "https://mirror.test", fetcher });
+    expect(result).toMatchObject([{ message: "hello" }]);
+  });
+
   it("reassembles Hedera mirror chunks before returning messages", async () => {
     const initialTransactionId = { account_id: "0.0.123", transaction_valid_start: "1.000000001" };
     const first = Buffer.from('{"hello":"world"}');

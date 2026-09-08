@@ -595,10 +595,10 @@ function parseMirrorMessage(value: unknown): ParsedMirrorMessage {
     const initialTransactionId = info.initial_transaction_id;
     const number = Number(info.number);
     const total = Number(info.total);
-    if (!initialTransactionId || !Number.isSafeInteger(number) || !Number.isSafeInteger(total) || number < 1 || total < 2 || number > total) {
+    if (!initialTransactionId || !Number.isSafeInteger(number) || !Number.isSafeInteger(total) || number < 1 || total < 1 || number > total) {
       throw new Error("mirror chunk info is invalid");
     }
-    chunk = { key: JSON.stringify(initialTransactionId), number, total };
+    if (total > 1) chunk = { key: JSON.stringify(initialTransactionId), number, total };
   }
   return {
     consensusTimestamp: typeof message.consensus_timestamp === "string" ? message.consensus_timestamp : null,

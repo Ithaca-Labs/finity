@@ -81,6 +81,7 @@ export type PurchaseDependencies = {
   brokerSessionKey: string;
   brokerAddress: `0x${string}`;
   parseChallenges: ChallengeParser;
+  paymentTransaction?(response: Response): string | undefined;
   fetchImpl?: typeof fetch;
   submitTrace?(envelope: HcsEnvelope): Promise<string | undefined>;
 };
@@ -246,6 +247,7 @@ export function createIntentExecutor(deps: PurchaseDependencies) {
       type: "PAYMENT", correlationId: purchase.correlationId,
       receiptHash: hashCanonicalJson({ reservationId, amount: selectedQuote.amount }),
       previousReceiptHash: decisionReceipt.receiptId as Hash, mandateId: intent.mandateId,
+      transactionId: deps.paymentTransaction?.(response),
     });
     await deps.submitTrace?.(paymentEnvelope);
     deps.mandateStore.recordReceiptHash(intent.mandateId, paymentEnvelope.h as Hash);

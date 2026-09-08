@@ -1,4 +1,5 @@
 import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
+import { decodePaymentResponseHeader } from "@x402/core/http";
 import { ExactHederaScheme, PrivateKey, createClientHederaSigner } from "@x402/hedera";
 import { hashCanonicalJson, type Capability, type Quote } from "@finity/schemas";
 
@@ -18,6 +19,14 @@ export function assertAuthorizedChallenge(challenge: unknown, quote: Quote): Pay
 }
 
 export type ChallengeParser = (response: Response) => Promise<PaymentRequirementsSubset[]>;
+
+/** Extracts the facilitator-confirmed settlement transaction from x402 v2. */
+export function settlementTransaction(response: Response): string | undefined {
+  const encoded = response.headers.get("PAYMENT-RESPONSE");
+  if (!encoded) return undefined;
+  const settlement = decodePaymentResponseHeader(encoded);
+  return typeof settlement.transaction === "string" && settlement.transaction ? settlement.transaction : undefined;
+}
 
 /**
  * Runs an unauthenticated probe, validates every offered requirement against the

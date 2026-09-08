@@ -77,4 +77,8 @@ describe("mandateAllows", () => {
     expect(mandateAllows(mandate, { ...request, amount: "5000001" }, 500)).toBe(false);
     expect(mandateAllows(mandate, { ...request, dataClass: 1 }, 500)).toBe(false);
   });
+
+  it("treats a zero unit cap as unlimited, matching the policy engine", () => {
+    expect(mandateAllows({ ...mandate, maxUnitsPerRequest: "0" }, { ...request, units: "100" }, 500)).toBe(true);
+  });
 });
