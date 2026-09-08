@@ -382,3 +382,39 @@ Not run, and not claimed: everything already listed as not run above,
 plus `/finity revoke`/`/finity escalations approve` signing on a physical
 device, and `finity-verify` against a real deployed `MandateRegistry`,
 mirror node, or settlement transaction. See `docs/HW_TODO.md`.
+
+## 2026-09-08 hardware E2E attempt
+
+Pulled `origin/main` with `git pull --ff-only origin main`; it was already at
+`4d83131e185251523b3214dbb80804d846439c14`.
+
+The connected physical Ledger was initially inside the HBAR app. Two
+sequential `wallet-cli genuine-check` attempts failed closed with exit code 4
+and the exact result `Wrong app. Open Ledger dashboard.` After the device was
+returned to the dashboard, the same command completed successfully:
+
+```text
+Connect and unlock your Ledger on the dashboard…
+Device is genuine
+```
+
+The installed wallet-cli Key Ring password lookup was checked without reading
+or printing the secret. The macOS Keychain item
+`account=default, service=ledger-wallet-cli` is absent. `wallet-cli ring init`
+was therefore not attempted, because setup requires a password already
+provisioned by the user and the agent must never choose, type, or receive it.
+
+Software verification against the pulled tree:
+
+```text
+pnpm install --frozen-lockfile -> pass
+pnpm build -> pass
+pnpm typecheck -> pass
+pnpm test -> pass
+```
+
+The run remains incomplete and no HBAR payment, mandate signature, registry
+write, HCS trace, or Broker Bundle was claimed. Continue only after the user
+stores the Key Ring password in the OS Keychain and opens the Ethereum app for
+the DMK EIP-712 signing step. Required testnet credentials and public provider
+origins are also unset in this workspace.

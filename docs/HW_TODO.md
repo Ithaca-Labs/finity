@@ -1,6 +1,6 @@
 # Hardware verification TODO
 
-- `HW-UNVERIFIED`: Run `wallet-cli genuine-check` with a physical Ledger on the dashboard. Wired in `@finity/pi-package`'s `wallet-cli-ops.ts` (`/finity setup`'s first step) but never run.
+- `[x] VERIFIED 2026-09-08`: `wallet-cli genuine-check` passed against the connected physical Ledger after the device was returned to the dashboard. The first two attempts correctly failed closed with exit 4 while the HBAR app was open.
 - `HW-UNVERIFIED`: Run `wallet-cli ring init` using the user-provisioned OS keychain secret; never place a password in agent input or logs. Wired the same way; `runSetupWizard` refuses to proceed to Broker Bundle sealing if this fails.
 - `HW-UNVERIFIED`: Complete and record second-host Key Ring recovery/enrollment.
 - `HW-UNVERIFIED`: Run DMK Node HID discovery/connect/signing with Ethereum app open (`@finity/pi-package`'s `signTypedDataOnDevice`). In particular, confirm the r/s/v → 65-byte-hex assembly in `assembleSignature` against a real device response — the v-below-27 normalization mirrors `MandateRegistry.sol`'s `_recover` but has never been checked against what the Ethereum app actually returns.

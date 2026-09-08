@@ -2,6 +2,28 @@
 
 ## Plan
 
+- [x] Hardware E2E run: fast-forward `main` and record the pulled commit.
+- [x] Hardware E2E run: inspect current environment without printing secrets.
+- [x] Hardware E2E run: verify installed Node, pnpm, wallet-cli, and Pi versions.
+- [x] Hardware E2E run: verify wallet-cli session state and command help.
+- [ ] Hardware E2E run: verify the Ethereum app and USB readiness for mandate signing.
+- [x] Hardware E2E run: run Ledger genuine-check sequentially.
+- [ ] Hardware E2E run: verify or initialize the Ledger Key Ring using user-provisioned credentials only.
+- [ ] Hardware E2E run: verify Broker Bundle recovery without exposing plaintext.
+- [x] Hardware E2E run: build and typecheck the pulled tree.
+- [x] Hardware E2E run: run the complete unit and integration test suite.
+- [ ] Hardware E2E run: start the local broker and verify health.
+- [ ] Hardware E2E run: exercise the Pi extension doctor path.
+- [ ] Hardware E2E run: prepare a real mandate draft from the repository fixture.
+- [ ] Hardware E2E run: sign the mandate on the physical Ledger.
+- [ ] Hardware E2E run: register the signed mandate against the configured Hedera registry.
+- [ ] Hardware E2E run: verify the registered mandate and trace topic.
+- [ ] Hardware E2E run: verify provider and facilitator availability.
+- [ ] Hardware E2E run: run the authorized paid HBAR purchase.
+- [ ] Hardware E2E run: run the matched policy refusal and confirm zero settlement.
+- [ ] Hardware E2E run: run the verifier against the resulting receipt and public evidence.
+- [ ] Hardware E2E run: record exact evidence, blockers, and any hardware result.
+
 - [x] 1. Verify Node, pnpm, wallet-cli, Pi, and required Ledger skills.
 - [x] 2. Probe Blocky402 `/supported`, Hedera mirror, and Hashio chain ID.
 - [x] 3. Verify package APIs from installed READMEs and type definitions.
@@ -252,6 +274,8 @@ in Day 4 (`verifyBrokerBundleRecovery`).
 
 ### Changed
 
+- Hardware E2E run plan and evidence for the 2026-09-08 pulled-main check.
+- `docs/HW_TODO.md`: physical genuine-check marked verified.
 - `@finity/provider-sdk`: signed manifests, deterministic quotes/usage receipts, x402 Express payment middleware, and fail-closed facilitator configuration.
 - `services/hello-weather` and `services/summarize-lite`: paid Hedera service skeletons with deterministic handlers and quote rules.
 - `@finity/registry-client`: viem MandateRegistry adapter, Hiero HCS writer, and same-origin mirror-node reader.
@@ -259,17 +283,24 @@ in Day 4 (`verifyBrokerBundleRecovery`).
 
 ### Verified
 
+- `origin/main` was already current at `4d83131e185251523b3214dbb80804d846439c14`.
+- Physical Ledger genuine-check passed after returning the device to the dashboard.
+- `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm typecheck`, `pnpm test`, and `pnpm lint` pass.
+- Source and fixture canary/password scan is clean.
 - Provider, service, and registry package builds, typechecks, and focused tests pass.
 - Full monorepo build/typecheck/test pass; scoped secret and pure-core scans are clean.
 - No HCS write or testnet contract transaction was claimed without funded credentials and a deployed address.
 
 ### Risks
 
+- Key Ring initialization is blocked until the user provisions `account=default, service=ledger-wallet-cli` in macOS Keychain.
+- Mandate signing still requires the Ledger Ethereum app; the HBAR app is not the current DMK signing target.
 - Physical Ledger, funded Hedera credentials, live contract address, HCS writes, and Blocky402 settlement remain unverified.
 - HCS-14 package installation is deferred because its published workspace dependency is unresolved.
 
 ### Follow-ups
 
+- Resume `verification/hardware-e2e` after Key Ring password provisioning; run `ring init`, setup, and Ethereum-app mandate signing.
 - Continue with `broker/runtime` later: vault isolation, commerce adapter, negotiator, capability, trace builder, daemon, and local E2E.
 
 ### Unresolved questions
