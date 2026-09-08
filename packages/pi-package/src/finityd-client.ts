@@ -107,4 +107,8 @@ export class FinitydClient {
   registerMandate(signedMandate: Record<string, unknown>): Promise<{ mandateId: string }> {
     return this.request("POST", "/v1/mandates", signedMandate) as Promise<{ mandateId: string }>;
   }
+
+  registerMandateOnChain(signedMandate: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return this.request("POST", "/v1/mandates/register", signedMandate) as Promise<Record<string, unknown>>;
+  }
 }

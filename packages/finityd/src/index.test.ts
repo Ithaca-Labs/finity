@@ -262,6 +262,30 @@ describe("finityd HTTP API mandates routes", () => {
     const response = await fetch(`${url}/v1/mandates`, { method: "POST", headers, body: JSON.stringify({ not: "a mandate" }) });
     expect(response.status).toBe(400);
   });
+
+  it("registers a signed mandate through the broker and loads it without restart", async () => {
+    const mandateStore = new MandateStore();
+    let received: SignedAgentMandate | undefined;
+    running = startFinityd({
+      services: { mandateStore, topicId: "0.0.1" },
+      mandateRegistration: {
+        register: async (input) => {
+          received = input;
+          return { mandateId: input.mandateId, registrationTx: `0x${"12".repeat(32)}`, traceTopicId: "0.0.9" };
+        },
+      },
+    });
+    const url = await baseUrl(running);
+    const response = await fetch(`${url}/v1/mandates/register`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${running.token}`, "content-type": "application/json" },
+      body: JSON.stringify(mandate),
+    });
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ mandateId: mandate.mandateId, traceTopicId: "0.0.9" });
+    expect(received).toEqual(mandate);
+    expect(mandateStore.get(compiled.mandateId)?.mandate).toEqual(mandate);
+  });
 });
 
 describe("finityd HTTP API escalation routes", () => {

@@ -1,6 +1,6 @@
 import { createHcsWriter, createRegistryClient, mandateRegistryAbi, type RegistryClient } from "@finity/registry-client";
 import { POLICY_HASH } from "@finity/policy-engine";
-import type { ServiceManifest } from "@finity/schemas";
+import type { ServiceManifest, SignedAgentMandate } from "@finity/schemas";
 import { decodeEventLog, type Hash } from "viem";
 import { sign } from "viem/accounts";
 import type { PaymentRequirementsSubset } from "@finity/commerce-adapter";
@@ -69,7 +69,11 @@ export async function parsePaymentChallenges(response: Response): Promise<Paymen
  * scheme - callers relying on this for anything but local/gated-testnet use
  * should know that gap exists.
  */
-export function createLiveDependencies(config: LiveDependenciesConfig): PurchaseDependencies {
+export type LiveDependencies = PurchaseDependencies & {
+  registerMandate(mandate: SignedAgentMandate): Promise<Record<string, unknown>>;
+};
+
+export function createLiveDependencies(config: LiveDependenciesConfig): LiveDependencies {
   const registryClient: RegistryClient = createRegistryClient({
     contractAddress: config.registryAddress,
     rpcUrl: config.rpcUrl,
@@ -153,6 +157,19 @@ export function createLiveDependencies(config: LiveDependenciesConfig): Purchase
       const record = await registryClient.readRecord(envelope.m as Hash);
       if (!record.traceTopic) return undefined;
       return getHcsWriter().submitMessage(record.traceTopic, envelope);
+    },
+    registerMandate: async (signedMandate) => {
+      const { signature, mandateId, ...mandate } = signedMandate;
+      const registrationTx = await registryClient.registerMandate(mandate, signature);
+      await registryClient.publicClient.waitForTransactionReceipt({ hash: registrationTx });
+      if ((await registryClient.readStatus(mandateId as Hash)) !== 1) {
+        throw new Error("registered mandate ID does not match its signed EIP-712 digest");
+      }
+      const topic = await getHcsWriter().createTopic(`Finity mandate trace ${mandateId}`);
+      const setTraceTopicTx = await registryClient.setTraceTopic(mandateId as Hash, topic.topicId);
+      await registryClient.publicClient.waitForTransactionReceipt({ hash: setTraceTopicTx });
+      config.mandateStore.set(mandateId as Hash, signedMandate);
+      return { mandateId, registrationTx, traceTopicId: topic.topicId, traceTopicTx: topic.transactionId, setTraceTopicTx };
     },
   };
 }

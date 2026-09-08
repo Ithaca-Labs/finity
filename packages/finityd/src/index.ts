@@ -13,7 +13,7 @@ export type { Escalation, EscalationStatus, ProposedAmendment } from "./escalati
 
 export const INTENT_ROUTE_ALLOWLIST = new Set([
   "POST /v1/intents", "GET /v1/services", "POST /v1/quotes", "POST /v1/escalations",
-  "GET /v1/escalations", "GET /v1/health", "POST /v1/mandates",
+  "GET /v1/escalations", "GET /v1/health", "POST /v1/mandates", "POST /v1/mandates/register",
 ]);
 
 export type Intent = {
@@ -92,8 +92,12 @@ export type ServicesDependencies = {
   now?(): number;
 };
 
+export type MandateRegistrationDependencies = {
+  register(mandate: import("@finity/schemas").SignedAgentMandate): Promise<Record<string, unknown>>;
+};
+
 /** Starts a localhost-only, bearer-protected API. No route can decrypt, sign, or broadcast arbitrary caller data. */
-export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; escalations?: EscalationStore; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
+export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; mandateRegistration?: MandateRegistrationDependencies; escalations?: EscalationStore; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
   const store = options.store ?? new PurchaseStore(); const token = options.token ?? randomBytes(32).toString("base64url");
   const escalations = options.escalations ?? new EscalationStore();
   const server = createServer(async (request, response) => {
@@ -182,6 +186,14 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
         return json(response, 200, { escalationId: escalation.escalationId, proposal: escalation.proposedAmendment });
       }
       if (key === "GET /v1/escalations") return json(response, 200, { escalations: escalations.listPending() });
+      if (key === "POST /v1/mandates/register") {
+        if (!options.services || !options.mandateRegistration) return json(response, 501, { error: "registration_unavailable" });
+        const parsed = signedAgentMandateSchema.safeParse(await readBody(request));
+        if (!parsed.success) return json(response, 400, { error: "invalid_mandate" });
+        const registered = await options.mandateRegistration.register(parsed.data);
+        options.services.mandateStore.set(parsed.data.mandateId as Hash, parsed.data);
+        return json(response, 201, registered);
+      }
       if (key === "POST /v1/mandates") {
         // Loads a mandate into the live MandateStore without a restart - needed
         // after /finity mandate new or an approved escalation's successor

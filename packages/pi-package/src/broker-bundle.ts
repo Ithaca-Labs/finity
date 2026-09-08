@@ -1,10 +1,18 @@
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { z } from "zod";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { decryptKeyRingBundle, type WalletPassProvider } from "@finity/vault-worker";
 import { brokerBundleSchema, type BrokerBundle } from "@finity/schemas";
 
 export type GeneratedBrokerKey = { brokerSessionKey: `0x${string}`; brokerAddress: `0x${string}` };
+
+const pendingBrokerBundleSchema = z.object({
+  version: z.literal(1),
+  brokerSessionKey: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+  brokerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+});
+export type PendingBrokerBundle = z.infer<typeof pendingBrokerBundleSchema>;
 
 /** Generates the ECDSA secp256k1 Broker Session Key. Its EVM address is also the funding target for the Spend Account (Hedera auto-creates the account on first receipt). */
 export function generateBrokerSessionKey(): GeneratedBrokerKey {
@@ -37,6 +45,22 @@ const defaultRunWalletCli: WalletCliRunner = (args, input, env) =>
     child.stdin.end(input);
   });
 
+async function encryptPayload(input: {
+  key: string;
+  payload: unknown;
+  outputPath: string;
+  walletPass: WalletPassProvider;
+  runWalletCli?: WalletCliRunner;
+}): Promise<void> {
+  const pass = await input.walletPass();
+  if (!pass) throw new WalletCliError("RING_ENCRYPT_FAILED", "wallet password was unavailable");
+  await (input.runWalletCli ?? defaultRunWalletCli)(
+    ["ring", "encrypt", "--key", input.key, "-o", input.outputPath],
+    Buffer.from(JSON.stringify(input.payload), "utf8"),
+    { PATH: process.env.PATH ?? "", WALLET_PASS: pass },
+  );
+}
+
 /**
  * Seals `{ brokerSessionKey, spendAccountId, brokerUaid }` with
  * `wallet-cli ring encrypt --key broker:<brokerId>`. WALLET_PASS is read from
@@ -52,14 +76,29 @@ export async function sealBrokerBundle(input: {
   runWalletCli?: WalletCliRunner;
 }): Promise<void> {
   const bundle = brokerBundleSchema.parse(input.bundle);
-  const pass = await input.walletPass();
-  if (!pass) throw new WalletCliError("RING_ENCRYPT_FAILED", "wallet password was unavailable");
-  const run = input.runWalletCli ?? defaultRunWalletCli;
-  await run(
-    ["ring", "encrypt", "--key", `broker:${input.brokerId}`, "-o", input.outputPath],
-    Buffer.from(JSON.stringify(bundle), "utf8"),
-    { PATH: process.env.PATH ?? "", WALLET_PASS: pass },
-  );
+  await encryptPayload({ key: `broker:${input.brokerId}`, payload: bundle, outputPath: input.outputPath, walletPass: input.walletPass, runWalletCli: input.runWalletCli });
+}
+
+/** Encrypts the fresh key before any funding transaction is requested. */
+export async function sealPendingBrokerBundle(input: {
+  brokerId: string;
+  bundle: PendingBrokerBundle;
+  outputPath: string;
+  walletPass: WalletPassProvider;
+  runWalletCli?: WalletCliRunner;
+}): Promise<void> {
+  const bundle = pendingBrokerBundleSchema.parse(input.bundle);
+  await encryptPayload({ key: `broker:${input.brokerId}:pending`, payload: bundle, outputPath: input.outputPath, walletPass: input.walletPass, runWalletCli: input.runWalletCli });
+}
+
+export async function recoverPendingBrokerBundle(input: {
+  brokerId: string;
+  bundlePath: string;
+  walletPass: WalletPassProvider;
+}): Promise<PendingBrokerBundle> {
+  const ciphertext = await readFile(input.bundlePath);
+  const plaintext = await decryptKeyRingBundle(ciphertext, `broker:${input.brokerId}:pending`, input.walletPass);
+  return pendingBrokerBundleSchema.parse(JSON.parse(plaintext.toString("utf8")));
 }
 
 /**
@@ -82,4 +121,15 @@ export async function verifyBrokerBundleRecovery(input: {
   const plaintext = await decryptKeyRingBundle(ciphertext, `broker:${input.brokerId}`, input.walletPass);
   const parsed = brokerBundleSchema.safeParse(JSON.parse(plaintext.toString("utf8")));
   return parsed.success;
+}
+
+/** Internal migration/finalization seam. Callers must never log the result. */
+export async function recoverBrokerBundle(input: {
+  brokerId: string;
+  bundlePath: string;
+  walletPass: WalletPassProvider;
+}): Promise<BrokerBundle> {
+  const ciphertext = await readFile(input.bundlePath);
+  const plaintext = await decryptKeyRingBundle(ciphertext, `broker:${input.brokerId}`, input.walletPass);
+  return brokerBundleSchema.parse(JSON.parse(plaintext.toString("utf8")));
 }

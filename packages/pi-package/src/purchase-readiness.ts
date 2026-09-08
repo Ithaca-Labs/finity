@@ -16,6 +16,8 @@ export type PurchaseRequest = {
 export type BrokerState = {
   identity: Identity;
   bundlePath: string;
+  brokerAddress?: `0x${string}`;
+  spendAccountId?: string;
 };
 
 export type ReadyPurchaseState = {
@@ -60,7 +62,20 @@ async function existingBroker(home: string): Promise<BrokerState | undefined> {
   } catch {
     return undefined;
   }
-  return { identity: identity.broker, bundlePath };
+  let brokerAddress: `0x${string}` | undefined;
+  let spendAccountId = /^hedera:testnet:(0\.0\.[1-9][0-9]*)$/.exec(identity.broker.canonical.nativeId)?.[1];
+  const active = await loadActiveMandate(join(home, "active-mandate.json"));
+  if (active) {
+    try {
+      const mandate = signedAgentMandateSchema.parse(JSON.parse(await readFile(join(home, "mandates", `${active.mandateId}.json`), "utf8")));
+      brokerAddress = mandate.broker as `0x${string}`;
+      spendAccountId ??= mandate.spendAccount;
+    } catch {
+      // Public metadata is optional here; createMandate can recover it from
+      // the sealed bundle when migrating an older setup.
+    }
+  }
+  return { identity: identity.broker, bundlePath, brokerAddress, spendAccountId };
 }
 
 async function existingMandate(
@@ -94,8 +109,8 @@ export async function ensureReadyForPurchase(request: PurchaseRequest, deps: Pur
   const foundBroker = await existingBroker(deps.home);
   const broker = foundBroker ?? await deps.provisionBroker();
   const foundMandate = await existingMandate(deps, broker, request);
-  const mandate = foundMandate ?? await deps.createMandate(broker, request);
   await deps.ensureDaemon();
+  const mandate = foundMandate ?? await deps.createMandate(broker, request);
   return {
     ...mandate,
     broker,

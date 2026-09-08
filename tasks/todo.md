@@ -7,12 +7,12 @@
 - [x] Checkpoint the already-verified runtime and payment fixes in focused commits.
 - [x] Add one resumable onboarding module behind `ensureReadyForPurchase`.
 - [x] Reuse a healthy existing broker bundle, spend account, active mandate, and daemon instead of reprovisioning.
-- [ ] Persist pending onboarding state without persisting plaintext broker keys.
-- [ ] Generate and Key-Ring-seal a fresh broker key before funding when no reusable broker exists.
-- [ ] Add Ledger Ethereum address verification and Hedera EVM funding transaction signing/broadcast.
-- [ ] Resolve the funded broker alias to its Hedera account ID and finalize the sealed bundle.
-- [ ] Build a narrow mandate interactively from the requested service and quote, sign/register it, and activate it.
-- [ ] Start or reconnect to `finityd`, then resume the original purchase automatically.
+- [x] Persist pending onboarding state without persisting plaintext broker keys.
+- [x] Generate and Key-Ring-seal a fresh broker key before funding when no reusable broker exists.
+- [x] Add Ledger Ethereum address verification and Hedera EVM funding transaction signing/broadcast.
+- [x] Resolve the funded broker alias to its Hedera account ID and finalize the sealed bundle.
+- [x] Build a narrow mandate interactively from the requested service and quote, sign/register it, and activate it.
+- [x] Start or reconnect to `finityd`, then resume the original purchase automatically.
 - [ ] Add tests for existing-state reuse, fresh setup, cancellation, restart/resume, and secret isolation.
 - [ ] Update verified APIs, decisions, hardware TODOs, and user documentation.
 - [ ] Commit implementation milestones and merge the completed branch into `main`.

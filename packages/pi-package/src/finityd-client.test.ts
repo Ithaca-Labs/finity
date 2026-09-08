@@ -88,4 +88,15 @@ describe("FinitydClient", () => {
     const client = new FinitydClient({ baseUrl: "http://127.0.0.1:4000", token: "tok", fetchImpl });
     expect(await client.registerMandate({ agent: "did:aid:buyer" })).toEqual({ mandateId: `0x${"01".repeat(32)}` });
   });
+
+  it("registerMandateOnChain uses the broker-owned registration route", async () => {
+    let seenPath = "";
+    const fetchImpl = (async (url: string) => {
+      seenPath = url;
+      return new Response(JSON.stringify({ mandateId: `0x${"01".repeat(32)}` }), { status: 201 });
+    }) as typeof fetch;
+    const client = new FinitydClient({ baseUrl: "http://127.0.0.1:4000", token: "tok", fetchImpl });
+    await client.registerMandateOnChain({ agent: "did:aid:buyer" });
+    expect(seenPath).toBe("http://127.0.0.1:4000/v1/mandates/register");
+  });
 });

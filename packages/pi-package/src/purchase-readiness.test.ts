@@ -56,7 +56,7 @@ describe("ensureReadyForPurchase", () => {
     const calls: string[] = [];
     const result = await ensureReadyForPurchase(request, deps(home, broker, calls));
     expect(result).toMatchObject({ reusedBroker: true, reusedMandate: false });
-    expect(calls).toEqual(["mandate", "daemon"]);
+    expect(calls).toEqual(["daemon", "mandate"]);
   });
 
   it("provisions broker and mandate when no state exists", async () => {
@@ -65,7 +65,7 @@ describe("ensureReadyForPurchase", () => {
     const calls: string[] = [];
     const result = await ensureReadyForPurchase(request, deps(home, broker, calls));
     expect(result).toMatchObject({ reusedBroker: false, reusedMandate: false });
-    expect(calls).toEqual(["broker", "mandate", "daemon"]);
+    expect(calls).toEqual(["broker", "daemon", "mandate"]);
   });
 });
 

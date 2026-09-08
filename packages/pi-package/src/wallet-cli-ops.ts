@@ -22,3 +22,12 @@ export function genuineCheck(): Promise<boolean> {
 export function ringInit(name: string): Promise<boolean> {
   return runInteractive(["ring", "init", "--name", name]);
 }
+
+/** Checks whether the existing Key Ring can be opened; output is discarded. */
+export function ringReady(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const child = spawn("wallet-cli", ["ring", "keys"], { stdio: "ignore", env: process.env });
+    child.once("error", () => resolve(false));
+    child.once("close", (code) => resolve(code === 0));
+  });
+}

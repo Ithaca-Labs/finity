@@ -1,10 +1,10 @@
 import type { DeviceActionStatus as DeviceActionStatusType, DeviceManagementKitBuilder as DeviceManagementKitBuilderType } from "@ledgerhq/device-management-kit";
 import type { nodeHidIdentifier as nodeHidIdentifierType, nodeHidTransportFactory as nodeHidTransportFactoryType } from "@ledgerhq/device-transport-kit-node-hid";
-import type { SignerEthBuilder as SignerEthBuilderType, Signature, TypedData } from "@ledgerhq/device-signer-kit-ethereum";
+import type { Address as LedgerAddress, SignerEthBuilder as SignerEthBuilderType, Signature, TypedData } from "@ledgerhq/device-signer-kit-ethereum";
 
 export class LedgerSigningError extends Error {
   constructor(
-    readonly code: "NO_DEVICE" | "CONNECT_FAILED" | "SIGN_FAILED",
+    readonly code: "NO_DEVICE" | "CONNECT_FAILED" | "ADDRESS_FAILED" | "SIGN_FAILED",
     message: string,
     options?: { cause?: unknown },
   ) {
@@ -36,6 +36,100 @@ export type SignTypedDataOnDeviceOptions = {
   discoveryTimeoutMs?: number;
 };
 
+export type LedgerDeviceOptions = {
+  derivationPath: string;
+  discoveryTimeoutMs?: number;
+};
+
+type DeviceModules = Awaited<ReturnType<typeof loadDeviceModules>>;
+type EthSigner = ReturnType<SignerEthBuilderType["build"]>;
+
+async function loadDeviceModules() {
+  const [dmkModule, transportModule, signerModule] = await Promise.all([
+    import("@ledgerhq/device-management-kit") as Promise<{ DeviceActionStatus: typeof DeviceActionStatusType; DeviceManagementKitBuilder: typeof DeviceManagementKitBuilderType }>,
+    import("@ledgerhq/device-transport-kit-node-hid") as Promise<{ nodeHidIdentifier: typeof nodeHidIdentifierType; nodeHidTransportFactory: typeof nodeHidTransportFactoryType }>,
+    import("@ledgerhq/device-signer-kit-ethereum") as Promise<{ SignerEthBuilder: typeof SignerEthBuilderType }>,
+  ]);
+  return { ...dmkModule, ...transportModule, ...signerModule };
+}
+
+async function withLedgerSigner<T>(
+  options: LedgerDeviceOptions,
+  operation: (signer: EthSigner, status: DeviceModules["DeviceActionStatus"]) => Promise<T>,
+): Promise<T> {
+  const [{ DeviceActionStatus, DeviceManagementKitBuilder, nodeHidIdentifier, nodeHidTransportFactory, SignerEthBuilder }, { firstValueFrom }] = await Promise.all([
+    loadDeviceModules(),
+    import("rxjs"),
+  ]);
+  const dmk = new DeviceManagementKitBuilder().addTransport(nodeHidTransportFactory).build();
+  try {
+    const discovered = await Promise.race([
+      firstValueFrom(dmk.startDiscovering({ transport: nodeHidIdentifier })),
+      new Promise<never>((_resolve, reject) =>
+        setTimeout(() => reject(new LedgerSigningError("NO_DEVICE", "no Ledger device found over USB HID")), options.discoveryTimeoutMs ?? 15_000),
+      ),
+    ]);
+    let sessionId: string;
+    try {
+      sessionId = await dmk.connect({ device: discovered });
+    } catch (error) {
+      throw new LedgerSigningError("CONNECT_FAILED", "failed to connect to the discovered Ledger device", { cause: error });
+    }
+    try {
+      return await operation(new SignerEthBuilder({ dmk, sessionId }).build(), DeviceActionStatus);
+    } finally {
+      await dmk.disconnect({ sessionId }).catch(() => undefined);
+    }
+  } finally {
+    dmk.close();
+  }
+}
+
+function deviceActionOutput<T>(
+  observable: { subscribe(observer: { next(state: { status: string; output?: T; error?: unknown }): void; error(error: unknown): void }): { unsubscribe(): void } },
+  completed: string,
+  failed: string,
+  code: "ADDRESS_FAILED" | "SIGN_FAILED",
+  message: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const subscription = observable.subscribe({
+      next(state) {
+        if (state.status === completed) {
+          resolve(state.output as T);
+          subscription.unsubscribe();
+        } else if (state.status === failed) {
+          reject(new LedgerSigningError(code, message, { cause: state.error }));
+          subscription.unsubscribe();
+        }
+      },
+      error(error) {
+        reject(new LedgerSigningError(code, `${message}: device action errored`, { cause: error }));
+      },
+    });
+  });
+}
+
+/** Reads and displays the fixed Finity Ethereum account on the Ledger. */
+export async function getEthereumAddressOnDevice(options: LedgerDeviceOptions): Promise<`0x${string}`> {
+  return withLedgerSigner(options, async (signer, status) => {
+    const action = signer.getAddress(options.derivationPath, { checkOnDevice: true, chainId: 296 });
+    const output = await deviceActionOutput<LedgerAddress>(action.observable, status.Completed, status.Error, "ADDRESS_FAILED", "device rejected or failed address verification");
+    if (!/^0x[0-9a-fA-F]{40}$/.test(output.address)) {
+      throw new LedgerSigningError("ADDRESS_FAILED", "device returned a malformed Ethereum address");
+    }
+    return output.address as `0x${string}`;
+  });
+}
+
+/** Signs one already-serialized EVM transaction after Ledger review. */
+export async function signTransactionOnDevice(options: LedgerDeviceOptions & { transaction: Uint8Array }): Promise<Signature> {
+  return withLedgerSigner(options, async (signer, status) => {
+    const action = signer.signTransaction(options.derivationPath, options.transaction);
+    return deviceActionOutput<Signature>(action.observable, status.Completed, status.Error, "SIGN_FAILED", "device rejected or failed the transaction signing request");
+  });
+}
+
 /**
  * Connects to the first Ledger found over USB HID, opens the Ethereum app's
  * EIP-712 signing flow, and returns the assembled 65-byte signature.
@@ -55,53 +149,9 @@ export type SignTypedDataOnDeviceOptions = {
  * normalization above have not been exercised for real.
  */
 export async function signTypedDataOnDevice(options: SignTypedDataOnDeviceOptions): Promise<`0x${string}`> {
-  const [{ DeviceActionStatus, DeviceManagementKitBuilder }, { nodeHidIdentifier, nodeHidTransportFactory }, { SignerEthBuilder }, { firstValueFrom }] = await Promise.all([
-    import("@ledgerhq/device-management-kit") as Promise<{ DeviceActionStatus: typeof DeviceActionStatusType; DeviceManagementKitBuilder: typeof DeviceManagementKitBuilderType }>,
-    import("@ledgerhq/device-transport-kit-node-hid") as Promise<{ nodeHidIdentifier: typeof nodeHidIdentifierType; nodeHidTransportFactory: typeof nodeHidTransportFactoryType }>,
-    import("@ledgerhq/device-signer-kit-ethereum") as Promise<{ SignerEthBuilder: typeof SignerEthBuilderType }>,
-    import("rxjs"),
-  ]);
-
-  const dmk = new DeviceManagementKitBuilder().addTransport(nodeHidTransportFactory).build();
-  try {
-    const discovered = await Promise.race([
-      firstValueFrom(dmk.startDiscovering({ transport: nodeHidIdentifier })),
-      new Promise<never>((_resolve, reject) =>
-        setTimeout(() => reject(new LedgerSigningError("NO_DEVICE", "no Ledger device found over USB HID")), options.discoveryTimeoutMs ?? 15_000),
-      ),
-    ]);
-
-    let sessionId: string;
-    try {
-      sessionId = await dmk.connect({ device: discovered });
-    } catch (error) {
-      throw new LedgerSigningError("CONNECT_FAILED", "failed to connect to the discovered Ledger device", { cause: error });
-    }
-
-    try {
-      const signer = new SignerEthBuilder({ dmk, sessionId }).build();
+  return withLedgerSigner(options, async (signer, status) => {
       const { observable } = signer.signTypedData(options.derivationPath, options.typedData);
-      const signature = await new Promise<Signature>((resolve, reject) => {
-        const subscription = observable.subscribe({
-          next(state) {
-            if (state.status === DeviceActionStatus.Completed) {
-              resolve(state.output);
-              subscription.unsubscribe();
-            } else if (state.status === DeviceActionStatus.Error) {
-              reject(new LedgerSigningError("SIGN_FAILED", "device rejected or failed the signing request", { cause: state.error }));
-              subscription.unsubscribe();
-            }
-          },
-          error(error) {
-            reject(new LedgerSigningError("SIGN_FAILED", "signing observable errored", { cause: error }));
-          },
-        });
-      });
+      const signature = await deviceActionOutput<Signature>(observable, status.Completed, status.Error, "SIGN_FAILED", "device rejected or failed the signing request");
       return assembleSignature(signature);
-    } finally {
-      await dmk.disconnect({ sessionId }).catch(() => undefined);
-    }
-  } finally {
-    dmk.close();
-  }
+  });
 }
