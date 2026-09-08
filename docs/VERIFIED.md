@@ -475,3 +475,117 @@ write, HCS trace, or Broker Bundle was claimed. Continue only after the user
 stores the Key Ring password in the OS Keychain and opens the Ethereum app for
 the DMK EIP-712 signing step. Required testnet credentials and public provider
 origins are also unset in this workspace.
+
+## 2026-09-08 user test audit
+
+The user's Ledger signing attempt left a complete local mandate record. Live
+read-only checks against the configured Hedera testnet registry confirmed:
+
+```text
+registry: 0xcbc39351ca205fd291b73d0c31904590c3098d89
+mandate: 0x6910295d536615ee2b07340daf36aa710447f53ef3abdf112d7ec3dfe12b18ff
+status: 1 (ACTIVE)
+trace topic: 0.0.10423252
+principal recovered from EIP-712 signature: 0xeAceF641c72286A4081A6D62Cc0c8d71a7d828b0
+signature principal matches registry record: yes
+trace messages: 1 (DECISION refusal)
+```
+
+This proves registration completed; it does not prove a successful purchase.
+The trace contains one refusal decision because no successful payment has run.
+The Key
+Ring has the `broker:default` domain and the sealed bundle exists. After the
+wallet-cli stdout decryption fix, `finityd` started and loaded one live
+mandate when `WALLET_PASS` was supplied from the user-managed Keychain.
+Configured provider origins are local development URLs
+(`127.0.0.1:3001` and `127.0.0.1:3002`), not public HTTPS deployments.
+
+Local smoke checks passed: both provider health endpoints returned 200 and both
+quote endpoints returned signed quotes. After the usability patch,
+`pnpm build`, `pnpm typecheck`, and `pnpm test` all pass.
+
+The first live broker purchase was also exercised after fixing Key Ring
+decryption. The daemon loaded the mandate and reached policy evaluation, but
+the request was safely `REFUSED` with `QUOTE_INVALID` and no reservation or
+HBAR payment. Root cause: provider startup regenerated `publishedAt`, changing
+the manifest hash from the HCS-published manifest. Provider runtime now keeps
+`publishedAt` stable or accepts an explicit configured timestamp; the existing
+HCS manifests must be republished or matched with that timestamp before the
+next live purchase.
+
+## 2026-09-09 reservation decoder fix
+
+The next Pi run successfully discovered `hello-weather@1` and received a
+valid 0.05 HBAR quote. The purchase reached the registry, but the daemon
+reported `FAILED_RESERVATION` because the client ABI omitted the
+`ReservationCreated` event and therefore could not recover the reservation ID.
+The reservation transaction did succeed:
+
+```text
+reservation tx: 0x187c624e08b21ef725dcb0ab9caf7c25f9c62c437717806e55aaf59b7313215a
+reservation amount: 5000000 tinybars
+```
+
+Added the event ABI and a receipt-decoding test. The stranded reservation was
+released before retrying:
+
+```text
+release tx: 0xe1a391ac064d9f42a283ee7690c1a86216fab3e1426da55bf783e9549869bd26
+registry reserved after release: 0
+```
+
+No provider settlement or HBAR payment occurred. The daemon must be restarted
+from the rebuilt tree before the next purchase attempt.
+
+The subsequent retry recovered the reservation path but reached `FAILED_PAYMENT`.
+The local provider returned HTTP 500 because `createFinityService` passed
+`false` as `paymentMiddleware`'s `syncFacilitatorOnStart` flag, so the x402
+resource server never initialized its facilitator capability map. Removing the
+flag restored the expected 402 challenge; a fresh provider smoke test now
+returns `402 Payment Required` with the Hedera testnet fee payer. The failed
+payment path released its reservation; live registry state remains:
+
+```text
+reserved: 0
+periodConsumed: 0
+lifetimeConsumed: 0
+```
+
+## 2026-09-09 authorized purchase verified
+
+After enabling the HBAR asset in the x402 client spend controls, a fresh
+broker-mediated request completed end to end:
+
+```text
+correlationId: 3d984b72-1a23-423d-9cb7-d804b54d4fb5
+state: RECONCILED
+result: {"city":"Kolkata","condition":"clear","temperatureC":28}
+amount: 5000000 tinybars (0.05 HBAR)
+```
+
+Public Hedera evidence:
+
+```text
+settlement transaction: 0.0.7162784-1788898976-660100298 (SUCCESS)
+spend account: -5000000 tinybars
+provider account: +5000000 tinybars
+registry: reserved=0, periodConsumed=5000000, lifetimeConsumed=5000000
+HCS trace: sequences 9-12 = DECISION, PAYMENT, USAGE, RECONCILED
+```
+
+## 2026-09-09 Ledger EVM principal funding
+
+The testnet operator funded the Ledger-derived EIP-712 principal by sending
+50 HBAR to its EVM alias. Hedera auto-created a hollow account for that alias:
+
+```text
+source: 0.0.8260226
+destination EVM alias: 0xeAceF641c72286A4081A6D62Cc0c8d71a7d828b0
+created account: 0.0.10427444
+amount received: 5000000000 tinybars (50 HBAR)
+transaction: 0.0.8260226-1788900863-017047227 (SUCCESS)
+```
+
+Mirror Node reports `key: null`, confirming the account remains hollow until
+its first outbound EVM transaction is signed by the corresponding Ledger
+Ethereum key.

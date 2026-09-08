@@ -1,5 +1,133 @@
 # Todo
 
+## 2026-09-09 first-purchase interactive onboarding
+
+### Plan
+
+- [ ] Checkpoint the already-verified runtime and payment fixes in focused commits.
+- [ ] Add one resumable onboarding module behind `ensureReadyForPurchase`.
+- [ ] Reuse a healthy existing broker bundle, spend account, active mandate, and daemon instead of reprovisioning.
+- [ ] Persist pending onboarding state without persisting plaintext broker keys.
+- [ ] Generate and Key-Ring-seal a fresh broker key before funding when no reusable broker exists.
+- [ ] Add Ledger Ethereum address verification and Hedera EVM funding transaction signing/broadcast.
+- [ ] Resolve the funded broker alias to its Hedera account ID and finalize the sealed bundle.
+- [ ] Build a narrow mandate interactively from the requested service and quote, sign/register it, and activate it.
+- [ ] Start or reconnect to `finityd`, then resume the original purchase automatically.
+- [ ] Add tests for existing-state reuse, fresh setup, cancellation, restart/resume, and secret isolation.
+- [ ] Update verified APIs, decisions, hardware TODOs, and user documentation.
+- [ ] Commit implementation milestones and merge the completed branch into `main`.
+
+### Verification
+
+- [ ] Pi package build, typecheck, and tests pass.
+- [ ] Full workspace build, typecheck, and tests pass.
+- [ ] Secret-pattern and diff checks pass.
+- [ ] Existing active setup reaches purchase without Ledger or Key Ring reprovisioning.
+- [ ] Fresh setup pauses only for explicit UI/device approvals and resumes the original intent.
+
+### Review
+
+#### Changed
+
+#### Verified
+
+#### Risks
+
+- Physical Ledger funding and mandate signing require the user/device and cannot be claimed from unit tests.
+
+#### Follow-ups
+
+## 2026-09-09 Ledger-account funding flow
+
+### Plan
+
+- [x] Confirm the Ledger EIP-712 signer EVM alias as the requested destination.
+- [x] Verify source balance, destination alias, and testnet before transfer.
+- [x] Transfer 50 HBAR from operator `0.0.8260226` to the confirmed alias.
+- [x] Verify the transaction and resulting hollow account on Mirror Node.
+- [x] Define the user flow from Ledger funding through mandate activation and purchases.
+
+### Verification
+
+- [x] Confirm transaction status is `SUCCESS` and recipient received exactly 50 HBAR.
+- [x] Confirm no mainnet account or unrelated account was touched.
+
+### Review
+
+#### Changed
+
+- Funded the Ledger EVM principal alias with 50 testnet HBAR.
+- Recorded the auto-created account and transaction evidence.
+
+#### Verified
+
+- Alias `0xeAceF641...d828b0` resolved to new account `0.0.10427444` with a 50 HBAR balance.
+- Transaction `0.0.8260226-1788900863-017047227` is `SUCCESS` on Hedera testnet.
+
+#### Risks
+
+- The account is hollow (`key: null`) until its first outbound transaction is signed by the matching Ledger Ethereum key.
+- The existing spend account is already funded; a clean user-funded demo should use a fresh empty spend account or first reconcile the old test funds.
+
+#### Follow-ups
+
+- Complete the hollow account with a Ledger-signed outbound EVM transaction.
+- Implement the principal-to-spend-account funding step in setup UX.
+
+## 2026-09-08 user-requested deployment/test audit
+
+### Plan
+
+- [x] Verify the persisted Ledger mandate against the live Hedera registry and HCS topic.
+- [x] Verify local Key Ring readiness, daemon prerequisites, and provider reachability without exposing secrets.
+- [x] Run build, typecheck, and full test suite.
+- [x] Run one safe end-to-end smoke test or document the exact external blocker.
+- [x] Record findings, changed files, verification, risks, and follow-ups.
+
+### Verification
+
+- [x] Live mandate record is active and signature principal matches.
+- [x] `finityd` health and provider endpoints are reachable, or blocker is recorded.
+
+### Review
+
+#### Changed
+
+- Added post-signing registration progress notifications.
+- Added repo-local `.env` loading to the `finity` wrapper.
+- Added an explicit `WALLET_PASS` startup error for `finityd`.
+- Fixed Key Ring bundle decryption to consume wallet-cli plaintext stdout.
+- Stabilized provider manifest `publishedAt` so quote hashes remain HCS-bound.
+- Made direct provider launchers load repo-local `.env` automatically.
+- Pointed the Pi package manifest at the runnable extension file instead of its declaration-containing directory.
+- Fixed registry receipt decoding for successful `ReservationCreated` transactions.
+- Enabled x402 facilitator initialization before protected provider routes.
+- Added x402 v2 `PAYMENT-REQUIRED` header parsing with legacy fallback.
+- Allowed only the quote's exact HBAR asset/network/amount through x402 spend controls.
+
+#### Verified
+
+- Live mandate is active on Hedera testnet; EIP-712 signature recovers the on-chain principal.
+- Local provider health and quote endpoints respond successfully.
+- `pnpm build`, `pnpm typecheck`, and `pnpm test` pass after the changes.
+- Broker loaded the live mandate; the first live purchase safely refused before payment with `QUOTE_INVALID`.
+- `pnpm provider:weather` now starts successfully from the repo with `.env` loaded; provider-runtime tests and typecheck pass.
+- Pi package build and tests pass; package extension loading no longer selects `finity.d.ts`.
+- Registry client test/build pass; the stranded 5,000,000-tinybar reservation was released and on-chain `reserved` is back to `0`.
+- Fresh provider smoke test returns HTTP 402 with Hedera fee-payer requirements; failed-payment cleanup leaves consumption at `0`.
+- Final broker-mediated weather purchase reached `RECONCILED`; Hedera settlement and HCS trace evidence verified.
+
+#### Risks
+
+- Local Hedera testnet purchase is verified; public HTTPS provider deployment is still pending.
+- Earlier failed/refused attempts remain in the HCS trace alongside the successful matched receipt chain.
+- Live credentials remain exposed and require rotation before treating this setup as secure.
+
+#### Follow-ups
+
+- Deploy both provider services publicly and rerun the guarded paid test.
+- Rotate the exposed operator, broker, and provider signing credentials, then republish manifests and register a new mandate.
+
 ## Plan
 
 - [x] Hardware E2E run: fast-forward `main` and record the pulled commit.
