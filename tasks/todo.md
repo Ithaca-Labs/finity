@@ -21,19 +21,30 @@
 
 - [x] Pi package build, typecheck, and tests pass.
 - [x] Full workspace build, typecheck, and tests pass.
-- [ ] Secret-pattern and diff checks pass.
+- [x] Secret-pattern and diff checks pass.
 - [x] Existing active setup reaches purchase without Ledger or Key Ring reprovisioning.
-- [ ] Fresh setup pauses only for explicit UI/device approvals and resumes the original intent.
+- [x] Fresh setup pauses only for explicit UI/device approvals and resumes the original intent (automated; physical funding remains HW-unverified).
 
 ### Review
 
 #### Changed
 
+- Added `finity_buy` as the single chat-first purchase interface.
+- Added reuse-first broker/mandate validation against local signed state and live registry status.
+- Added resumable Key Ring sealing, Ledger EVM funding, alias resolution, narrow mandate signing, broker-owned registration, daemon startup, and purchase continuation.
+- Added x402 settlement transaction capture and Mirror Node `chunk_info.total=1` support.
+
 #### Verified
+
+- Full workspace build, typecheck, and tests pass.
+- Existing broker and mandate reused with no prompt; live Kolkata purchase reached `RECONCILED`.
+- Registry remains ACTIVE with zero reserved balance; HCS sequences 17-20 contain the complete trace.
+- Diff and credential-pattern checks pass.
 
 #### Risks
 
 - Physical Ledger funding and mandate signing require the user/device and cannot be claimed from unit tests.
+- The currently running daemon predates settlement-header capture; restart it before the next live purchase to include the transaction ID in the PAYMENT envelope.
 
 #### Follow-ups
 
