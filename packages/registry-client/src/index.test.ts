@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canonicalServiceManifestMessage, createRegistryClient, readTopicMessages, toContractMandate } from "./index.js";
+import { decodeEventLog, encodeEventTopics, encodeAbiParameters } from "viem";
+import { canonicalServiceManifestMessage, createRegistryClient, mandateRegistryAbi, readTopicMessages, toContractMandate } from "./index.js";
 
 const mandate = {
   agent: "did:aid:buyer",
@@ -54,6 +55,25 @@ describe("registry client", () => {
     expect(result.maxPerRequest).toBe(5000000n);
     expect(result.validUntil).toBe(1790208000n);
     expect(result.broker).toBe(mandate.broker);
+  });
+
+  it("decodes reservation IDs from registry receipts", () => {
+    const reservationId = `0x${"11".repeat(32)}` as `0x${string}`;
+    const mandateId = `0x${"22".repeat(32)}` as `0x${string}`;
+    const topics = encodeEventTopics({
+      abi: mandateRegistryAbi,
+      eventName: "ReservationCreated",
+      args: { reservationId, mandateId },
+    }) as [`0x${string}`, `0x${string}`, `0x${string}`];
+    const decoded = decodeEventLog({
+      abi: mandateRegistryAbi,
+      data: encodeAbiParameters([{ type: "uint256" }], [5000000n]),
+      topics,
+    });
+    expect(decoded.eventName).toBe("ReservationCreated");
+    expect(decoded.args.reservationId).toBe(reservationId);
+    expect(decoded.args.mandateId).toBe(mandateId);
+    expect(decoded.args.amount).toBe(5000000n);
   });
 
   it("rejects writes without a configured wallet", async () => {

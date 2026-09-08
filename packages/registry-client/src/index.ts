@@ -78,6 +78,15 @@ const recordComponents = [
 
 export const mandateRegistryAbi = [
   {
+    type: "event",
+    name: "ReservationCreated",
+    inputs: [
+      { name: "reservationId", type: "bytes32", indexed: true },
+      { name: "mandateId", type: "bytes32", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
     type: "function",
     name: "registerMandate",
     stateMutability: "nonpayable",

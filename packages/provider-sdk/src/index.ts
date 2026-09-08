@@ -195,7 +195,7 @@ export function createFinityService(options: FinityServiceOptions): Express {
       response.status(400).json({ error: "invalid_quote_request" });
     }
   });
-  app.use(paymentMiddleware(routes, resourceServer, undefined, undefined, false));
+  app.use(paymentMiddleware(routes, resourceServer));
   for (const method of options.methods) {
     if (method.httpMethod === "GET") app.get(method.path, method.handler);
     else app.post(method.path, method.handler);

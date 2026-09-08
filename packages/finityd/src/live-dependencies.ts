@@ -3,6 +3,7 @@ import { POLICY_HASH } from "@finity/policy-engine";
 import type { ServiceManifest } from "@finity/schemas";
 import { decodeEventLog, type Hash } from "viem";
 import { sign } from "viem/accounts";
+import type { PaymentRequirementsSubset } from "@finity/commerce-adapter";
 import type { MandateStore, PurchaseDependencies } from "./executor.js";
 
 export type LiveDependenciesConfig = {
@@ -34,6 +35,23 @@ function defaultResourceUrl(manifest: ServiceManifest, methodId: string): string
   const path = DEMO_RESOURCE_PATHS[`${manifest.serviceId}:${methodId}`];
   if (!path) throw new Error(`no known resource path for ${manifest.serviceId}:${methodId}`);
   return `${manifest.baseUrl}${path}`;
+}
+
+/** Reads x402 v2's base64 PAYMENT-REQUIRED header, with legacy body support. */
+export async function parsePaymentChallenges(response: Response): Promise<PaymentRequirementsSubset[]> {
+  const encoded = response.headers.get("PAYMENT-REQUIRED");
+  if (encoded) {
+    try {
+      const decoded = JSON.parse(Buffer.from(encoded, "base64").toString("utf8")) as { accepts?: unknown };
+      if (Array.isArray(decoded.accepts)) return decoded.accepts as PaymentRequirementsSubset[];
+    } catch {
+      throw new Error("402 PAYMENT-REQUIRED header is invalid");
+    }
+    throw new Error("402 PAYMENT-REQUIRED header has no accepts array");
+  }
+  const body = (await response.clone().json()) as { accepts?: unknown };
+  if (!Array.isArray(body.accepts)) throw new Error("402 response did not include payment requirements");
+  return body.accepts as PaymentRequirementsSubset[];
 }
 
 /**
@@ -130,11 +148,7 @@ export function createLiveDependencies(config: LiveDependenciesConfig): Purchase
     spendAccountId: config.spendAccountId,
     brokerSessionKey: config.brokerSessionKey,
     brokerAddress: config.brokerAddress,
-    parseChallenges: async (response) => {
-      const body = (await response.clone().json()) as { accepts?: unknown[] };
-      if (!Array.isArray(body.accepts)) throw new Error("402 response did not include an accepts array");
-      return body.accepts as never;
-    },
+    parseChallenges: parsePaymentChallenges,
     submitTrace: async (envelope) => {
       const record = await registryClient.readRecord(envelope.m as Hash);
       if (!record.traceTopic) return undefined;

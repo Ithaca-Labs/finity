@@ -128,4 +128,27 @@ describe("provider-sdk", function () {
     });
     assert.equal(typeof app, "function");
   });
+
+  it("initializes facilitator capabilities before serving protected routes", async function () {
+    let supportedCalls = 0;
+    const app = createFinityService({
+      manifest,
+      methods: [{ methodId: "weather.current", httpMethod: "GET", path: "/weather", priceTinybar: "5000000", handler: (_request, response) => response.json({ ok: true }) }],
+      quoteFactory: async () => { throw new Error("not used"); },
+      facilitator: {
+        ...facilitator,
+        async getSupported() {
+          supportedCalls += 1;
+          return {
+            kinds: [{ x402Version: 2, scheme: "exact", network: "hedera:testnet", extra: { feePayer: "0.0.1" } }],
+            extensions: [],
+            signers: {},
+          };
+        },
+      },
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(typeof app, "function");
+    assert.equal(supportedCalls, 1);
+  });
 });

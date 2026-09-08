@@ -43,6 +43,11 @@ export async function paidFetch(input: {
   if (challenges.length !== 1) throw new CommerceError("PAYMENT_CHALLENGE_INVALID", "expected exactly one payment requirement");
   assertAuthorizedChallenge(challenges[0], input.quote);
   const signer = createClientHederaSigner(input.spendAccountId, PrivateKey.fromStringECDSA(input.brokerSessionKey), { network: input.quote.network });
-  const client = new x402Client().register(input.quote.network, new ExactHederaScheme(signer));
+  const client = new x402Client()
+    .register(input.quote.network, new ExactHederaScheme(signer))
+    .setSpendControls({
+      maxAmountPerPayment: false,
+      allowedAssets: [{ network: input.quote.network, asset: input.quote.asset, maxAmountPerPayment: input.quote.amount }],
+    });
   return wrapFetchWithPayment(fetchImpl, client)(input.url, { ...input.init, redirect: "manual" });
 }

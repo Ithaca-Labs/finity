@@ -230,8 +230,13 @@ export function createIntentExecutor(deps: PurchaseDependencies) {
         capability, quote: selectedQuote, spendAccountId: deps.spendAccountId, brokerSessionKey: deps.brokerSessionKey,
         url: deps.resourceUrl(manifest, selectedQuote.methodId), fetchImpl: deps.fetchImpl, parseChallenges: deps.parseChallenges,
       });
-      if (!response.ok) throw new Error(`provider returned HTTP ${response.status}`);
-    } catch {
+      if (!response.ok) {
+        const body = (await response.clone().text().catch(() => "")).replace(/\s+/g, " ").slice(0, 300);
+        throw new Error(`provider returned HTTP ${response.status}${body ? `: ${body}` : ""}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message.replace(/\s+/g, " ").slice(0, 300) : "unknown error";
+      console.error(`[finityd] payment failed: ${message}`);
       await deps.release(reservationId).catch(() => undefined);
       transition({ type: "FAILED_PAYMENT" });
       return;
