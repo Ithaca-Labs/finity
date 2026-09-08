@@ -8,10 +8,12 @@
 - [x] Hardware E2E run: verify wallet-cli session state and command help.
 - [ ] Hardware E2E run: verify the Ethereum app and USB readiness for mandate signing.
 - [x] Hardware E2E run: run Ledger genuine-check sequentially.
-- [ ] Hardware E2E run: verify or initialize the Ledger Key Ring using user-provisioned credentials only.
+- [x] Hardware E2E run: verify or initialize the Ledger Key Ring using user-provisioned credentials only.
 - [ ] Hardware E2E run: verify Broker Bundle recovery without exposing plaintext.
 - [x] Hardware E2E run: build and typecheck the pulled tree.
 - [x] Hardware E2E run: run the complete unit and integration test suite.
+- [ ] Hardware E2E run: bootstrap separate Hedera testnet broker/provider accounts and persist only non-secret config.
+- [ ] Hardware E2E run: deploy `MandateRegistry` to Hedera testnet and create the HCS service registry topic.
 - [ ] Hardware E2E run: start the local broker and verify health.
 - [ ] Hardware E2E run: exercise the Pi extension doctor path.
 - [ ] Hardware E2E run: prepare a real mandate draft from the repository fixture.
@@ -157,7 +159,7 @@ hardware-dependent paths separately.
 - [x] `@finity/finityd`: wired `GET /v1/services` and `POST /v1/quotes` for
   real (they existed in the route allowlist since Day 3 but always 501'd —
   pure software, no reason to leave them gated behind hardware).
-- [ ] `wallet-cli genuine-check` / `ring init` against a physical Ledger.
+- [x] `wallet-cli genuine-check` / `ring init` against a physical Ledger.
 - [ ] DMK node-hid discover/connect/`signTypedData` against a physical
   Ledger with the Ethereum app open; the r/s/v → 65-byte-hex convention in
   `assembleSignature` needs confirming against a real device response.
@@ -280,11 +282,17 @@ in Day 4 (`verifyBrokerBundleRecovery`).
 - `services/hello-weather` and `services/summarize-lite`: paid Hedera service skeletons with deterministic handlers and quote rules.
 - `@finity/registry-client`: viem MandateRegistry adapter, Hiero HCS writer, and same-origin mirror-node reader.
 - `docs/VERIFIED.md` and `docs/DECISIONS.md`: provider/registry API evidence and HCS-14 packaging decision.
+- Testnet bootstrap branch: Key Ring initialization and funded operator preflight evidence.
 
 ### Verified
 
 - `origin/main` was already current at `4d83131e185251523b3214dbb80804d846439c14`.
 - Physical Ledger genuine-check passed after returning the device to the dashboard.
+- Physical Ledger Key Ring initialization passed after the user provisioned the
+  `ledger-wallet-cli` password in macOS Keychain; `ring keys` returns an
+  initialized ring with no plaintext keys exposed.
+- `0.0.8260226` is a funded ECDSA Hedera testnet operator account; a read-only
+  SDK balance query returned approximately 954.93 HBAR.
 - `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm typecheck`, `pnpm test`, and `pnpm lint` pass.
 - Source and fixture canary/password scan is clean.
 - Provider, service, and registry package builds, typechecks, and focused tests pass.
@@ -293,14 +301,14 @@ in Day 4 (`verifyBrokerBundleRecovery`).
 
 ### Risks
 
-- Key Ring initialization is blocked until the user provisions `account=default, service=ledger-wallet-cli` in macOS Keychain.
 - Mandate signing still requires the Ledger Ethereum app; the HBAR app is not the current DMK signing target.
-- Physical Ledger, funded Hedera credentials, live contract address, HCS writes, and Blocky402 settlement remain unverified.
+- Physical Ledger mandate signing, live contract deployment, HCS writes, and Blocky402 settlement remain unverified.
 - HCS-14 package installation is deferred because its published workspace dependency is unresolved.
 
 ### Follow-ups
 
-- Resume `verification/hardware-e2e` after Key Ring password provisioning; run `ring init`, setup, and Ethereum-app mandate signing.
+- Continue `verification/testnet-bootstrap`: create the broker/provider accounts,
+  deploy the registry, and run the Ledger Ethereum-app mandate signing flow.
 - Continue with `broker/runtime` later: vault isolation, commerce adapter, negotiator, capability, trace builder, daemon, and local E2E.
 
 ### Unresolved questions

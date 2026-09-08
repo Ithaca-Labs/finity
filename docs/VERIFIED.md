@@ -152,6 +152,25 @@ here only after a funded testnet run.
 - Physical Ledger genuine-check, DMK Node HID permissions, Ethereum app clear-signing rendering, and signer output remain unverified.
 - Hedera account creation/faucet limits, Hashio deployment behavior, and funded testnet settlement IDs remain unverified.
 
+## 2026-09-08 hardware and operator preflight
+
+- `wallet-cli genuine-check` passed against the connected physical Ledger after
+  returning it to the dashboard; the two earlier HBAR-app attempts failed
+  closed with exit 4 and `Wrong app. Open Ledger dashboard.`
+- `wallet-cli ring init` completed after the user provisioned the
+  `account=default, service=ledger-wallet-cli` macOS Keychain secret. The
+  command output contained no password, and `wallet-cli ring keys --output
+  json` returned an initialized ring with zero named keys.
+- The configured `.env` contains `HEDERA_OPERATOR_ID=0.0.8260226` and a
+  DER-encoded ECDSA key. The installed Hiero SDK's `Client.setOperator()` was
+  verified to parse this DER form; the key value is intentionally not recorded.
+- A read-only `AccountBalanceQuery` against Hedera testnet succeeded for
+  `0.0.8260226`, returning `95493170133` tinybars (about 954.93 HBAR). The
+  mirror node reports the account as ECDSA and not deleted.
+- The next live writes are intentionally still pending: separate broker and
+  provider accounts, `MandateRegistry` deployment, HCS registry topic, real
+  Ledger Ethereum-app signature, and a paid x402 request.
+
 ## Day 3 implementation notes
 
 `@x402/fetch@2.25.0` declarations confirm that `wrapFetchWithPayment(fetch, client)` accepts an `x402Client`; `@x402/hedera@2.25.0` declarations confirm `createClientHederaSigner(accountId, PrivateKey, { network })` and `ExactHederaScheme`. The commerce adapter uses these exact signatures only after separately validating the 402 requirements against the policy-authorized quote.
