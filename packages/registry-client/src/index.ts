@@ -567,18 +567,51 @@ type MirrorPayload = {
   links?: { next?: unknown };
 };
 
-function parseMirrorMessage(value: unknown): MirrorTopicMessage {
+type ParsedMirrorMessage = MirrorTopicMessage & {
+  bytes: Uint8Array;
+  chunk?: { key: string; number: number; total: number };
+};
+
+function parseMirrorMessage(value: unknown): ParsedMirrorMessage {
   if (!value || typeof value !== "object") throw new Error("mirror returned an invalid topic message");
   const message = value as Record<string, unknown>;
   if (typeof message.message !== "string") throw new Error("mirror message has no base64 payload");
   const sequenceNumber = Number(message.sequence_number);
   if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber < 0) throw new Error("mirror message sequence is invalid");
+  const bytes = Buffer.from(message.message, "base64");
+  let chunk: ParsedMirrorMessage["chunk"];
+  if (message.chunk_info !== undefined) {
+    if (!message.chunk_info || typeof message.chunk_info !== "object") throw new Error("mirror chunk info is invalid");
+    const info = message.chunk_info as Record<string, unknown>;
+    const initialTransactionId = info.initial_transaction_id;
+    const number = Number(info.number);
+    const total = Number(info.total);
+    if (!initialTransactionId || !Number.isSafeInteger(number) || !Number.isSafeInteger(total) || number < 1 || total < 2 || number > total) {
+      throw new Error("mirror chunk info is invalid");
+    }
+    chunk = { key: JSON.stringify(initialTransactionId), number, total };
+  }
   return {
     consensusTimestamp: typeof message.consensus_timestamp === "string" ? message.consensus_timestamp : null,
     sequenceNumber,
-    message: Buffer.from(message.message, "base64").toString("utf8"),
+    message: bytes.toString("utf8"),
     runningHash: typeof message.running_hash === "string" ? message.running_hash : null,
     transactionId: typeof message.transaction_id === "string" ? message.transaction_id : null,
+    bytes,
+    chunk,
+  };
+}
+
+function completeMirrorMessage(chunks: ParsedMirrorMessage[]): MirrorTopicMessage {
+  const ordered = [...chunks].sort((left, right) => (left.chunk?.number ?? 0) - (right.chunk?.number ?? 0));
+  const last = ordered.at(-1);
+  if (!last) throw new Error("mirror message chunk group is empty");
+  return {
+    consensusTimestamp: last.consensusTimestamp,
+    sequenceNumber: last.sequenceNumber,
+    message: Buffer.concat(ordered.map((part) => Buffer.from(part.bytes))).toString("utf8"),
+    runningHash: last.runningHash,
+    transactionId: last.transactionId,
   };
 }
 
@@ -604,6 +637,7 @@ export async function readTopicMessages(
   let next = new URL(`/api/v1/topics/${encodeURIComponent(topicId)}/messages`, base);
   next.searchParams.set("order", "asc");
   const result: MirrorTopicMessage[] = [];
+  const pendingChunks = new Map<string, ParsedMirrorMessage[]>();
   while (next && result.length < requested) {
     if (next.origin !== base.origin) throw new Error("mirror pagination crossed origins");
     next.searchParams.set("limit", String(Math.min(requested - result.length, 100)));
@@ -612,12 +646,24 @@ export async function readTopicMessages(
     const payload = (await response.json()) as MirrorPayload;
     if (!Array.isArray(payload.messages)) throw new Error("mirror returned no messages array");
     for (const item of payload.messages) {
-      result.push(parseMirrorMessage(item));
+      const parsed = parseMirrorMessage(item);
+      if (!parsed.chunk) {
+        result.push(parsed);
+      } else {
+        const chunks = pendingChunks.get(parsed.chunk.key) ?? [];
+        chunks.push(parsed);
+        pendingChunks.set(parsed.chunk.key, chunks);
+        if (chunks.length === parsed.chunk.total) {
+          result.push(completeMirrorMessage(chunks));
+          pendingChunks.delete(parsed.chunk.key);
+        }
+      }
       if (result.length === requested) break;
     }
     const candidate = payload.links?.next;
     if (typeof candidate !== "string" || !candidate) break;
     next = new URL(candidate, base);
   }
+  if (pendingChunks.size > 0) throw new Error("mirror topic ended with incomplete message chunks");
   return result;
 }

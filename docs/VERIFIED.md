@@ -70,6 +70,7 @@ Inspected from exact npm tarballs and declarations before dependent code:
 - `@x402/core@2.25.0`: `HTTPFacilitatorClient({ url })`, `x402ResourceServer(facilitator).register(network, scheme)`, `RoutesConfig`, and `FacilitatorClient` from `@x402/core/server`.
 - `@hiero-ledger/sdk@2.87.0`: the package-root `Client` export is the Node client; `Client.forTestnet()` / `Client.forMainnet()` create clients, `setOperator(accountId, privateKey)` configures signing, and `TopicCreateTransaction({ topicMemo }).execute(client)` plus `TopicMessageSubmitTransaction({ topicId, message }).execute(client)` return responses whose `getReceipt(client)` confirms consensus. `privateKeyToAccount` is not a viem root export; it is imported from `viem/accounts`.
 - `@hiero-ledger/sdk@2.87.0`: `AccountCreateTransaction.setECDSAKeyWithAlias(key)` creates an ECDSA account with an EVM alias, `setInitialBalance(new Hbar(amount))` funds it, and the receipt exposes the resulting `accountId`.
+- `@hiero-ledger/sdk@2.87.0`: `TopicMessageSubmitTransaction` chunks messages at the SDK's 1,024-byte `CHUNK_SIZE`; the mirror REST payload exposes `chunk_info.initial_transaction_id`, `number`, and `total`. `readTopicMessages` now reassembles these chunks before returning UTF-8 messages.
 - `@hol-org/standards-sdk@0.1.186`: published package re-exports `@hashgraphonline/standards-sdk`. The live declaration exposes `HCS14Client`, `canonicalizeAgentData(input)`, and overloaded `createUaid(existingDid, params?)` / `createUaid(canonicalAgentData, params?, options?)`. The canonical agent schema requires `registry`, `name`, `version`, `protocol`, `nativeId`, and `skills`; this supersedes the older `resolveAgent`/`registerAgent` assumption in the spec for v1 identity generation.
 - `@ledgerhq/device-signer-kit-ethereum@1.18.0`: `new SignerEthBuilder({ dmk, sessionId, originToken? }).build()`; `signTypedData(derivationPath, typedData, options?)` returns a device-action observable.
 - `@ledgerhq/device-transport-kit-node-hid@1.0.1`: `NodeHidTransport`, `nodeHidTransportFactory`, and `nodeHidIdentifier` from the package root.
@@ -155,6 +156,34 @@ missing ECDSA broker/provider accounts from fresh local keys, deploys the
 compiled `MandateRegistry` through Hashio, creates the HCS service registry
 topic, seals the broker bundle through the initialized wallet-cli Key Ring,
 and writes generated values only to the ignored, mode-600 local `.env`.
+
+## 2026-09-08 live Hedera testnet bootstrap
+
+All values below are public identifiers; private keys remain local only.
+
+- Broker/Spend Account: `0.0.10423102`; account creation transaction:
+  `0.0.8260226@1788877970.198833346`; funded with 50 HBAR initially.
+- Provider A: `0.0.10423105`; account creation transaction:
+  `0.0.8260226@1788877975.613280407`; funded with 10 HBAR initially.
+- Provider B: `0.0.10423106`; account creation transaction:
+  `0.0.8260226@1788877976.808042274`; funded with 10 HBAR initially.
+- `MandateRegistry` contract: EVM address
+  `0xcbc39351ca205fd291b73d0c31904590c3098d89`, Hedera contract ID
+  `0.0.10423109`; deployment transaction:
+  `0xd061ebd1a6657d5ad66fb49f35510a5d176772ee7e880901b40444f36c2ffdd2`.
+- Service registry HCS topic: `0.0.10423110`; creation transaction:
+  `0.0.8260226@1788877983.471829810`.
+- Signed manifest `hello-weather@1` hash:
+  `0x4d7ee12d450c5468991ca2b15c6004bd7791ff4e9838f93885ed3127067738b8`;
+  submission transaction `0.0.8260226@1788878025.516291780`.
+- Signed manifest `summarize-lite@1` hash:
+  `0x5f4cdbb27adcb9f27f42444a5d713db9d10233a065a4d7b911fdf8f85eecada1`;
+  submission transaction `0.0.8260226@1788878030.851834482`.
+- Mirror node verified the contract as not deleted and returned four HCS
+  chunks (two chunks per manifest). The fixed reader reassembled them, and a
+  live discovery call returned both service IDs with their localhost origins.
+- Blocky402 `/supported` advertises `hedera:testnet` with fee payer
+  `0.0.7162784`; Hashio `eth_chainId` returned `0x128` (296).
 
 ## Pending live/hardware verification
 

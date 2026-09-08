@@ -91,6 +91,40 @@ describe("registry client", () => {
     expect(result.map((message) => message.message)).toEqual(["first", "second"]);
   });
 
+  it("reassembles Hedera mirror chunks before returning messages", async () => {
+    const initialTransactionId = { account_id: "0.0.123", transaction_valid_start: "1.000000001" };
+    const first = Buffer.from('{"hello":"world"}');
+    const second = Buffer.from("\u0000", "utf8");
+    const pages = [
+      {
+        messages: [
+          {
+            consensus_timestamp: "1.000000001",
+            sequence_number: 1,
+            message: first.toString("base64"),
+            chunk_info: { initial_transaction_id: initialTransactionId, number: 1, total: 2 },
+          },
+        ],
+        links: { next: "https://mirror.test/api/v1/topics/0.0.1/messages?timestamp=gt:1" },
+      },
+      {
+        messages: [
+          {
+            consensus_timestamp: "1.000000002",
+            sequence_number: 2,
+            message: second.toString("base64"),
+            chunk_info: { initial_transaction_id: initialTransactionId, number: 2, total: 2 },
+          },
+        ],
+        links: { next: null },
+      },
+    ];
+    const fetcher = async () => new Response(JSON.stringify(pages.shift()), { status: 200 });
+    const result = await readTopicMessages("0.0.1", { mirrorNodeUrl: "https://mirror.test", fetcher });
+    expect(result).toHaveLength(1);
+    expect(result[0]?.message).toBe('{"hello":"world"}\u0000');
+  });
+
   it("rejects cross-origin mirror pagination", async () => {
     const fetcher = async () =>
       new Response(

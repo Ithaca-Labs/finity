@@ -12,15 +12,15 @@
 - [ ] Hardware E2E run: verify Broker Bundle recovery without exposing plaintext.
 - [x] Hardware E2E run: build and typecheck the pulled tree.
 - [x] Hardware E2E run: run the complete unit and integration test suite.
-- [ ] Hardware E2E run: bootstrap separate Hedera testnet broker/provider accounts and persist only non-secret config.
-- [ ] Hardware E2E run: deploy `MandateRegistry` to Hedera testnet and create the HCS service registry topic.
+- [x] Hardware E2E run: bootstrap separate Hedera testnet broker/provider accounts and persist only non-secret config.
+- [x] Hardware E2E run: deploy `MandateRegistry` to Hedera testnet and create the HCS service registry topic.
 - [ ] Hardware E2E run: start the local broker and verify health.
 - [ ] Hardware E2E run: exercise the Pi extension doctor path.
 - [ ] Hardware E2E run: prepare a real mandate draft from the repository fixture.
 - [ ] Hardware E2E run: sign the mandate on the physical Ledger.
 - [ ] Hardware E2E run: register the signed mandate against the configured Hedera registry.
 - [ ] Hardware E2E run: verify the registered mandate and trace topic.
-- [ ] Hardware E2E run: verify provider and facilitator availability.
+- [x] Hardware E2E run: verify provider and facilitator availability.
 - [ ] Hardware E2E run: run the authorized paid HBAR purchase.
 - [ ] Hardware E2E run: run the matched policy refusal and confirm zero settlement.
 - [ ] Hardware E2E run: run the verifier against the resulting receipt and public evidence.
