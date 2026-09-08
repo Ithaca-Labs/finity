@@ -23,7 +23,9 @@ const writer = createHcsWriter({
 });
 
 try {
-  const topic = await writer.createTopic("Finity Service Registry v1");
+  const topic = process.env.FINITY_REGISTRY_TOPIC_ID
+    ? { topicId: process.env.FINITY_REGISTRY_TOPIC_ID, transactionId: "" }
+    : await writer.createTopic("Finity Service Registry v1");
   const publish = async (manifest: typeof weather.manifest) => {
     return {
       serviceId: manifest.serviceId,
