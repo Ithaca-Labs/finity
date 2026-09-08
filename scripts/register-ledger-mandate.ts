@@ -92,6 +92,12 @@ async function main(): Promise<void> {
       registryClient,
       sign: async () => signature,
       createTraceTopic: (memo) => hcsWriter.createTopic(memo),
+      onProgress: (stage) => console.error({
+        signature_received: "Ledger signature received; registering the mandate on Hedera...",
+        mandate_registered: "Mandate registered; creating the HCS trace topic...",
+        trace_topic_created: "Trace topic created; binding it to the mandate...",
+        trace_topic_bound: "Mandate registration complete.",
+      }[stage]),
     });
     const parsed = signedAgentMandateSchema.parse(registered.signedMandate);
     await mkdir(join(home, "mandates"), { recursive: true });
@@ -119,4 +125,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
-

@@ -32,6 +32,7 @@ const FAKE_SET_TRACE_TX = `0x${"33".repeat(32)}` as `0x${string}`;
 describe("registerMandateOnChain", () => {
   it("signs exactly what compile() produced, then registers and binds a trace topic in order", async () => {
     const calls: string[] = [];
+    const stages: string[] = [];
     let seenTypedData: CompiledMandate["typedData"] | undefined;
     const result = await registerMandateOnChain({
       choices,
@@ -55,9 +56,11 @@ describe("registerMandateOnChain", () => {
         expect(memo).toContain("Finity mandate trace");
         return { topicId: "0.0.999", transactionId: "0.0.5@1.0" };
       }) satisfies TraceTopicCreator,
+      onProgress: (stage) => { stages.push(stage); },
     });
 
     expect(calls).toEqual(["sign", "registerMandate", "createTraceTopic", "setTraceTopic"]);
+    expect(stages).toEqual(["signature_received", "mandate_registered", "trace_topic_created", "trace_topic_bound"]);
     expect(seenTypedData?.primaryType).toBe("AgentMandate");
     expect(seenTypedData?.message.agent).toBe("did:aid:buyer");
     expect(result).toMatchObject({

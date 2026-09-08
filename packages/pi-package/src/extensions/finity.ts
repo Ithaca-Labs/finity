@@ -290,6 +290,15 @@ async function handleMandate(args: string[], ctx: ExtensionCommandContext): Prom
       sign,
       registryClient,
       createTraceTopic: (memo) => hcsWriter.createTopic(memo),
+      onProgress: (stage) => {
+        const messages = {
+          signature_received: "Ledger signature received. Registering the mandate on Hedera...",
+          mandate_registered: "Mandate registered. Creating its HCS trace topic...",
+          trace_topic_created: "Trace topic created. Binding it to the mandate...",
+          trace_topic_bound: "Mandate registration complete.",
+        } as const;
+        ctx.ui.notify(messages[stage], "info");
+      },
     });
     // finityd's MandateStore needs the full signed mandate content, not just
     // an ID: MandateRegistry.record() only exposes consumption/status
