@@ -92,7 +92,7 @@ async function createAccount(
 ): Promise<ProvisionedAccount> {
   const evmAddress = privateKeyToAccount(privateKey).address;
   const hederaKey = rawHederaKey(privateKey);
-  if (hederaKey.publicKey.toEvmAddress().toLowerCase() !== evmAddress.toLowerCase()) {
+  if (`0x${hederaKey.publicKey.toEvmAddress()}`.toLowerCase() !== evmAddress.toLowerCase()) {
     throw new Error(`${label} ECDSA key/address mismatch`);
   }
   const response = await new AccountCreateTransaction()
