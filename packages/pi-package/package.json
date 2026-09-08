@@ -4,7 +4,7 @@
   "type": "module",
   "keywords": ["pi-package"],
   "pi": {
-    "extensions": ["./dist/extensions"],
+    "extensions": ["./dist/extensions/finity.js"],
     "skills": ["./skills"]
   },
   "exports": {

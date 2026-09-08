@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process";
-import { isFinitydRunning, resolveFinitydBin, resolvePiPackageRoot } from "../resolve.js";
+import { isFinitydRunning, loadDotEnv, resolveFinitydBin, resolvePiPackageRoot } from "../resolve.js";
 
 const FINITY_SYSTEM_PROMPT = [
   "You are the Finity Buyer Agent. You have no keys, no passwords, and no wallet access.",
@@ -21,6 +21,7 @@ async function startFinitydDetached(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await loadDotEnv();
   const args = process.argv.slice(2);
 
   if (args[0] === "broker") {

@@ -61,6 +61,7 @@ async function loadMandates(mandateStore: MandateStore): Promise<number> {
 
 async function loadBrokerBundle(): Promise<{ brokerSessionKey: `0x${string}`; spendAccountId: string; brokerUaid: string }> {
   const bundlePath = join(finityHome(), "bundles", "broker.enc");
+  if (!process.env.WALLET_PASS) throw new Error("WALLET_PASS is required to start finityd; set it from the OS keychain before launching the broker");
   const ciphertext = await readFile(bundlePath);
   const plaintext = await decryptKeyRingBundle(ciphertext, "broker:default", async () => process.env.WALLET_PASS ?? "");
   const bundle = brokerBundleSchema.parse(JSON.parse(plaintext.toString("utf8")));

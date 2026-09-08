@@ -2,7 +2,13 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { isFinitydRunning, resolveFinitydBin, resolvePiPackageRoot } from "./resolve.js";
+import { isFinitydRunning, parseDotEnv, resolveFinitydBin, resolvePiPackageRoot } from "./resolve.js";
+
+describe("parseDotEnv", () => {
+  it("parses comments, export syntax, and quoted values", () => {
+    expect(parseDotEnv("# comment\nexport FOO=bar\nBAR=\"quoted value\"\nBAZ='single'\n")).toEqual({ FOO: "bar", BAR: "quoted value", BAZ: "single" });
+  });
+});
 
 describe("resolvePiPackageRoot / resolveFinitydBin", () => {
   it("resolve to real paths in the actually-installed workspace packages", () => {

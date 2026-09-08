@@ -8,7 +8,7 @@ import {
   Hbar,
   PrivateKey,
 } from "@hiero-ledger/sdk";
-import { generateIdentity, saveIdentityFile, sealBrokerBundle } from "@finity/pi-package";
+import { generateIdentity, saveIdentityFile, sealBrokerBundle, verifyBrokerBundleRecovery } from "@finity/pi-package";
 import { createHcsWriter, hederaTestnetChain } from "@finity/registry-client";
 import { http, createPublicClient, createWalletClient, type Abi, type Address, type Hex } from "viem";
 import { deployContract } from "viem/actions";
@@ -206,12 +206,16 @@ async function main(): Promise<void> {
   const topic = await createRegistryTopic(values, { id: operatorId, key: operatorKey });
   const brokerIdentity = await generateIdentity({ name: "finity-broker", nativeId: `hedera:testnet:${broker.accountId}` });
   const home = process.env.FINITY_HOME ?? `${homedir()}/.finity`;
+  const bundlePath = `${home}/bundles/broker.enc`;
   await sealBrokerBundle({
     brokerId: "default",
     bundle: { brokerSessionKey: broker.privateKey, spendAccountId: broker.accountId, brokerUaid: brokerIdentity.uaid },
-    outputPath: `${home}/bundles/broker.enc`,
+    outputPath: bundlePath,
     walletPass: keychainPassword,
   });
+  if (!(await verifyBrokerBundleRecovery({ brokerId: "default", bundlePath, walletPass: keychainPassword }))) {
+    throw new Error("sealed Broker Bundle failed its recovery check");
+  }
   await saveIdentityFile(`${home}/identity.json`, { broker: brokerIdentity });
   await persistEnv({ FINITY_REGISTRY_ADDRESS: deployment.address, FINITY_REGISTRY_TOPIC_ID: topic.topicId });
 

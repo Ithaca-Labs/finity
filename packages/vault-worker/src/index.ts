@@ -23,7 +23,9 @@ export async function decryptKeyRingBundle(ciphertext: Uint8Array, keyName: stri
   const pass = await walletPass();
   if (!pass) throw new VaultError("VAULT_DECRYPT_FAILED", "wallet password was unavailable");
   return new Promise((resolve, reject) => {
-    const child = spawn("wallet-cli", ["ring", "decrypt", "--key", keyName, "--output", "json"], {
+    // Decryption returns the bundle's raw plaintext on stdout. wallet-cli's
+    // JSON mode is metadata-only and rejects binary plaintext without --out.
+    const child = spawn("wallet-cli", ["ring", "decrypt", "--key", keyName], {
       env: { PATH: process.env.PATH ?? "", WALLET_PASS: pass }, stdio: ["pipe", "pipe", "pipe"],
     });
     const output: Buffer[] = []; const errors: Buffer[] = [];

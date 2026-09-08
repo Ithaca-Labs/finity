@@ -72,7 +72,7 @@ describe("verifyBrokerBundleRecovery against the real installed wallet-cli", () 
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it("fails closed when the sealed bundle file does not exist", async () => {
     await expect(

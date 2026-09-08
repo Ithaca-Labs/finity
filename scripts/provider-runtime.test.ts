@@ -24,7 +24,15 @@ describe("provider runtime", () => {
     expect(runtime.manifest.baseUrl).toBe("http://localhost:3001");
     expect(runtime.manifest.provider.signingKey).toMatch(/^0x[0-9a-f]{130}$/i);
     expect(runtime.manifest.signature).toMatch(/^0x[0-9a-f]{130}$/i);
+    expect(runtime.manifest.publishedAt).toBe(helloWeatherManifest.publishedAt);
     expect(JSON.stringify(runtime)).not.toContain(testKey);
+  });
+
+  it("accepts an explicit publishedAt when matching an already-published HCS manifest", async () => {
+    configureProvider("http://localhost:3001");
+    process.env.FINITY_PROVIDER_A_PUBLISHED_AT = "1788878031";
+    const runtime = await loadProviderRuntime("A", helloWeatherManifest);
+    expect(runtime.manifest.publishedAt).toBe(1788878031);
   });
 
   it("fails closed for a non-local HTTP provider origin", async () => {

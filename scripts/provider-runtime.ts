@@ -4,6 +4,8 @@ import {
   type UnsignedServiceManifest,
 } from "@finity/provider-sdk";
 import type { ServiceManifest } from "@finity/schemas";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
 
@@ -15,6 +17,24 @@ export type ProviderRuntime = {
   signer: CanonicalSigner;
   port: number;
 };
+
+async function loadDotEnv(filePath = join(process.cwd(), ".env")): Promise<void> {
+  let source: string;
+  try {
+    source = await readFile(filePath, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  for (const rawLine of source.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+    if (!match || process.env[match[1]!] !== undefined) continue;
+    const value = match[2]!.trim();
+    process.env[match[1]!] = value.replace(/^(?:"(.*)"|'(.*)')$/, (_, doubleQuoted, singleQuoted) => doubleQuoted ?? singleQuoted);
+  }
+}
 
 function required(name: string): string {
   const value = process.env[name];
@@ -44,6 +64,13 @@ function port(value: string): number {
   return parsed;
 }
 
+function publishedAt(provider: ProviderName, fallback: number): number {
+  const raw = process.env[`FINITY_PROVIDER_${provider}_PUBLISHED_AT`] ?? String(fallback);
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error("provider publishedAt must be a UNIX timestamp");
+  return parsed;
+}
+
 function canonicalSigner(privateKey: string): { signer: CanonicalSigner; publicKey: string } {
   if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
     throw new Error("provider signing key must be a 32-byte 0x-prefixed ECDSA private key");
@@ -63,6 +90,7 @@ export async function loadProviderRuntime(
   provider: ProviderName,
   template: UnsignedServiceManifest,
 ): Promise<ProviderRuntime> {
+  await loadDotEnv();
   const baseUrl = validatePublicBaseUrl(providerValue(provider, "URL"));
   const account = providerValue(provider, "ACCOUNT");
   const signing = canonicalSigner(providerValue(provider, "SIGNING_EVM_PRIVATE_KEY"));
@@ -77,7 +105,9 @@ export async function loadProviderRuntime(
     })),
     payTo: account,
     receiptKey: signing.publicKey,
-    publishedAt: Math.floor(Date.now() / 1000),
+    // Quotes bind to the manifest hash published in HCS. Keep this stable
+    // across provider restarts; changing it requires publishing a new manifest.
+    publishedAt: publishedAt(provider, template.publishedAt),
   };
   return {
     baseUrl,
