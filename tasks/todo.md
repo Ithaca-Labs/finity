@@ -15,7 +15,7 @@
 - [x] Start or reconnect to `finityd`, then resume the original purchase automatically.
 - [x] Add tests for existing-state reuse, fresh setup, cancellation, restart/resume, and secret isolation.
 - [x] Update verified APIs, decisions, hardware TODOs, and user documentation.
-- [ ] Commit implementation milestones and merge the completed branch into `main`.
+- [x] Commit implementation milestones and merge the completed branch into `main`.
 
 ### Verification
 
