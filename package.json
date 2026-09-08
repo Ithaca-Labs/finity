@@ -18,6 +18,7 @@
     "provider:summarize": "tsx scripts/serve-summarize-lite.ts",
     "registry:seed": "tsx scripts/seed-registry.ts",
     "testnet:bootstrap": "tsx scripts/bootstrap-testnet.ts",
+    "testnet:mandate": "tsx scripts/register-ledger-mandate.ts",
     "testnet:paid": "tsx scripts/paid-testnet.ts",
     "finityd": "tsx scripts/finityd-intent.ts"
   },
