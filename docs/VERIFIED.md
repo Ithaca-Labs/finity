@@ -69,11 +69,13 @@ Inspected from exact npm tarballs and declarations before dependent code:
 - `@x402/fetch@2.25.0`: `wrapFetchWithPayment(fetch, new x402Client().register("hedera:testnet", new ExactHederaScheme(signer)))` retries a 402 request with a payment payload. `x402HTTPClient.processResponse(response)` reports the post-payment settlement status. `PrivateKey` and `createClientHederaSigner` are imported from `@x402/hedera`, avoiding a direct SDK import in the payment client.
 - `@x402/core@2.25.0`: `HTTPFacilitatorClient({ url })`, `x402ResourceServer(facilitator).register(network, scheme)`, `RoutesConfig`, and `FacilitatorClient` from `@x402/core/server`.
 - `@hiero-ledger/sdk@2.87.0`: the package-root `Client` export is the Node client; `Client.forTestnet()` / `Client.forMainnet()` create clients, `setOperator(accountId, privateKey)` configures signing, and `TopicCreateTransaction({ topicMemo }).execute(client)` plus `TopicMessageSubmitTransaction({ topicId, message }).execute(client)` return responses whose `getReceipt(client)` confirms consensus. `privateKeyToAccount` is not a viem root export; it is imported from `viem/accounts`.
+- `@hiero-ledger/sdk@2.87.0`: `AccountCreateTransaction.setECDSAKeyWithAlias(key)` creates an ECDSA account with an EVM alias, `setInitialBalance(new Hbar(amount))` funds it, and the receipt exposes the resulting `accountId`.
 - `@hol-org/standards-sdk@0.1.186`: published package re-exports `@hashgraphonline/standards-sdk`. The live declaration exposes `HCS14Client`, `canonicalizeAgentData(input)`, and overloaded `createUaid(existingDid, params?)` / `createUaid(canonicalAgentData, params?, options?)`. The canonical agent schema requires `registry`, `name`, `version`, `protocol`, `nativeId`, and `skills`; this supersedes the older `resolveAgent`/`registerAgent` assumption in the spec for v1 identity generation.
 - `@ledgerhq/device-signer-kit-ethereum@1.18.0`: `new SignerEthBuilder({ dmk, sessionId, originToken? }).build()`; `signTypedData(derivationPath, typedData, options?)` returns a device-action observable.
 - `@ledgerhq/device-transport-kit-node-hid@1.0.1`: `NodeHidTransport`, `nodeHidTransportFactory`, and `nodeHidIdentifier` from the package root.
 - `json-canonicalize@3.0.0`: `canonicalize(value, allowCircular?)` from the package root; returns a canonical JSON string.
 - `viem@2.56.3`: `createPublicClient({ chain, transport: http(rpcUrl) })`, `createWalletClient({ account, chain, transport: http(rpcUrl) })`, `readContract`, and `writeContract` are the registry-client primitives; EIP-712 hashing/recovery remains in the compiler.
+- `viem@2.56.3`: `deployContract` is exported from `viem/actions`; it accepts the verified wallet client, artifact ABI, and bytecode and returns a transaction hash for `waitForTransactionReceipt`.
 - `@finity/policy-engine` build emits `dist/POLICY_HASH`; current deterministic build descriptor hash is `0x37501b231d9111797415c034aeb2875598ff583b38c025326c97e7e7649453a6`.
 
 ## Contract toolchain
@@ -146,6 +148,13 @@ registry seeder, and a real x402 payment client script. `registry:seed` and
 `testnet:paid` refuse unless `FINITY_TESTNET=1`; no HCS write or HBAR payment
 has been attempted from this workspace. Their transaction IDs must be recorded
 here only after a funded testnet run.
+
+`pnpm testnet:bootstrap` is the guarded live setup command on the
+`verification/testnet-bootstrap` branch. With `FINITY_TESTNET=1`, it creates
+missing ECDSA broker/provider accounts from fresh local keys, deploys the
+compiled `MandateRegistry` through Hashio, creates the HCS service registry
+topic, seals the broker bundle through the initialized wallet-cli Key Ring,
+and writes generated values only to the ignored, mode-600 local `.env`.
 
 ## Pending live/hardware verification
 

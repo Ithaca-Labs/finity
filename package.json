@@ -17,6 +17,7 @@
     "provider:weather": "tsx scripts/serve-hello-weather.ts",
     "provider:summarize": "tsx scripts/serve-summarize-lite.ts",
     "registry:seed": "tsx scripts/seed-registry.ts",
+    "testnet:bootstrap": "tsx scripts/bootstrap-testnet.ts",
     "testnet:paid": "tsx scripts/paid-testnet.ts",
     "finityd": "tsx scripts/finityd-intent.ts"
   },
@@ -24,6 +25,7 @@
     "@finity/finityd": "workspace:*",
     "@finity/hello-weather": "workspace:*",
     "@finity/mandate-compiler": "workspace:*",
+    "@finity/pi-package": "workspace:*",
     "@finity/policy-engine": "workspace:*",
     "@finity/provider-sdk": "workspace:*",
     "@finity/registry-client": "workspace:*",
