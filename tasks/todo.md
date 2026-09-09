@@ -9,14 +9,14 @@
 - [x] Route `/finity revoke` through `finityd` and clear only the matching active-mandate pointer after success.
 - [x] Add daemon, client, and local-state regression tests.
 - [x] Update revocation architecture and hardware verification docs.
-- [ ] Commit, push `main`, restart the local daemon, and verify health without revoking the live mandate.
+- [x] Commit, push `main`, restart the local daemon, and verify health without revoking the live mandate.
 
 ### Verification
 
 - [x] Targeted revocation tests pass.
 - [x] Workspace build, typecheck, and tests pass.
 - [x] Diff and secret-pattern checks pass.
-- [ ] Running daemon exposes the route and remains healthy.
+- [x] Running daemon exposes the route and remains healthy.
 
 ### Review
 
@@ -30,6 +30,7 @@
 
 - Full workspace build, typecheck, and 334 tests pass.
 - Malformed revocations fail closed; broker failures return a typed HTTP error.
+- Rebuilt daemon is healthy; its live route rejected an invalid probe with HTTP 400 and the existing mandate remains ACTIVE.
 
 #### Risks
 

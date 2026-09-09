@@ -649,3 +649,8 @@ mandate. Daemon and Pi package unit tests cover valid relay, malformed input,
 relay failure, exact client payload, and stale-pointer protection. Physical
 Ledger execution remains listed in `docs/HW_TODO.md` until the user approves
 the live revocation.
+
+The rebuilt daemon was restarted as a detached process and passed an
+authenticated health check. A deliberately malformed request to the live
+revocation route returned HTTP 400 `invalid_revocation`; the active-mandate
+pointer remained present and its registry status remained `ACTIVE`.
