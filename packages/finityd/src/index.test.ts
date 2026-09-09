@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, afterEach } from "vitest";
 import { compile } from "@finity/mandate-compiler";
-import type { ServiceManifest, SignedAgentMandate } from "@finity/schemas";
+import type { Revocation, ServiceManifest, SignedAgentMandate } from "@finity/schemas";
 import { MandateStore, PurchaseStore, startFinityd, type Finityd } from "./index.js";
 
 let running: Finityd | undefined;
@@ -285,6 +285,48 @@ describe("finityd HTTP API mandates routes", () => {
     expect(await response.json()).toMatchObject({ mandateId: mandate.mandateId, traceTopicId: "0.0.9" });
     expect(received).toEqual(mandate);
     expect(mandateStore.get(compiled.mandateId)?.mandate).toEqual(mandate);
+  });
+
+  it("relays only a valid Ledger-signed revocation through the broker", async () => {
+    const revocation = { mandateId: compiled.mandateId as `0x${string}`, nonce: "123", reason: "rotate broker" };
+    const signature = `0x${"ab".repeat(65)}` as `0x${string}`;
+    let received: { revocation: Revocation; signature: string } | undefined;
+    running = startFinityd({
+      mandateRevocation: {
+        revoke: async (input, inputSignature) => {
+          received = { revocation: input, signature: inputSignature };
+          return { mandateId: input.mandateId, status: "REVOKED", revocationTx: `0x${"12".repeat(32)}` };
+        },
+      },
+    });
+    const url = await baseUrl(running);
+    const headers = { authorization: `Bearer ${running.token}`, "content-type": "application/json" };
+    const response = await fetch(`${url}/v1/mandates/revoke`, {
+      method: "POST", headers, body: JSON.stringify({ revocation, signature }),
+    });
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ mandateId: compiled.mandateId, status: "REVOKED" });
+    expect(received).toEqual({ revocation, signature });
+
+    const malformed = await fetch(`${url}/v1/mandates/revoke`, {
+      method: "POST", headers, body: JSON.stringify({ revocation: { ...revocation, nonce: "-1" }, signature }),
+    });
+    expect(malformed.status).toBe(400);
+    expect(await malformed.json()).toEqual({ error: "invalid_revocation" });
+  });
+
+  it("reports broker relay failure without accepting the revocation", async () => {
+    running = startFinityd({ mandateRevocation: { revoke: async () => { throw new Error("relay failed"); } } });
+    const response = await fetch(`${await baseUrl(running)}/v1/mandates/revoke`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${running.token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        revocation: { mandateId: compiled.mandateId, nonce: "123", reason: "rotate broker" },
+        signature: `0x${"ab".repeat(65)}`,
+      }),
+    });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "revocation_failed" });
   });
 });
 

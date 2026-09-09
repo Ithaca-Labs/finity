@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { createHcsWriter, createRegistryClient, mandateRegistryAbi, type RegistryClient } from "@finity/registry-client";
 import { POLICY_HASH } from "@finity/policy-engine";
-import type { ServiceManifest, SignedAgentMandate } from "@finity/schemas";
+import { hashCanonicalJson, type Revocation, type ServiceManifest, type SignedAgentMandate } from "@finity/schemas";
+import { buildEnvelope } from "@finity/trace-builder";
 import { decodeEventLog, type Hash } from "viem";
 import { sign } from "viem/accounts";
 import { settlementTransaction, type PaymentRequirementsSubset } from "@finity/commerce-adapter";
@@ -71,6 +73,7 @@ export async function parsePaymentChallenges(response: Response): Promise<Paymen
  */
 export type LiveDependencies = PurchaseDependencies & {
   registerMandate(mandate: SignedAgentMandate): Promise<Record<string, unknown>>;
+  revokeMandate(revocation: Revocation, signature: `0x${string}`): Promise<Record<string, unknown>>;
 };
 
 export function createLiveDependencies(config: LiveDependenciesConfig): LiveDependencies {
@@ -171,6 +174,50 @@ export function createLiveDependencies(config: LiveDependenciesConfig): LiveDepe
       await registryClient.publicClient.waitForTransactionReceipt({ hash: setTraceTopicTx });
       config.mandateStore.set(mandateId as Hash, signedMandate);
       return { mandateId, registrationTx, traceTopicId: topic.topicId, traceTopicTx: topic.transactionId, setTraceTopicTx };
+    },
+    revokeMandate: async (revocation, signature) => {
+      const mandateId = revocation.mandateId as Hash;
+      const revocationTx = await registryClient.revoke(
+        { ...revocation, mandateId },
+        signature,
+      );
+      await registryClient.publicClient.waitForTransactionReceipt({ hash: revocationTx });
+      const registryRecord = await registryClient.readRecord(mandateId);
+      if (registryRecord.status !== 4) throw new Error("mandate revocation was not reflected on-chain");
+
+      let traceStatus: "SUBMITTED" | "FAILED" | "NOT_CONFIGURED" = "NOT_CONFIGURED";
+      let traceTransactionId: string | undefined;
+      if (registryRecord.traceTopic) {
+        const mandateRecord = config.mandateStore.get(mandateId);
+        if (mandateRecord) {
+          try {
+            const envelope = buildEnvelope({
+              type: "REVOKED",
+              correlationId: randomUUID(),
+              receiptHash: hashCanonicalJson({ kind: "finity.revocation", revocation, signature }),
+              previousReceiptHash: mandateRecord.lastReceiptHash,
+              mandateId,
+              transactionId: revocationTx,
+            });
+            traceTransactionId = await getHcsWriter().submitMessage(registryRecord.traceTopic, envelope);
+            config.mandateStore.recordReceiptHash(mandateId, envelope.h as Hash);
+            traceStatus = "SUBMITTED";
+          } catch {
+            // Revocation is already final on-chain. Report partial trace failure
+            // instead of presenting the irreversible action as wholly failed.
+            traceStatus = "FAILED";
+          }
+        } else {
+          traceStatus = "FAILED";
+        }
+      }
+      return {
+        mandateId,
+        revocationTx,
+        status: "REVOKED",
+        traceStatus,
+        ...(traceTransactionId ? { traceTransactionId } : {}),
+      };
     },
   };
 }

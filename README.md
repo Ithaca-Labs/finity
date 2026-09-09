@@ -60,3 +60,9 @@ and resumes the original purchase. Existing users see no setup prompts.
 On macOS the wrapper loads `WALLET_PASS` from Keychain service
 `ledger-wallet-cli`, account `default`; it never enters the chat. Manual
 `/finity setup` and `/finity mandate new` remain available for diagnostics.
+
+To permanently stop the active authority, connect and unlock the Ledger,
+open the Ethereum app, then run `/finity revoke` (or include a mandate ID).
+The Ledger clear-signs the revocation; `finityd` relays only that signed
+authorization with the sealed broker key, verifies `REVOKED` on-chain, and
+clears the matching local active-mandate pointer.

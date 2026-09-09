@@ -111,4 +111,8 @@ export class FinitydClient {
   registerMandateOnChain(signedMandate: Record<string, unknown>): Promise<Record<string, unknown>> {
     return this.request("POST", "/v1/mandates/register", signedMandate) as Promise<Record<string, unknown>>;
   }
+
+  revokeMandateOnChain(input: { revocation: Record<string, unknown>; signature: string }): Promise<Record<string, unknown>> {
+    return this.request("POST", "/v1/mandates/revoke", input) as Promise<Record<string, unknown>>;
+  }
 }

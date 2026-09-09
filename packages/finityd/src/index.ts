@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import Database from "better-sqlite3";
 import { discover, quote, type QuoteFetcher } from "@finity/negotiator";
 import type { MirrorFetcher } from "@finity/registry-client";
-import { reducePurchase, requestClassSchema, signedAgentMandateSchema, type Hash, type PurchaseEvent, type PurchaseState } from "@finity/schemas";
+import { reducePurchase, requestClassSchema, revocationSchema, signature as signatureSchema, signedAgentMandateSchema, type Hash, type PurchaseEvent, type PurchaseState, type Revocation } from "@finity/schemas";
 import { EscalationStore, type ProposedAmendment } from "./escalation-store.js";
 import type { MandateStore } from "./executor.js";
 
@@ -14,6 +14,7 @@ export type { Escalation, EscalationStatus, ProposedAmendment } from "./escalati
 export const INTENT_ROUTE_ALLOWLIST = new Set([
   "POST /v1/intents", "GET /v1/services", "POST /v1/quotes", "POST /v1/escalations",
   "GET /v1/escalations", "GET /v1/health", "POST /v1/mandates", "POST /v1/mandates/register",
+  "POST /v1/mandates/revoke",
 ]);
 
 export type Intent = {
@@ -96,8 +97,12 @@ export type MandateRegistrationDependencies = {
   register(mandate: import("@finity/schemas").SignedAgentMandate): Promise<Record<string, unknown>>;
 };
 
+export type MandateRevocationDependencies = {
+  revoke(revocation: Revocation, signature: `0x${string}`): Promise<Record<string, unknown>>;
+};
+
 /** Starts a localhost-only, bearer-protected API. No route can decrypt, sign, or broadcast arbitrary caller data. */
-export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; mandateRegistration?: MandateRegistrationDependencies; escalations?: EscalationStore; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
+export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; mandateRegistration?: MandateRegistrationDependencies; mandateRevocation?: MandateRevocationDependencies; escalations?: EscalationStore; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
   const store = options.store ?? new PurchaseStore(); const token = options.token ?? randomBytes(32).toString("base64url");
   const escalations = options.escalations ?? new EscalationStore();
   const server = createServer(async (request, response) => {
@@ -193,6 +198,18 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
         const registered = await options.mandateRegistration.register(parsed.data);
         options.services.mandateStore.set(parsed.data.mandateId as Hash, parsed.data);
         return json(response, 201, registered);
+      }
+      if (key === "POST /v1/mandates/revoke") {
+        if (!options.mandateRevocation) return json(response, 501, { error: "revocation_unavailable" });
+        const body = (await readBody(request)) as { revocation?: unknown; signature?: unknown };
+        const revocation = revocationSchema.safeParse(body.revocation);
+        const signature = signatureSchema.safeParse(body.signature);
+        if (!revocation.success || !signature.success) return json(response, 400, { error: "invalid_revocation" });
+        try {
+          return json(response, 201, await options.mandateRevocation.revoke(revocation.data, signature.data as `0x${string}`));
+        } catch {
+          return json(response, 502, { error: "revocation_failed" });
+        }
       }
       if (key === "POST /v1/mandates") {
         // Loads a mandate into the live MandateStore without a restart - needed

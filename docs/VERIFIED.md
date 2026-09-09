@@ -635,3 +635,17 @@ running daemon and therefore has no transaction ID in sequence 18.
 
 After merging, the old daemon was stopped and the rebuilt `main` daemon
 started successfully and passed its authenticated health check.
+
+## 2026-09-09 broker-relayed revocation route
+
+`/finity revoke` no longer attempts a write through a read-only Pi-side
+registry client. It sends only the canonical Ledger-signed Revocation to
+finityd's authenticated `/v1/mandates/revoke` route. The daemon validates the
+revocation/signature schemas, pays and broadcasts with the sealed Broker
+Session Key, waits for the transaction receipt, verifies registry status code
+`4` (`REVOKED`), and attempts an HCS `REVOKED` envelope. The Pi extension
+clears the local pointer only when it still names the successfully revoked
+mandate. Daemon and Pi package unit tests cover valid relay, malformed input,
+relay failure, exact client payload, and stale-pointer protection. Physical
+Ledger execution remains listed in `docs/HW_TODO.md` until the user approves
+the live revocation.

@@ -99,4 +99,22 @@ describe("FinitydClient", () => {
     await client.registerMandateOnChain({ agent: "did:aid:buyer" });
     expect(seenPath).toBe("http://127.0.0.1:4000/v1/mandates/register");
   });
+
+  it("revokeMandateOnChain uses the broker-owned revocation route", async () => {
+    let seenPath = "";
+    let seenBody = "";
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      seenPath = url;
+      seenBody = String(init?.body ?? "");
+      return new Response(JSON.stringify({ status: "REVOKED" }), { status: 201 });
+    }) as typeof fetch;
+    const client = new FinitydClient({ baseUrl: "http://127.0.0.1:4000", token: "tok", fetchImpl });
+    const input = {
+      revocation: { mandateId: `0x${"01".repeat(32)}`, nonce: "1", reason: "rotate broker" },
+      signature: `0x${"02".repeat(65)}`,
+    };
+    await client.revokeMandateOnChain(input);
+    expect(seenPath).toBe("http://127.0.0.1:4000/v1/mandates/revoke");
+    expect(JSON.parse(seenBody)).toEqual(input);
+  });
 });

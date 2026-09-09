@@ -157,3 +157,17 @@
 - Reason: Pi must not decrypt the Broker Session Key or inherit an arbitrary
   transaction-signing primitive. Keeping registration in finityd preserves
   the Buyer Agent/Broker trust boundary.
+
+## ADR-014: finityd relays Ledger-signed revocations
+
+- Date: 2026-09-09
+- Decision: `/finity revoke` compiles and clear-signs the exact EIP-712
+  Revocation on Ledger, then submits `{ revocation, signature }` to finityd's
+  bearer-protected `/v1/mandates/revoke` route. finityd validates the fixed
+  schema, relays it with the sealed Broker Session Key, verifies registry
+  status `REVOKED`, and attempts the HCS `REVOKED` commitment. No generic
+  transaction or signing endpoint is exposed.
+- Reason: The contract intentionally permits a relayer because authority
+  comes from the Principal's signature. Keeping transaction payment and
+  broadcast in finityd prevents Pi from seeing the broker key while allowing
+  the Principal to revoke directly from the interactive chat flow.

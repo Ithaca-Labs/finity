@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 export type ActiveMandate = { mandateId: string; agentUaid: string; brokerUaid?: string };
@@ -24,4 +24,12 @@ export async function loadActiveMandate(path: string): Promise<ActiveMandate | u
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   }
+}
+
+/** Clears only the expected active mandate, preventing an old revocation response from removing a newer pointer. */
+export async function clearActiveMandate(path: string, expectedMandateId: string): Promise<boolean> {
+  const active = await loadActiveMandate(path);
+  if (active?.mandateId !== expectedMandateId) return false;
+  await rm(path, { force: true });
+  return true;
 }

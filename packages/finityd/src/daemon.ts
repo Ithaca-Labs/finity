@@ -97,6 +97,7 @@ async function main(): Promise<void> {
     executor: createIntentExecutor(deps),
     services: { mandateStore, topicId: registryTopicId, mirrorNodeUrl: process.env.FINITY_MIRROR_NODE_URL },
     mandateRegistration: { register: (mandate) => deps.registerMandate(mandate) },
+    mandateRevocation: { revoke: (revocation, signature) => deps.revokeMandate(revocation, signature) },
     killSwitchPath: join(home, "kill-switch"),
     host: "127.0.0.1",
   });

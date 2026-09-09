@@ -1,5 +1,44 @@
 # Todo
 
+## 2026-09-09 broker-relayed mandate revocation
+
+### Plan
+
+- [x] Add a narrow authenticated `finityd` route for a Ledger-signed revocation.
+- [x] Relay the revocation with the sealed broker key and verify the on-chain status.
+- [x] Route `/finity revoke` through `finityd` and clear only the matching active-mandate pointer after success.
+- [x] Add daemon, client, and local-state regression tests.
+- [x] Update revocation architecture and hardware verification docs.
+- [ ] Commit, push `main`, restart the local daemon, and verify health without revoking the live mandate.
+
+### Verification
+
+- [x] Targeted revocation tests pass.
+- [x] Workspace build, typecheck, and tests pass.
+- [x] Diff and secret-pattern checks pass.
+- [ ] Running daemon exposes the route and remains healthy.
+
+### Review
+
+#### Changed
+
+- Added a schema-bound revocation relay from the Pi extension through finityd.
+- Added post-receipt registry verification, best-effort HCS trace submission, and safe local active-pointer clearing.
+- Added daemon/client/state regression coverage and trust-boundary documentation.
+
+#### Verified
+
+- Full workspace build, typecheck, and 334 tests pass.
+- Malformed revocations fail closed; broker failures return a typed HTTP error.
+
+#### Risks
+
+- The live Ledger approval and irreversible on-chain revocation remain user-controlled and unexecuted.
+
+#### Follow-ups
+
+- User runs `/finity revoke` with the Ledger connected after the rebuilt daemon is healthy.
+
 ## 2026-09-09 first-purchase interactive onboarding
 
 ### Plan

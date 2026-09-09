@@ -7,7 +7,7 @@ import { Type } from "typebox";
 import { compile, compileRevocation, type MandateChoices } from "@finity/mandate-compiler";
 import { POLICY_HASH } from "@finity/policy-engine";
 import type { SignedAgentMandate } from "@finity/schemas";
-import { loadActiveMandate, saveActiveMandate, type ActiveMandate } from "../active-mandate.js";
+import { clearActiveMandate, loadActiveMandate, saveActiveMandate, type ActiveMandate } from "../active-mandate.js";
 import { explainRefusal, pollPurchase } from "../buyer-tools.js";
 import { approveEscalation, type ProposedAmendment } from "../escalation-wizard.js";
 import { FinitydClient, FinitydError, loadFinitydRuntimeInfo } from "../finityd-client.js";
@@ -464,9 +464,11 @@ async function handleRevoke(args: string[], ctx: ExtensionCommandContext): Promi
     derivationPath: "44'/60'/0'/0/0",
     typedData: { ...typedData, types: { Revocation: [...typedData.types.Revocation] } },
   });
-  const registryClient = createRegistryClient({ contractAddress: registryAddress, rpcUrl: process.env.FINITY_RPC_URL });
-  await registryClient.revoke({ ...canonicalRevocation, mandateId: canonicalRevocation.mandateId as `0x${string}` }, signature);
-  ctx.ui.notify(`Mandate ${mandateId} revoked.`, "info");
+  const result = await (await finitydClient()).revokeMandateOnChain({ revocation: canonicalRevocation, signature });
+  if (result.status !== "REVOKED") throw new Error("finityd did not confirm the mandate is REVOKED on-chain");
+  await clearActiveMandate(join(finityHome(), "active-mandate.json"), mandateId);
+  const trace = result.traceStatus === "SUBMITTED" ? " Revocation trace submitted to HCS." : "";
+  ctx.ui.notify(`Mandate ${mandateId} revoked on Hedera testnet.${trace}`, "info");
 }
 
 /** `/finity kill on|off`: a broker-level emergency stop that needs no device, no network, and no signature - a file finityd checks before accepting any new intent. */
