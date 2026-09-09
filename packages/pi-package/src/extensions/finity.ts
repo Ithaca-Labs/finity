@@ -18,6 +18,16 @@ import { ensureInteractivePurchaseReady } from "../interactive-onboarding.js";
 import { genuineCheck, ringInit } from "../wallet-cli-ops.js";
 import { walletPassFromEnvironmentOrKeychain } from "../wallet-pass.js";
 import { createRegistryClient } from "@finity/registry-client";
+import {
+  FinityControlCenter,
+  finityFooter,
+  finityHeader,
+  formatAddress,
+  formatTinybars,
+  formatUntil,
+  parseHbarToTinybars,
+  type FinityDashboardState,
+} from "../finity-tui.js";
 
 const REQUEST_UNITS = ["call", "char", "token", "row", "byte", "second"] as const;
 const BLOCKED_BUILTIN_TOOLS = new Set(["bash", "write", "edit"]);
@@ -53,7 +63,93 @@ function toolResult(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data) }], details: data as Record<string, unknown> };
 }
 
+const MANDATE_STATUS_LABELS = ["NONE", "ACTIVE", "EXHAUSTED", "EXPIRED", "REVOKED", "SUPERSEDED"] as const;
+
+function field(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function remainingBudget(limit: unknown, consumed: unknown, reserved: unknown): string {
+  try {
+    const remaining = BigInt(field(limit)) - BigInt(field(consumed, "0")) - BigInt(field(reserved, "0"));
+    return (remaining < 0n ? 0n : remaining).toString();
+  } catch {
+    return "0";
+  }
+}
+
+function dashboardState(): FinityDashboardState {
+  return { connected: false, killSwitchActive: false, pendingEscalations: 0 };
+}
+
+async function loadControlCenterState(): Promise<FinityDashboardState> {
+  const active = await loadActiveMandate(join(finityHome(), "active-mandate.json"));
+  const state = dashboardState();
+  if (!active) state.message = "No active mandate. Setup is ready when you are.";
+
+  let client: FinitydClient;
+  try {
+    client = await finitydClient();
+    const health = await client.health();
+    state.connected = true;
+    state.killSwitchActive = health.killSwitchActive === true;
+  } catch {
+    return active
+      ? { ...state, mandate: { id: active.mandateId, status: "LOCAL ONLY", principal: "", broker: "", periodRemainingTinybar: "0", periodLimitTinybar: "0", lifetimeRemainingTinybar: "0", lifetimeLimitTinybar: "0", reservedTinybar: "0", validUntil: "", allowedServices: "", allowedMethods: "" }, error: "finityd offline — run `finity broker` to connect" }
+      : { ...state, error: "finityd offline — run `finity broker` to connect" };
+  }
+
+  if (active) {
+    try {
+      const { mandate, record } = await client.getMandateStatus(active.mandateId);
+      const limits = record.limits as Record<string, unknown> | undefined;
+      state.mandate = {
+        id: active.mandateId,
+        status: MANDATE_STATUS_LABELS[Number(record.status)] ?? "UNKNOWN",
+        principal: field(record.principal),
+        broker: field(record.broker),
+        periodRemainingTinybar: remainingBudget(limits?.maxPerPeriod, record.periodConsumed, record.reserved),
+        periodLimitTinybar: field(limits?.maxPerPeriod, "0"),
+        lifetimeRemainingTinybar: remainingBudget(limits?.maxLifetime, record.lifetimeConsumed, record.reserved),
+        lifetimeLimitTinybar: field(limits?.maxLifetime, "0"),
+        reservedTinybar: field(record.reserved, "0"),
+        validUntil: field(limits?.validUntil, field(mandate.validUntil)),
+        allowedServices: field(mandate.allowedServices),
+        allowedMethods: field(mandate.allowedMethods),
+      };
+    } catch {
+      state.error = "could not read live mandate state";
+    }
+  }
+
+  try {
+    state.broker = await client.getBroker();
+  } catch {
+    state.error ??= "could not read broker balance";
+  }
+  try {
+    state.pendingEscalations = (await client.listEscalations()).escalations.length;
+  } catch {
+    // Escalations are secondary to the authority and balance view.
+  }
+  return state;
+}
+
 export default function finityExtension(pi: ExtensionAPI) {
+  pi.on("session_start", async (_event, ctx) => {
+    if (ctx.mode !== "tui") return;
+    ctx.ui.setTitle("Finity · Ledger-governed commerce");
+    ctx.ui.setHeader((_tui, theme) => ({
+      render: (width) => finityHeader(theme, width),
+      invalidate() {},
+    }));
+    ctx.ui.setFooter((_tui, theme) => ({
+      render: (width) => finityFooter(theme, width),
+      invalidate() {},
+    }));
+    ctx.ui.setWorkingMessage("Finity is evaluating the mandate…");
+  });
+
   pi.on("tool_call", async (event) => {
     if (BLOCKED_BUILTIN_TOOLS.has(event.toolName)) {
       return { block: true, reason: "Finity Agent has no shell: use the finity_* tools instead of bash/write/edit." };
@@ -216,11 +312,15 @@ export default function finityExtension(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("finity", {
-    description: "Finity setup, mandate, and diagnostics commands (setup | mandate new|list|show | escalations [approve|reject <id>] | revoke <id> | trace <mandateId> | doctor | kill on|off)",
+    description: "Open the Finity control center (or use setup | mandate | escalations | revoke | trace | doctor | kill)",
     handler: async (args, ctx) => {
       const [subcommand, ...rest] = (args ?? "").trim().split(/\s+/).filter(Boolean);
       try {
         switch (subcommand) {
+          case undefined:
+          case "center":
+            await handleControlCenter(ctx);
+            return;
           case "setup":
             await handleSetup(ctx);
             return;
@@ -243,7 +343,7 @@ export default function finityExtension(pi: ExtensionAPI) {
             await handleKillSwitch(rest, ctx);
             return;
           default:
-            ctx.ui.notify("Usage: /finity setup | mandate new|list|show | escalations [approve|reject <id>] | revoke <id> | trace <mandateId> | doctor | kill on|off", "info");
+            ctx.ui.notify("Usage: /finity (center) | setup | mandate new|list|show | escalations | revoke | trace | doctor | kill on|off", "info");
         }
       } catch (error) {
         ctx.ui.notify(`/finity ${subcommand ?? ""} failed: ${(error as Error).message}`, "error");
@@ -265,6 +365,115 @@ async function handleSetup(ctx: ExtensionCommandContext): Promise<void> {
     hostname: hostname(),
   });
   if (!result.ok) ctx.ui.notify(`Setup did not complete: ${result.reason}`, "error");
+}
+
+async function handleControlCenter(ctx: ExtensionCommandContext): Promise<void> {
+  if (ctx.mode !== "tui") {
+    ctx.ui.notify("The Finity control center is available in interactive TUI mode.", "info");
+    return;
+  }
+
+  let panel: FinityControlCenter | undefined;
+  let state: FinityDashboardState = { ...dashboardState(), loading: true };
+  let requestRender: () => void = () => {};
+  const update = (next: FinityDashboardState): void => {
+    state = next;
+    panel?.setState(next);
+    requestRender();
+  };
+  const refresh = async (): Promise<void> => {
+    update({ ...state, loading: true, error: undefined, message: undefined });
+    update(await loadControlCenterState());
+  };
+
+  await ctx.ui.custom<void>((tui, theme, _keybindings, done) => {
+    requestRender = () => tui.requestRender();
+    panel = new FinityControlCenter(theme, state, async (action) => {
+      try {
+        switch (action) {
+          case "refresh":
+            await refresh();
+            return;
+          case "mandate":
+            if (!state.mandate) {
+              update({ ...state, message: "No active mandate to inspect." });
+              return;
+            }
+            update({
+              ...state,
+              message: `${state.mandate.allowedServices || "no services"} · ${state.mandate.allowedMethods || "no methods"} · ${formatAddress(state.mandate.broker)}`,
+              error: undefined,
+            });
+            return;
+          case "services": {
+            if (!state.mandate) {
+              update({ ...state, message: "No active mandate. Services are mandate-scoped." });
+              return;
+            }
+            const client = await finitydClient();
+            const services = await client.listServices(state.mandate.id);
+            const names = services.manifests.map((item) => {
+              const service = item as { serviceId?: unknown; name?: unknown };
+              return field(service.name, field(service.serviceId, "unnamed service"));
+            });
+            update({ ...state, message: names.length ? names.join(" · ") : "No allowed services discovered.", error: undefined });
+            return;
+          }
+          case "withdraw": {
+            if (!state.mandate || !state.broker) {
+              update({ ...state, error: "Need a live mandate and broker balance before withdrawing." });
+              return;
+            }
+            const amountText = await ctx.ui.input("Withdraw broker funds", "Amount in HBAR (up to 8 decimals)");
+            if (!amountText) return;
+            const amountTinybar = parseHbarToTinybars(amountText);
+            if (BigInt(amountTinybar) > BigInt(state.broker.balanceTinybar)) throw new Error("amount exceeds the broker balance; network fee is extra");
+            const confirmed = await ctx.ui.confirm(
+              "Confirm broker withdrawal",
+              `Send ${formatTinybars(amountTinybar)} from ${state.broker.spendAccountId} to Ledger principal ${formatAddress(state.mandate.principal)}. Network fee is deducted from the broker balance. Continue?`,
+            );
+            if (!confirmed) return;
+            const result = await (await finitydClient()).withdrawBrokerFunds({ mandateId: state.mandate.id, amountTinybar });
+            ctx.ui.notify(`Withdrawn ${formatTinybars(result.amountTinybar)}. Transaction ${result.transactionHash}`, "info");
+            const refreshed = await loadControlCenterState();
+            update({ ...refreshed, message: `sent ${formatTinybars(result.amountTinybar)} back to the Ledger principal` });
+            return;
+          }
+          case "escalations": {
+            const escalations = (await (await finitydClient()).listEscalations()).escalations as Array<{ escalationId?: unknown; proposedAmendment?: { newValueText?: unknown } }>;
+            update({ ...state, message: escalations.length ? `${escalations.length} pending · ${escalations.map((item) => `${field(item.escalationId, "unknown")} ${field(item.proposedAmendment?.newValueText)}`).join(" · ")}` : "No pending escalations.", error: undefined });
+            return;
+          }
+          case "setup":
+            await handleSetup(ctx);
+            await refresh();
+            return;
+          case "revoke":
+            await handleRevoke([], ctx);
+            await refresh();
+            return;
+          case "kill": {
+            const next = state.killSwitchActive ? "off" : "on";
+            const confirmed = await ctx.ui.confirm(
+              next === "on" ? "Activate purchase kill switch" : "Clear purchase kill switch",
+              next === "on" ? "New purchases will be refused until the switch is cleared. Continue?" : "Allow new purchases through the broker again?",
+            );
+            if (!confirmed) return;
+            await handleKillSwitch([next], ctx);
+            await refresh();
+            return;
+          }
+        }
+      } catch (error) {
+        update({ ...state, loading: false, error: error instanceof FinitydError ? error.message : (error as Error).message });
+      }
+    }, () => done(undefined));
+    void refresh();
+    return panel;
+  }, {
+    overlay: true,
+    overlayOptions: { width: "88%", minWidth: 72, maxHeight: "90%", anchor: "center", margin: 1 },
+  });
 }
 
 async function handleMandate(args: string[], ctx: ExtensionCommandContext): Promise<void> {

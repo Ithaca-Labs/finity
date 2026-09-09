@@ -171,3 +171,17 @@
   comes from the Principal's signature. Keeping transaction payment and
   broadcast in finityd prevents Pi from seeing the broker key while allowing
   the Principal to revoke directly from the interactive chat flow.
+
+## ADR-015: the Pi extension owns a Finity control-center overlay
+
+- Date: 2026-09-10
+- Decision: `/finity` opens a compact Finity-branded Pi overlay with live
+  mandate status/remaining budgets, broker balance, allowed services,
+  escalations, setup, revocation, kill-switch, and principal-only withdrawal
+  actions. The wrapper selects the package's `finity` theme and the extension
+  replaces Pi's generic header/footer with Finity identity and controls.
+- Reason: The stock Pi TUI exposed Finity only as scattered slash commands and
+  generic agent chrome. Keeping the overlay inside the extension preserves the
+  supported Pi customization boundary and leaves chat available underneath.
+  Live status and transfer actions remain broker-owned: Pi receives only
+  public metadata and a transaction result, never the Broker Session Key.

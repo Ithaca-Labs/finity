@@ -1,5 +1,44 @@
 # Todo
 
+## 2026-09-10 Finity control-center TUI
+
+### Plan
+
+- [x] Add verified Pi theme/header/footer and a focused `/finity` control center.
+- [x] Add authenticated daemon routes for live mandate state, broker balance, and guarded withdrawal.
+- [x] Add client/live-dependency wiring with no secret exposure.
+- [x] Add unit coverage for formatting, routes, withdrawal guards, and UI actions.
+- [x] Update verification/architecture docs and run build, typecheck, tests, and diff secret checks.
+
+### Verification
+
+- [x] `pnpm build`
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] Review diff for unrelated changes and secret patterns.
+
+### Review
+
+#### Changed
+
+- Added a Finity-branded Pi header/footer/theme and `/finity` control-center overlay.
+- Added live mandate/broker routes, broker-owned principal withdrawal, client methods, and tests.
+- Updated user/operator docs and verified dependency API notes.
+
+#### Verified
+
+- `pnpm build`, `pnpm typecheck`, `pnpm test`, and `pnpm lint` pass.
+- Pi theme parses; rendered control-center rows stay within terminal width.
+- Secret-pattern scan and `git diff --check` pass.
+
+#### Risks
+
+- A real withdrawal transfer was not executed; it remains a user-triggered Hedera testnet action.
+
+#### Follow-ups
+
+- Run `/finity`, refresh live state, and test a small withdrawal only after reviewing the confirmation target and amount.
+
 ## 2026-09-09 broker-relayed mandate revocation
 
 ### Plan

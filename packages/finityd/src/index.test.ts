@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, afterEach } from "vitest";
 import { compile } from "@finity/mandate-compiler";
+import type { RegistryRecord } from "@finity/registry-client";
 import type { Revocation, ServiceManifest, SignedAgentMandate } from "@finity/schemas";
 import { MandateStore, PurchaseStore, startFinityd, type Finityd } from "./index.js";
 
@@ -122,6 +123,19 @@ const compiled = compile({
   verifyingContract: "0x2222222222222222222222222222222222222222",
 });
 const mandate: SignedAgentMandate = { ...compiled.canonicalMandate, signature: `0x${"bb".repeat(65)}`, mandateId: compiled.mandateId };
+const liveRecord: RegistryRecord = {
+  principal: `0x${"aa".repeat(20)}`,
+  broker: `0x${"11".repeat(20)}`,
+  policyHash: `0x${"cc".repeat(32)}`,
+  limits: { maxPerRequest: "5000000", maxPerPeriod: "500000000", periodSeconds: "86400", maxLifetime: "2000000000", validFrom: "1", validUntil: "2000000000" },
+  lifetimeConsumed: "100000000",
+  periodIndex: "1",
+  periodConsumed: "50000000",
+  reserved: "5000000",
+  status: 1,
+  successor: `0x${"00".repeat(32)}`,
+  traceTopic: "0.0.456",
+};
 const manifest: ServiceManifest = {
   kind: "finity.manifest", version: 1, serviceId: "hello-weather@1",
   provider: { uaid: "did:aid:provider", hederaAccount: "0.0.789", signingKey: "provider-key" },
@@ -131,6 +145,78 @@ const manifest: ServiceManifest = {
   quoteEndpoint: "/quote", payTo: "0.0.789", receiptKey: "receipt-key", healthEndpoint: "/health",
   publishedAt: 1_788_739_200, signature: `0x${"cc".repeat(65)}`,
 };
+
+describe("finityd HTTP API control-center routes", () => {
+  it("returns live mandate consumption and status", async () => {
+    const mandateStore = new MandateStore();
+    mandateStore.set(compiled.mandateId, mandate);
+    running = startFinityd({ services: {
+      mandateStore, topicId: "0.0.1", registryRecord: async () => liveRecord,
+    } });
+    const response = await fetch(`${await baseUrl(running)}/v1/mandates/${compiled.mandateId}/status`, {
+      headers: { authorization: `Bearer ${running.token}` },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ mandate, record: liveRecord });
+  });
+
+  it("returns broker balance and derives withdrawal destination from the mandate principal", async () => {
+    const mandateStore = new MandateStore();
+    mandateStore.set(compiled.mandateId, mandate);
+    let received: { destination: string; amountTinybar: string } | undefined;
+    running = startFinityd({
+      services: { mandateStore, topicId: "0.0.1", registryRecord: async () => liveRecord },
+      brokerAccount: {
+        address: liveRecord.broker,
+        spendAccountId: "0.0.123",
+        getBalanceTinybar: async () => "500000000",
+        withdrawToPrincipal: async (input) => {
+          received = input;
+          return { transactionHash: `0x${"dd".repeat(32)}`, ...input, feeTinybar: "1000" };
+        },
+      },
+    });
+    const url = await baseUrl(running);
+    const headers = { authorization: `Bearer ${running.token}` };
+    const broker = await fetch(`${url}/v1/broker`, { headers });
+    expect(await broker.json()).toEqual({ address: liveRecord.broker, spendAccountId: "0.0.123", balanceTinybar: "500000000" });
+
+    const withdrawal = await fetch(`${url}/v1/broker/withdraw`, {
+      method: "POST", headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ mandateId: compiled.mandateId, amountTinybar: "100000000" }),
+    });
+    expect(withdrawal.status).toBe(200);
+    expect(received).toEqual({ destination: liveRecord.principal, amountTinybar: "100000000" });
+
+    const malformed = await fetch(`${url}/v1/broker/withdraw`, {
+      method: "POST", headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ mandateId: compiled.mandateId, amountTinybar: "0" }),
+    });
+    expect(malformed.status).toBe(400);
+    expect(await malformed.json()).toEqual({ error: "invalid_withdrawal" });
+  });
+
+  it("refuses withdrawal when the mandate is bound to another broker", async () => {
+    const mandateStore = new MandateStore();
+    mandateStore.set(compiled.mandateId, mandate);
+    running = startFinityd({
+      services: { mandateStore, topicId: "0.0.1", registryRecord: async () => ({ ...liveRecord, broker: `0x${"22".repeat(20)}` }) },
+      brokerAccount: {
+        address: liveRecord.broker,
+        spendAccountId: "0.0.123",
+        getBalanceTinybar: async () => "500000000",
+        withdrawToPrincipal: async () => { throw new Error("should not send"); },
+      },
+    });
+    const response = await fetch(`${await baseUrl(running)}/v1/broker/withdraw`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${running.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ mandateId: compiled.mandateId, amountTinybar: "100000000" }),
+    });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "broker_mismatch" });
+  });
+});
 
 function mirrorFetcherWith(entries: unknown[]): typeof fetch {
   return (async () =>
