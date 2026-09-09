@@ -467,8 +467,12 @@ async function handleRevoke(args: string[], ctx: ExtensionCommandContext): Promi
   const result = await (await finitydClient()).revokeMandateOnChain({ revocation: canonicalRevocation, signature });
   if (result.status !== "REVOKED") throw new Error("finityd did not confirm the mandate is REVOKED on-chain");
   await clearActiveMandate(join(finityHome(), "active-mandate.json"), mandateId);
-  const trace = result.traceStatus === "SUBMITTED" ? " Revocation trace submitted to HCS." : "";
-  ctx.ui.notify(`Mandate ${mandateId} revoked on Hedera testnet.${trace}`, "info");
+  const trace = result.traceStatus === "SUBMITTED"
+    ? " Revocation trace submitted to HCS."
+    : result.traceStatus === "FAILED"
+      ? " The on-chain revocation succeeded, but its HCS trace submission failed."
+      : " No HCS trace topic was configured.";
+  ctx.ui.notify(`Mandate ${mandateId} revoked on Hedera testnet.${trace}`, result.traceStatus === "FAILED" ? "error" : "info");
 }
 
 /** `/finity kill on|off`: a broker-level emergency stop that needs no device, no network, and no signature - a file finityd checks before accepting any new intent. */
