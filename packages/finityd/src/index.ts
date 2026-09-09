@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import Database from "better-sqlite3";
 import { discover, quote, type QuoteFetcher } from "@finity/negotiator";
-import type { MirrorFetcher } from "@finity/registry-client";
+import type { MirrorFetcher, RegistryRecord } from "@finity/registry-client";
 import { reducePurchase, requestClassSchema, revocationSchema, signature as signatureSchema, signedAgentMandateSchema, type Hash, type PurchaseEvent, type PurchaseState, type Revocation } from "@finity/schemas";
 import { EscalationStore, type ProposedAmendment } from "./escalation-store.js";
 import type { MandateStore } from "./executor.js";
@@ -14,7 +14,7 @@ export type { Escalation, EscalationStatus, ProposedAmendment } from "./escalati
 export const INTENT_ROUTE_ALLOWLIST = new Set([
   "POST /v1/intents", "GET /v1/services", "POST /v1/quotes", "POST /v1/escalations",
   "GET /v1/escalations", "GET /v1/health", "POST /v1/mandates", "POST /v1/mandates/register",
-  "POST /v1/mandates/revoke",
+  "POST /v1/mandates/revoke", "GET /v1/broker", "POST /v1/broker/withdraw",
 ]);
 
 export type Intent = {
@@ -91,6 +91,19 @@ export type ServicesDependencies = {
   mirrorFetcher?: MirrorFetcher;
   quoteFetcher?: QuoteFetcher;
   now?(): number;
+  registryRecord?(mandateId: Hash): Promise<RegistryRecord>;
+};
+
+export type BrokerAccountDependencies = {
+  address: `0x${string}`;
+  spendAccountId: string;
+  getBalanceTinybar(): Promise<string>;
+  withdrawToPrincipal(input: { destination: `0x${string}`; amountTinybar: string }): Promise<{
+    transactionHash: string;
+    destination: `0x${string}`;
+    amountTinybar: string;
+    feeTinybar: string;
+  }>;
 };
 
 export type MandateRegistrationDependencies = {
@@ -102,7 +115,7 @@ export type MandateRevocationDependencies = {
 };
 
 /** Starts a localhost-only, bearer-protected API. No route can decrypt, sign, or broadcast arbitrary caller data. */
-export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; mandateRegistration?: MandateRegistrationDependencies; mandateRevocation?: MandateRevocationDependencies; escalations?: EscalationStore; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
+export function startFinityd(options: { store?: PurchaseStore; executor?: IntentExecutor; services?: ServicesDependencies; brokerAccount?: BrokerAccountDependencies; mandateRegistration?: MandateRegistrationDependencies; mandateRevocation?: MandateRevocationDependencies; escalations?: EscalationStore; token?: string; host?: "127.0.0.1" | "::1"; port?: number; killSwitchPath?: string } = {}): Finityd {
   const store = options.store ?? new PurchaseStore(); const token = options.token ?? randomBytes(32).toString("base64url");
   const escalations = options.escalations ?? new EscalationStore();
   const server = createServer(async (request, response) => {
@@ -116,6 +129,17 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
         const record = options.services.mandateStore.get(url.pathname.split("/").at(-1) as Hash);
         return record ? json(response, 200, record.mandate) : json(response, 404, { error: "mandate_not_found" });
       }
+      if (method === "GET" && /^\/v1\/mandates\/0x[0-9a-fA-F]{64}\/status$/.test(url.pathname)) {
+        if (!options.services?.registryRecord) return json(response, 501, { error: "mandate_status_unavailable" });
+        const mandateId = url.pathname.split("/").at(-2) as Hash;
+        const mandate = options.services.mandateStore.get(mandateId);
+        if (!mandate) return json(response, 404, { error: "mandate_not_found" });
+        try {
+          return json(response, 200, { mandate: mandate.mandate, record: await options.services.registryRecord(mandateId) });
+        } catch {
+          return json(response, 502, { error: "mandate_status_failed" });
+        }
+      }
       if (method === "POST" && /^\/v1\/escalations\/[0-9a-f-]+\/resolve$/i.test(url.pathname)) {
         const escalationId = url.pathname.split("/").at(-2)!;
         const body = (await readBody(request)) as { status?: string };
@@ -127,6 +151,34 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
       if (key === "GET /v1/health") {
         const killSwitchActive = Boolean(options.killSwitchPath && existsSync(options.killSwitchPath));
         return json(response, 200, { status: "ok", killSwitchActive });
+      }
+      if (key === "GET /v1/broker") {
+        if (!options.brokerAccount) return json(response, 501, { error: "broker_account_unavailable" });
+        try {
+          return json(response, 200, {
+            address: options.brokerAccount.address,
+            spendAccountId: options.brokerAccount.spendAccountId,
+            balanceTinybar: await options.brokerAccount.getBalanceTinybar(),
+          });
+        } catch {
+          return json(response, 502, { error: "broker_balance_failed" });
+        }
+      }
+      if (key === "POST /v1/broker/withdraw") {
+        if (!options.brokerAccount || !options.services?.registryRecord) return json(response, 501, { error: "broker_withdrawal_unavailable" });
+        const body = (await readBody(request)) as { mandateId?: unknown; amountTinybar?: unknown };
+        if (typeof body.mandateId !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(body.mandateId) || typeof body.amountTinybar !== "string" || !/^[1-9][0-9]*$/.test(body.amountTinybar)) {
+          return json(response, 400, { error: "invalid_withdrawal" });
+        }
+        const mandateId = body.mandateId as Hash;
+        if (!options.services.mandateStore.get(mandateId)) return json(response, 404, { error: "mandate_not_found" });
+        try {
+          const record = await options.services.registryRecord(mandateId);
+          if (record.broker.toLowerCase() !== options.brokerAccount.address.toLowerCase()) return json(response, 403, { error: "broker_mismatch" });
+          return json(response, 200, await options.brokerAccount.withdrawToPrincipal({ destination: record.principal, amountTinybar: body.amountTinybar }));
+        } catch {
+          return json(response, 502, { error: "broker_withdrawal_failed" });
+        }
       }
       if (key === "POST /v1/intents") {
         if (options.killSwitchPath && existsSync(options.killSwitchPath)) return json(response, 503, { error: "kill_switch_active" });

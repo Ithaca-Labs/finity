@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   }
 
   const piRoot = resolvePiPackageRoot();
-  const result = spawnSync("pi", ["--no-builtin-tools", "-e", piRoot, "--system-prompt", FINITY_SYSTEM_PROMPT, ...args], {
+  const result = spawnSync("pi", ["--no-builtin-tools", "-e", piRoot, "--use-theme", "finity", "--system-prompt", FINITY_SYSTEM_PROMPT, ...args], {
     stdio: "inherit",
     env: { ...process.env, FINITY_DAEMON_PATH: resolveFinitydBin() },
   });

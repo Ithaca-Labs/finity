@@ -40,7 +40,7 @@ Record the resulting topic and settlement transaction IDs in
 ## Day 4: Ledger setup, mandate signing, and the buyer agent
 
 `packages/pi-package` is the Pi extension (seven `finity_*` tools, the
-`/finity` command family, and the `finity-buyer` skill); `packages/finity-cli`
+`/finity` command family, Finity control-center TUI, and the `finity-buyer` skill); `packages/finity-cli`
 is the `finity` wrapper bin non-developers install. See `docs/HW_TODO.md`
 for the remaining physical-device checks.
 
@@ -56,6 +56,14 @@ missing, the same chat flow creates and immediately Key-Ring-seals a broker
 key, asks the Ledger account to fund it, resolves the Hedera account ID,
 asks the Ledger to sign a one-purchase/one-hour mandate, starts `finityd`,
 and resumes the original purchase. Existing users see no setup prompts.
+
+`/finity` opens the Finity control center. It shows live mandate status,
+period/lifetime budget remaining, broker balance, pending escalations, and
+Hedera connectivity. From the same panel you can run Ledger setup, inspect
+mandate-scoped services, toggle the broker kill switch, revoke the mandate,
+or withdraw broker funds back to the principal address recorded by the active
+mandate. Withdrawal asks for explicit confirmation and leaves the network fee
+in the broker account.
 
 On macOS the wrapper loads `WALLET_PASS` from Keychain service
 `ledger-wallet-cli`, account `default`; it never enters the chat. Manual

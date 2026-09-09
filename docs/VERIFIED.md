@@ -654,3 +654,39 @@ The rebuilt daemon was restarted as a detached process and passed an
 authenticated health check. A deliberately malformed request to the live
 revocation route returned HTTP 400 `invalid_revocation`; the active-mandate
 pointer remained present and its registry status remained `ACTIVE`.
+
+## 2026-09-10 Finity control-center TUI APIs
+
+Installed `@earendil-works/pi-coding-agent@0.85.1` declarations and
+`@earendil-works/pi-tui@0.85.1` README/types confirm that a Pi extension can:
+
+```text
+ctx.ui.setHeader((tui, theme) => Component)
+ctx.ui.setFooter((tui, theme, footerData) => Component)
+ctx.ui.custom((tui, theme, keybindings, done) => Component, { overlay: true })
+ctx.ui.setTitle(title)
+```
+
+Custom components implement `render(width): string[]`, `invalidate()`, and
+optionally `handleInput(data)`. The verified `Theme` methods used by Finity
+are `fg(color, text)`, `bg(color, text)`, `bold(text)`, and `inverse(text)`;
+`@earendil-works/pi-tui` exports `matchesKey`, `Key`, and
+`truncateToWidth`. Pi package manifests support a `themes` directory, and
+interactive runs can select a package theme with `--use-theme <name>`.
+
+Installed `viem@2.56.3` declarations confirm the broker withdrawal wiring:
+
+```text
+privateKeyToAccount(privateKey: Hex, options?) -> PrivateKeyAccount
+createWalletClient({ account, chain, transport }) -> WalletClient
+walletClient.sendTransaction({ account, chain, to, value, gas, gasPrice }) -> Promise<Hash>
+publicClient.getBalance({ address }) -> Promise<bigint>
+publicClient.getGasPrice() -> Promise<bigint>
+publicClient.estimateGas({ account, to, value }) -> Promise<bigint>
+publicClient.waitForTransactionReceipt({ hash }) -> Promise<receipt>
+```
+
+The existing Hedera testnet EVM conversion remains in force: one tinybar is
+`10^10` EVM wei. `finityd` estimates the native transfer fee, refuses a
+withdrawal unless amount plus fee fits the Broker Session Key balance, then
+waits for a successful receipt before returning the transaction hash.

@@ -5,7 +5,8 @@
   "keywords": ["pi-package"],
   "pi": {
     "extensions": ["./dist/extensions/finity.js"],
-    "skills": ["./skills"]
+    "skills": ["./skills"],
+    "themes": ["./themes"]
   },
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },

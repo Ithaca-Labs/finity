@@ -68,8 +68,20 @@ export class FinitydClient {
     return payload;
   }
 
-  health(): Promise<{ status: string }> {
-    return this.request("GET", "/v1/health") as Promise<{ status: string }>;
+  health(): Promise<{ status: string; killSwitchActive?: boolean }> {
+    return this.request("GET", "/v1/health") as Promise<{ status: string; killSwitchActive?: boolean }>;
+  }
+
+  getMandateStatus(mandateId: string): Promise<{ mandate: Record<string, unknown>; record: Record<string, unknown> }> {
+    return this.request("GET", `/v1/mandates/${encodeURIComponent(mandateId)}/status`) as Promise<{ mandate: Record<string, unknown>; record: Record<string, unknown> }>;
+  }
+
+  getBroker(): Promise<{ address: string; spendAccountId: string; balanceTinybar: string }> {
+    return this.request("GET", "/v1/broker") as Promise<{ address: string; spendAccountId: string; balanceTinybar: string }>;
+  }
+
+  withdrawBrokerFunds(input: { mandateId: string; amountTinybar: string }): Promise<{ transactionHash: string; destination: string; amountTinybar: string; feeTinybar: string }> {
+    return this.request("POST", "/v1/broker/withdraw", input) as Promise<{ transactionHash: string; destination: string; amountTinybar: string; feeTinybar: string }>;
   }
 
   createIntent(intent: Intent): Promise<{ correlationId: string; status: string }> {
