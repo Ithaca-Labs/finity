@@ -54,15 +54,28 @@ export default function HomePage() {
       <section className="landing-section shell motion-section" id="difference">
         <div className="section-lead">
           <div>
+            <p className="section-eyebrow">the lifecycle of one action</p>
             <h2>Autonomy becomes useful when it stays yours.</h2>
             <p>Set one mandate. Your agent can discover, pay, and deliver—without stepping beyond it.</p>
           </div>
         </div>
 
         <ol className="mandate-rail">
-          <li className="motion-card"><span className="rail-number">01</span><div><p>before it acts</p><h3>You set the terms.</h3></div><span className="rail-detail">services · spend · access</span></li>
-          <li className="motion-card"><span className="rail-number">02</span><div><p>when it acts</p><h3>Finity holds the line.</h3></div><span className="rail-detail">policy · capability · payment</span></li>
-          <li className="motion-card"><span className="rail-number">03</span><div><p>after it acts</p><h3>The trail remains.</h3></div><span className="rail-detail">receipt · refusal · result</span></li>
+          <li className="motion-card">
+            <p className="rail-phase"><span className="rail-number">01</span>before it acts</p>
+            <h3>You set the terms.</h3>
+            <span className="rail-detail">services · spend · access</span>
+          </li>
+          <li className="motion-card">
+            <p className="rail-phase"><span className="rail-number">02</span>when it acts</p>
+            <h3>Finity holds the line.</h3>
+            <span className="rail-detail">policy · capability · payment</span>
+          </li>
+          <li className="motion-card">
+            <p className="rail-phase"><span className="rail-number">03</span>after it acts</p>
+            <h3>The trail remains.</h3>
+            <span className="rail-detail">receipt · refusal · result</span>
+          </li>
         </ol>
       </section>
 
