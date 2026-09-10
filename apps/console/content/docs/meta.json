@@ -1,4 +1,12 @@
 {
   "title": "Docs",
-  "pages": ["index", "how-it-works", "install", "policy-outcomes", "trust-boundaries"]
+  "pages": [
+    "index",
+    "how-it-works",
+    "install",
+    "cli-reference",
+    "environment-variables",
+    "policy-outcomes",
+    "trust-boundaries"
+  ]
 }
