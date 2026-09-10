@@ -7,6 +7,11 @@ Verified on 2026-09-07 in this workspace. Live sources supersede this record.
 - `@finity/console` builds with Next.js `16.3.4`, React `19.3.0`, and the App
   Router. `pnpm --filter @finity/console typecheck` and
   `pnpm --filter @finity/console build` pass.
+- Installed `lenis@1.3.26` exports a default `Lenis` class from the package
+  root. Its constructor accepts `autoRaf`, `anchors`, `smoothWheel`, and
+  `respectReducedMotion`; `destroy()` removes listeners and cleans up the
+  wrapper class. Finity initializes it in a client-side effect and destroys
+  it on unmount.
 - The console serves `/` and `/docs` as static routes. Its build generates a
   source archive at `apps/console/public/downloads/finity-0.1.0.tar.gz` and
   excludes `.git`, dependency folders, build output, contract artifacts, and

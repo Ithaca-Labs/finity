@@ -20,8 +20,8 @@ export default function HomePage() {
       <section className="minimal-hero shell">
         <div className="hero-copy">
           <h1>finity</h1>
-          <p className="minimal-kicker">the agent that knows when to stop</p>
-          <p className="minimal-description">Let AI handle the small stuff.<br />Keep the final say.</p>
+          <p className="minimal-kicker">let your agent cook. responsibly.</p>
+          <p className="minimal-description"><strong>Ledger</strong> sets the limit.<br /><strong>Hedera</strong> keeps the receipts.</p>
 
           <div className="demo-wrap">
             <CopyCommand command="pnpm demo" />
@@ -37,9 +37,42 @@ export default function HomePage() {
         <DemoVideo />
       </section>
 
-      <section className="landing-section shell" id="why">
+      <section className="landing-section proof-section shell" id="why">
         <div className="section-lead">
-          <span className="section-index">01 / the difference</span>
+          <span className="section-index">01 / the feeling</span>
+          <div>
+            <h2>The best kind of autonomy knows when to stop.</h2>
+            <p>You get the upside of an agent that acts, without the anxiety of one that improvises.</p>
+          </div>
+        </div>
+
+        <div className="decision-stage">
+          <article className="decision-card allowed">
+            <div className="decision-topline">
+              <span className="proof-status">a confident yes</span>
+              <span className="decision-code">01 / through</span>
+            </div>
+            <h3>The job gets done.</h3>
+            <p>The request fits. Finity clears the way, makes the payment, and brings back the result.</p>
+            <div className="decision-foot"><span>outcome</span><strong>delivered</strong></div>
+          </article>
+          <article className="decision-card stopped">
+            <div className="decision-topline">
+              <span className="proof-status stopped">a clean no</span>
+              <span className="decision-code">02 / stopped</span>
+            </div>
+            <h3>The line holds.</h3>
+            <p>The request is outside the rules. Nothing moves, and you know exactly why.</p>
+            <div className="decision-foot"><span>what you keep</span><strong>peace of mind</strong></div>
+          </article>
+        </div>
+
+        <p className="proof-note"><span aria-hidden="true">→</span> More done. Less babysitting.</p>
+      </section>
+
+      <section className="landing-section shell" id="difference">
+        <div className="section-lead">
+          <span className="section-index">02 / the difference</span>
           <div>
             <h2>Most AI stops at suggestions. Finity follows through.</h2>
             <p>Your agent can discover, pay, and deliver—inside a boundary you set once.</p>
@@ -69,39 +102,6 @@ export default function HomePage() {
             <span className="trust-token">know_more</span>
           </article>
         </div>
-      </section>
-
-      <section className="landing-section proof-section shell" id="proof">
-        <div className="section-lead">
-          <span className="section-index">02 / the feeling</span>
-          <div>
-            <h2>The best kind of autonomy knows when to stop.</h2>
-            <p>You get the upside of an agent that acts, without the anxiety of one that improvises.</p>
-          </div>
-        </div>
-
-        <div className="decision-stage">
-          <article className="decision-card allowed">
-            <div className="decision-topline">
-              <span className="proof-status">a confident yes</span>
-              <span className="decision-code">01 / through</span>
-            </div>
-            <h3>The job gets done.</h3>
-            <p>The request fits. Finity clears the way, makes the payment, and brings back the result.</p>
-            <div className="decision-foot"><span>outcome</span><strong>delivered</strong></div>
-          </article>
-          <article className="decision-card stopped">
-            <div className="decision-topline">
-              <span className="proof-status stopped">a clean no</span>
-              <span className="decision-code">02 / stopped</span>
-            </div>
-            <h3>The line holds.</h3>
-            <p>The request is outside the rules. Nothing moves, and you know exactly why.</p>
-            <div className="decision-foot"><span>what you keep</span><strong>peace of mind</strong></div>
-          </article>
-        </div>
-
-        <p className="proof-note"><span aria-hidden="true">→</span> More done. Less babysitting.</p>
       </section>
 
       <footer className="minimal-footer shell">
