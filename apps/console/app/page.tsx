@@ -41,12 +41,12 @@ export default function HomePage() {
 
       <section className="landing-section proof-section motion-section" id="why">
         <div className="proof-visual motion-card">
-          <div className="proof-visual-heading">
-            <h2>Autonomy,<br />with a stopping point.</h2>
-          </div>
-          <div className="proof-visual-copy">
-            <p className="proof-visual-description"><em>Let your agent act.<br />Just keep the final say.</em></p>
-            <p className="proof-visual-note">Every action stays inside the boundary you set.</p>
+          <div className="proof-visual-inner shell">
+            <h2 className="proof-visual-heading">Autonomy,<br />with a stopping point.</h2>
+            <div className="proof-terms">
+              <p className="proof-terms-line">Let your agent act.<br /><strong>Just keep the final say.</strong></p>
+              <p className="proof-terms-note">Every action stays inside the boundary you set.</p>
+            </div>
           </div>
         </div>
       </section>
