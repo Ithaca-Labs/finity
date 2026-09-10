@@ -45,9 +45,8 @@ export default function HomePage() {
             <h2>Autonomy,<br />with a stopping point.</h2>
           </div>
           <div className="proof-visual-copy">
-            <p className="proof-visual-eyebrow">the useful kind</p>
-            <p className="proof-visual-description"><strong>Let your agent<br />move with purpose.</strong></p>
-            <p className="proof-visual-note">It acts on what you allow.<br />It stops when the boundary says no.</p>
+            <p className="proof-visual-description"><em>Let your agent act.<br />Just keep the final say.</em></p>
+            <p className="proof-visual-note">Every action stays inside the boundary you set.</p>
           </div>
         </div>
       </section>
