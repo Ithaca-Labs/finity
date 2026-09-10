@@ -179,7 +179,7 @@ button { font: inherit; }
   .proof-visual-heading h2 { font-size: clamp(42px, 12vw, 58px); }
   .proof-visual-copy { justify-content: flex-start; width: calc(100% - 48px); min-height: 0; margin: 220px 24px 0; padding: 0; }
   .proof-visual-description { max-width: 360px; font-size: clamp(29px, 8vw, 40px); line-height: .96; }
-  .proof-visual-note { margin-top: 20px; font-size: 13px; }
+  .proof-visual-note { display: none; }
   .mandate-rail { display: block; margin-top: 52px; }
   .mandate-rail li, .mandate-rail li + li { min-height: 0; padding: 22px 0; border-right: 0; border-bottom: 1px solid var(--line-soft); }
   .mandate-rail li:last-child { border-bottom: 0; }
