@@ -1,0 +1,16 @@
+---
+title: Trust boundaries
+description: Three processes. One narrow handoff.
+---
+
+Secrets stay out of the agent transcript. The Ledger signs authority; it never signs individual x402 payments.
+
+<Cards>
+  <Card title="A / buyer — Pi agent" description="Receives intents, decisions, receipts, and service output. Never sees keys or plaintext credentials." />
+  <Card title="B / broker — finityd" description="Runs discovery, negotiation, policy evaluation, capability minting, and trace building." />
+  <Card title="C / vault — vault-worker" description="Decrypts sealed bundles for a lease, injects credentials, enforces egress, and pays." />
+</Cards>
+
+<Callout title="Full architecture">
+  See [docs/ARCHITECTURE.md](https://github.com/Ithaca-Labs/finity/blob/main/docs/ARCHITECTURE.md) for the complete design.
+</Callout>
