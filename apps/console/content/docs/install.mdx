@@ -1,16 +1,98 @@
 ---
 title: Install & run
-description: Get the source, then run the proof.
+description: Build the monorepo, run the test suite, and bring up the local proof.
 ---
 
-The archive includes the TypeScript monorepo, provider examples, Solidity registry, tests, and demo script.
+Finity is a pnpm monorepo. It includes the TypeScript packages, provider examples, the Solidity mandate registry, the test suite, and a demo script.
+
+## Prerequisites
+
+- Node.js 20 or later
+- pnpm 10 (`corepack enable` is sufficient; the repo pins `pnpm@10.12.1`)
+
+## Build and verify
 
 ```bash
 pnpm install
 pnpm -r build
-pnpm demo
+pnpm -r typecheck
+pnpm -r test
 ```
 
 <Callout title="Source package">
-  [Download the source package ↓](/downloads/finity-0.1.0.tar.gz)
+  Prefer a standalone archive instead of cloning? [Download the source package ↓](/downloads/finity-0.1.0.tar.gz)
 </Callout>
+
+## Run the demo
+
+```bash
+pnpm demo
+```
+
+## Day 2: provider and testnet operator commands
+
+The weather and summarize providers each need their own Hedera account ID, a public HTTPS origin, and a provider-owned ECDSA signing key — never the Broker Session Key. Copy `.env.example` to a private `.env` and fill in those values before running either command.
+
+<Tabs items={['Providers', 'Registry seed', 'Paid testnet run']}>
+<Tab value="Providers">
+
+```bash
+pnpm provider:weather
+pnpm provider:summarize
+```
+
+</Tab>
+<Tab value="Registry seed">
+
+Fails closed until `FINITY_TESTNET=1` is set deliberately.
+
+```bash
+FINITY_TESTNET=1 pnpm registry:seed
+```
+
+</Tab>
+<Tab value="Paid testnet run">
+
+Run once both provider processes are publicly reachable and the HCS operator account is funded.
+
+```bash
+FINITY_TESTNET=1 pnpm testnet:paid
+```
+
+</Tab>
+</Tabs>
+
+Record the resulting HCS topic ID and settlement transaction ID in `docs/VERIFIED.md` before claiming the Hedera testnet flow is complete.
+
+## Day 4: Ledger, mandate signing, and the buyer agent
+
+`packages/pi-package` is the Pi extension — seven `finity_*` tools, the `/finity` command family, the Finity control-center TUI, and the `finity-buyer` skill. `packages/finity-cli` is the `finity` wrapper binary end users install.
+
+```bash
+npm i -g @ledgerhq/wallet-cli @earendil-works/pi-coding-agent
+pnpm --filter finity --filter @finity/pi-package --filter @finity/finityd build
+node packages/finity-cli/dist/bin/finity.js   # or, once published: finity
+```
+
+For normal use, just ask Pi to buy something. `finity_buy` validates and reuses an existing sealed broker and an `ACTIVE` compatible mandate first. If either is missing, the same chat flow creates and Key-Ring-seals a broker key, asks the Ledger account to fund it, resolves the Hedera account ID, asks the Ledger to sign a one-purchase/one-hour mandate, starts `finityd`, and resumes the original purchase. Returning users see no setup prompts.
+
+<Callout type="warn" title="macOS keychain">
+  On macOS the wrapper loads `WALLET_PASS` from Keychain service `ledger-wallet-cli`, account `default` — it never enters the chat. Manual `/finity setup` and `/finity mandate new` remain available for diagnostics.
+</Callout>
+
+See the [CLI reference](/docs/cli-reference) for the full `finity`, `/finity`, and `finity-verify` command set, and [environment variables](/docs/environment-variables) for every configuration value these commands read.
+
+## Web console
+
+The Next.js console powering this site lives in `apps/console`.
+
+```bash
+pnpm --filter @finity/console dev
+```
+
+For a production build:
+
+```bash
+pnpm --filter @finity/console build
+pnpm --filter @finity/console start
+```
