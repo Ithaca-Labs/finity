@@ -1,0 +1,68 @@
+---
+title: Environment variables
+description: Every value the broker, provider, and testnet scripts read from .env.
+---
+
+Copy `.env.example` to a private `.env` before running any provider, registry, or testnet command. Never commit a filled-in `.env`.
+
+```bash
+cp .env.example .env
+```
+
+## Hedera operator
+
+```bash
+HEDERA_OPERATOR_ID=
+HEDERA_OPERATOR_KEY=
+```
+
+Used only by broker and provider scripts. `HEDERA_OPERATOR_KEY` is the ECDSA private key for the corresponding account — never commit a value.
+
+## Accounts and keys
+
+| Variable | Purpose |
+| --- | --- |
+| `FINITY_PRINCIPAL_FUNDING_ACCOUNT` | Principal funding account ID used by setup instructions. |
+| `FINITY_PROVIDER_A_ACCOUNT` | Provider A Hedera account ID. |
+| `FINITY_PROVIDER_B_ACCOUNT` | Provider B Hedera account ID. |
+| `FINITY_SPEND_ACCOUNT_ID` | Broker Spend Account ID. |
+| `FINITY_BROKER_SESSION_KEY` | Broker Session Key, in the format the verified SDK accepts. |
+| `FINITY_BROKER_EVM_ADDRESS` | Broker Session Key EVM address. |
+
+<Callout type="warn" title="Provider keys are not the broker key">
+  `FINITY_PROVIDER_A_SIGNING_EVM_PRIVATE_KEY` and `FINITY_PROVIDER_B_SIGNING_EVM_PRIVATE_KEY` are provider-owned signing keys for manifests, quotes, and usage receipts. They must never be set to the Broker Session Key.
+</Callout>
+
+## Registry and network endpoints
+
+```bash
+FINITY_REGISTRY_ADDRESS=
+FINITY_REGISTRY_TOPIC_ID=
+FINITY_FACILITATOR_URL=https://api.testnet.blocky402.com
+FINITY_MIRROR_NODE_URL=https://testnet.mirrornode.hedera.com/api/v1
+FINITY_RPC_URL=https://testnet.hashio.io/api
+```
+
+`FINITY_REGISTRY_ADDRESS` is the Mandate Registry EVM address on Hedera testnet. `FINITY_REGISTRY_TOPIC_ID` is the service registry HCS topic ID. The three URLs default to the verified testnet endpoints and rarely need to change.
+
+## Provider processes
+
+| Variable | Purpose |
+| --- | --- |
+| `FINITY_PROVIDER_A_URL` / `FINITY_PROVIDER_B_URL` | Public base URL for each provider. |
+| `FINITY_PROVIDER_A_PORT` / `FINITY_PROVIDER_B_PORT` | Local listening port (default `3001` / `3002`). |
+| `FINITY_PROVIDER_A_PUBLISHED_AT` / `FINITY_PROVIDER_B_PUBLISHED_AT` | Stable UNIX timestamp used when hashing the HCS-published manifest. |
+
+## Local runtime
+
+```bash
+FINITY_TESTNET=0
+WALLET_PASS=
+FINITY_HOME=
+FINITY_UPSTREAM_API_KEY=
+```
+
+- `FINITY_TESTNET` — set to `1` only for explicitly gated testnet integration tests (`registry:seed`, `testnet:paid`). Everything fails closed at `0`.
+- `WALLET_PASS` — secret-store lookup is performed by `vault-worker`; this value is never read by Pi directly.
+- `FINITY_HOME` — overrides `~/.finity` (bundles, identity, mandates, `finityd.db`, `finityd.runtime.json`). Optional; defaults to the OS home directory.
+- `FINITY_UPSTREAM_API_KEY` — optional upstream API key stored in a PAB, never passed directly to the agent.
