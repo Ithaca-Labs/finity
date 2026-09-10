@@ -1,0 +1,54 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+:root,
+.dark {
+  --color-fd-background: #10100f;
+  --color-fd-foreground: #f3f0e8;
+  --color-fd-muted: #171614;
+  --color-fd-muted-foreground: #aaa69d;
+  --color-fd-popover: #171614;
+  --color-fd-popover-foreground: #f3f0e8;
+  --color-fd-card: #171614;
+  --color-fd-card-foreground: #f3f0e8;
+  --color-fd-border: #35332f;
+  --color-fd-primary: #f26d52;
+  --color-fd-primary-foreground: #171614;
+  --color-fd-secondary: #292722;
+  --color-fd-secondary-foreground: #f3f0e8;
+  --color-fd-accent: #292722;
+  --color-fd-accent-foreground: #f3f0e8;
+  --color-fd-ring: #f26d52;
+}
+
+.finity-docs {
+  color-scheme: dark;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  letter-spacing: -0.01em;
+}
+
+.finity-docs code,
+.finity-docs pre,
+.finity-docs kbd {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.finity-docs .fd-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: -0.06em;
+  font-size: 13px;
+}
+
+.finity-docs .fd-brand-mark {
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 16px;
+  background: #f0f0e9;
+  border: 1px solid #b7b7b1;
+  border-radius: 1px;
+  box-shadow: 2px 2px 0 var(--color-fd-primary);
+}
