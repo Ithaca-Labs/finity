@@ -1,0 +1,95 @@
+---
+title: CLI reference
+description: Every command exposed by finity, the /finity control center, and finity-verify.
+---
+
+Finity ships three command surfaces: the `finity` wrapper binary, the `/finity` overlay inside a Pi chat session, and the standalone `finity-verify` read-only auditor.
+
+## `finity`
+
+The wrapper non-developers install. With no arguments it starts (or reuses) `finityd` in the background, then launches Pi with the Finity buyer system prompt and the `finity-buyer` skill loaded.
+
+```bash
+finity
+```
+
+Run the broker daemon directly, in the foreground, to see its logs:
+
+```bash
+finity broker
+```
+
+Inside the chat session, ask in plain language — `finity_buy` handles setup, reuse, and the purchase itself:
+
+```text
+buy me a weather quote for Austin, TX
+```
+
+## `/finity`
+
+Opens the Finity control center from inside a Pi session: live mandate status, period and lifetime budget remaining, broker balance, pending escalations, and Hedera connectivity.
+
+<Accordions>
+<Accordion title="/finity setup">
+
+Runs (or re-runs) Ledger and broker setup manually. Useful for diagnostics when the automatic first-purchase flow needs to be repeated.
+
+</Accordion>
+<Accordion title="/finity mandate new">
+
+Compiles a fresh mandate, asks the connected Ledger to clear-sign it, and registers it through `finityd`'s bearer-protected `/v1/mandates/register` route.
+
+</Accordion>
+<Accordion title="/finity revoke">
+
+Connect and unlock the Ledger, open the Ethereum app, then run this to permanently stop the active authority (optionally pass a specific mandate ID). The Ledger clear-signs the revocation; `finityd` relays only that signed authorization with the sealed broker key, verifies `REVOKED` on-chain, and clears the matching local active-mandate pointer.
+
+```text
+/finity revoke
+```
+
+</Accordion>
+<Accordion title="/finity escalations approve">
+
+Signs a `MandateAmendment` on the physical Ledger to approve a spend-limit escalation that the policy engine raised.
+
+</Accordion>
+</Accordions>
+
+From the same panel you can also inspect mandate-scoped services, toggle the broker kill switch, or withdraw broker funds back to the principal address recorded by the active mandate. Withdrawal asks for explicit confirmation and leaves the network fee in the broker account.
+
+## `finity-verify`
+
+Read-only reconstruction and verification of a decision receipt against public registry, mirror node, and HCS trace state — no keys, no broker, no daemon required. Exits `0` for `verified`, `1` for `insufficient_disclosure`, `2` for `invalid`, so it composes directly into CI and scripts without parsing its own JSON output.
+
+```bash
+finity-verify \
+  --receipt receipt.json \
+  --mandate <mandateId> \
+  --registry-address <0x...> \
+  --mandate-file mandate.json \
+  --manifest-file manifest.json \
+  --quote-file quote.json \
+  --settlement-tx <transactionId> \
+  --rpc-url https://testnet.hashio.io/api \
+  --mirror-node-url https://testnet.mirrornode.hedera.com/api/v1
+```
+
+| Flag | Required | Purpose |
+| --- | --- | --- |
+| `--receipt` | yes | Path to the `DecisionReceipt` JSON to verify. |
+| `--mandate` | yes | Mandate ID; must match `receipt.mandateId`. |
+| `--registry-address` | yes | Deployed `MandateRegistry` contract address. |
+| `--mandate-file` | no | The signed mandate, if disclosed alongside the receipt. |
+| `--manifest-file` | no | The provider's signed service manifest. |
+| `--quote-file` | no | The signed quote the decision was evaluated against. |
+| `--settlement-tx` | no | Hedera transaction ID to cross-check against the receipt's payment. |
+| `--rpc-url` | no | Hashio JSON-RPC relay URL, for registry reads. |
+| `--mirror-node-url` | no | Hedera mirror node base URL, for HCS trace reconstruction. |
+
+The command prints its full verdict as JSON to stdout:
+
+```bash
+finity-verify --receipt receipt.json --mandate 0x1234... --registry-address 0xabcd... > verdict.json
+echo "exit code: $?"
+```
