@@ -705,3 +705,20 @@ The existing Hedera testnet EVM conversion remains in force: one tinybar is
 `10^10` EVM wei. `finityd` estimates the native transfer fee, refuses a
 withdrawal unless amount plus fee fits the Broker Session Key balance, then
 waits for a successful receipt before returning the transaction hash.
+
+## 2026-09-10 console motion dependencies
+
+`npm view` and installed declarations confirm the landing page uses
+`gsap@3.14.2` and `@gsap/react@2.1.2`. The verified imports are:
+
+```text
+import gsap from "gsap"
+import ScrollTrigger from "gsap/ScrollTrigger"
+import { useGSAP } from "@gsap/react"
+```
+
+`useGSAP(callback, { scope? })` is SSR-safe and automatically reverts its
+GSAP context on cleanup. `ScrollTrigger` must be registered with
+`gsap.registerPlugin(...)` before a tween receives its `scrollTrigger`
+configuration. The console uses only reveal-on-entry scroll triggers and
+honours `prefers-reduced-motion`.

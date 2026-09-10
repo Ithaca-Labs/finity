@@ -1,11 +1,13 @@
 import { CopyCommand } from "./components/CopyCommand";
 import { DemoVideo } from "./components/DemoVideo";
+import { LandingMotion } from "./components/LandingMotion";
 
 const downloadHref = "/downloads/finity-0.1.0.tar.gz";
 
 export default function HomePage() {
   return (
     <main className="minimal-page">
+      <LandingMotion />
       <header className="minimal-header shell">
         <a className="tiny-brand" href="/" aria-label="Finity home">finity</a>
         <nav className="pixel-nav" aria-label="Primary navigation">
@@ -37,71 +39,32 @@ export default function HomePage() {
         <DemoVideo />
       </section>
 
-      <section className="landing-section proof-section shell" id="why">
-        <div className="section-lead">
-          <span className="section-index">01 / the feeling</span>
-          <div>
-            <h2>The best kind of autonomy knows when to stop.</h2>
-            <p>You get the upside of an agent that acts, without the anxiety of one that improvises.</p>
+      <section className="landing-section proof-section motion-section" id="why">
+        <div className="proof-visual motion-card">
+          <div className="proof-visual-heading">
+            <h2>Autonomy,<br />with a stopping point.</h2>
+          </div>
+          <div className="proof-visual-copy">
+            <p className="proof-visual-eyebrow">the useful kind</p>
+            <p className="proof-visual-description"><strong>Let your agent<br />move with purpose.</strong></p>
+            <p className="proof-visual-note">It acts on what you allow.<br />It stops when the boundary says no.</p>
           </div>
         </div>
-
-        <div className="decision-stage">
-          <article className="decision-card allowed">
-            <div className="decision-topline">
-              <span className="proof-status">a confident yes</span>
-              <span className="decision-code">01 / through</span>
-            </div>
-            <h3>The job gets done.</h3>
-            <p>The request fits. Finity clears the way, makes the payment, and brings back the result.</p>
-            <div className="decision-foot"><span>outcome</span><strong>delivered</strong></div>
-          </article>
-          <article className="decision-card stopped">
-            <div className="decision-topline">
-              <span className="proof-status stopped">a clean no</span>
-              <span className="decision-code">02 / stopped</span>
-            </div>
-            <h3>The line holds.</h3>
-            <p>The request is outside the rules. Nothing moves, and you know exactly why.</p>
-            <div className="decision-foot"><span>what you keep</span><strong>peace of mind</strong></div>
-          </article>
-        </div>
-
-        <p className="proof-note"><span aria-hidden="true">→</span> More done. Less babysitting.</p>
       </section>
 
-      <section className="landing-section shell" id="difference">
+      <section className="landing-section shell motion-section" id="difference">
         <div className="section-lead">
-          <span className="section-index">02 / the difference</span>
           <div>
-            <h2>Most AI stops at suggestions. Finity follows through.</h2>
-            <p>Your agent can discover, pay, and deliver—inside a boundary you set once.</p>
+            <h2>Autonomy becomes useful when it stays yours.</h2>
+            <p>Set one mandate. Your agent can discover, pay, and deliver—without stepping beyond it.</p>
           </div>
         </div>
 
-        <div className="trust-grid">
-          <article className="trust-card">
-            <span className="trust-number">01</span>
-            <p className="trust-kicker">your rules</p>
-            <h3>Set the terms.</h3>
-            <p>You choose the services, spend, and access before your agent takes a step.</p>
-            <span className="trust-token">you_decide</span>
-          </article>
-          <article className="trust-card">
-            <span className="trust-number">02</span>
-            <p className="trust-kicker">its turn</p>
-            <h3>Let it follow through.</h3>
-            <p>Finity turns a clear mandate into a real action, not another recommendation.</p>
-            <span className="trust-token">make_it_real</span>
-          </article>
-          <article className="trust-card">
-            <span className="trust-number">03</span>
-            <p className="trust-kicker">after the fact</p>
-            <h3>Keep the receipts.</h3>
-            <p>Every request leaves a readable trail, whether it goes through or stops.</p>
-            <span className="trust-token">know_more</span>
-          </article>
-        </div>
+        <ol className="mandate-rail">
+          <li className="motion-card"><span className="rail-number">01</span><div><p>before it acts</p><h3>You set the terms.</h3></div><span className="rail-detail">services · spend · access</span></li>
+          <li className="motion-card"><span className="rail-number">02</span><div><p>when it acts</p><h3>Finity holds the line.</h3></div><span className="rail-detail">policy · capability · payment</span></li>
+          <li className="motion-card"><span className="rail-number">03</span><div><p>after it acts</p><h3>The trail remains.</h3></div><span className="rail-detail">receipt · refusal · result</span></li>
+        </ol>
       </section>
 
       <footer className="minimal-footer shell">
