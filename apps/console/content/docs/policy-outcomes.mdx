@@ -1,0 +1,18 @@
+---
+title: Policy outcomes
+description: Every result has a reason.
+---
+
+Unknown, missing, or malformed policy and payment inputs fail closed as `STATE_UNAVAILABLE`. Otherwise, the outcome is one of three typed states.
+
+<Callout type="success" title="authorized">
+  No failing predicates. A single-use capability can be minted and the request can settle.
+</Callout>
+
+<Callout type="warn" title="escalation">
+  Only spend limits fail. The agent can propose an amendment for fresh Ledger approval.
+</Callout>
+
+<Callout type="error" title="refused">
+  Any other failure. No payment, capability, or credential access is allowed.
+</Callout>
