@@ -1,0 +1,27 @@
+{
+  "name": "@finity/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm package:archive && next dev",
+    "build": "pnpm package:archive && next build",
+    "package:archive": "node scripts/build-package.mjs",
+    "start": "next start",
+    "preview": "next start",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1",
+    "@types/react": "19.2.18",
+    "typescript": "7.0.2",
+    "vitest": "5.0.0"
+  },
+  "dependencies": {
+    "next": "^16.3.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

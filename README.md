@@ -13,6 +13,19 @@ pnpm -r test
 
 No funded accounts, contract address, HCS topic IDs, provider URLs, or hardware claims are recorded until verified and added to `docs/VERIFIED.md`.
 
+## Web console
+
+The Next.js console is in `apps/console`. It contains the public landing page,
+an architecture and setup guide at `/docs`, and a generated source archive at
+`/downloads/finity-0.1.0.tar.gz`.
+
+```bash
+pnpm --filter @finity/console dev
+```
+
+For a production build, run `pnpm --filter @finity/console build` and then
+`pnpm --filter @finity/console start`.
+
 ## Day 2 operator commands
 
 The two provider processes require their own Hedera account IDs, public HTTPS

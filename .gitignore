@@ -15,6 +15,9 @@ vendor/
 *.enc
 *.log
 .DS_Store
+*.tsbuildinfo
 contracts/artifacts/
 contracts/cache/
 contracts/types/
+apps/console/.next/
+apps/console/public/downloads/

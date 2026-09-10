@@ -2,6 +2,16 @@
 
 Verified on 2026-09-07 in this workspace. Live sources supersede this record.
 
+## 2026-09-10 web console
+
+- `@finity/console` builds with Next.js `16.3.4`, React `19.3.0`, and the App
+  Router. `pnpm --filter @finity/console typecheck` and
+  `pnpm --filter @finity/console build` pass.
+- The console serves `/` and `/docs` as static routes. Its build generates a
+  source archive at `apps/console/public/downloads/finity-0.1.0.tar.gz` and
+  excludes `.git`, dependency folders, build output, contract artifacts, and
+  local `.env` files.
+
 ## Toolchain
 
 Commands and observed output:
