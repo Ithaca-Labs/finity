@@ -3,16 +3,12 @@ title: Policy outcomes
 description: Every result has a reason.
 ---
 
-Unknown, missing, or malformed policy and payment inputs fail closed as `STATE_UNAVAILABLE`. Otherwise, the outcome is one of three typed states.
+The policy engine evaluates every predicate in the active mandate against a quote and returns exactly one of three typed outcomes. Unknown, missing, or malformed policy and payment inputs fail closed as `STATE_UNAVAILABLE` rather than falling through to a default.
 
-<Callout type="success" title="authorized">
-  No failing predicates. A single-use capability can be minted and the request can settle.
-</Callout>
+| Outcome | Trigger | Effect |
+| --- | --- | --- |
+| `authorized` | No failing predicates. | A single-use capability is minted and the request can settle. |
+| `escalation` | Only spend-limit predicates fail; every other check passes. | No payment or capability is issued. The agent can propose an amendment for fresh Ledger approval via `/finity escalations approve`. |
+| `refused` | Any predicate other than a spend limit fails. | No payment, capability, or credential access is allowed. Nothing is retried automatically. |
 
-<Callout type="warn" title="escalation">
-  Only spend limits fail. The agent can propose an amendment for fresh Ledger approval.
-</Callout>
-
-<Callout type="error" title="refused">
-  Any other failure. No payment, capability, or credential access is allowed.
-</Callout>
+Every outcome — including `refused` and `escalation` — produces a signed `DecisionReceipt` and an HCS `DECISION` commitment. There is no code path that reaches a purchase attempt without first producing this record; `finity-verify` reconstructs and checks it independently of the broker that issued it. See the [CLI reference](/docs/cli-reference#finity-verify) for how to run that check against public state.
