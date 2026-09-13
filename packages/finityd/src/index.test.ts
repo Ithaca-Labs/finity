@@ -376,7 +376,12 @@ describe("finityd HTTP API mandates routes", () => {
   it("returns a safe category when mandate relay rejects the signature", async () => {
     running = startFinityd({
       services: { mandateStore: new MandateStore(), topicId: "0.0.1" },
-      mandateRegistration: { register: async () => { throw new Error("ContractFunctionExecutionError: InvalidSignature()"); } },
+      mandateRegistration: {
+        register: async () => {
+          const error = new Error("mandate contract submission failed", { cause: new Error("InvalidSignature()") });
+          throw Object.assign(error, { registrationStage: "contract_submission" });
+        },
+      },
     });
     const url = await baseUrl(running);
     const response = await fetch(`${url}/v1/mandates/register`, {
@@ -386,6 +391,25 @@ describe("finityd HTTP API mandates routes", () => {
     });
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "invalid_signature" });
+  });
+
+  it("returns the failing registration stage without exposing the cause", async () => {
+    running = startFinityd({
+      services: { mandateStore: new MandateStore(), topicId: "0.0.1" },
+      mandateRegistration: {
+        register: async () => {
+          throw Object.assign(new Error("mandate trace topic creation failed"), { registrationStage: "trace_topic_creation" });
+        },
+      },
+    });
+    const url = await baseUrl(running);
+    const response = await fetch(`${url}/v1/mandates/register`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${running.token}`, "content-type": "application/json" },
+      body: JSON.stringify(mandate),
+    });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "trace_topic_creation_failed" });
   });
 
   it("relays only a valid Ledger-signed revocation through the broker", async () => {

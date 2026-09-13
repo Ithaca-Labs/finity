@@ -1,5 +1,70 @@
 # Todo
 
+## 2026-09-13 fix mandate command registration
+
+### Plan
+
+- [x] Reproduce the new `registration_failed` report.
+- [x] Confirm the current daemon runtime is active.
+- [x] Identify which Pi command emitted the exact progress text.
+- [x] Compare command-path and onboarding-path signature handling.
+- [x] Confirm `/finity mandate new` bypasses local recovery.
+- [x] Inspect all live mandate registration side effects.
+- [x] Separate contract submission from receipt confirmation.
+- [x] Separate registry status confirmation from transaction receipt.
+- [x] Separate HCS topic creation from EVM trace binding.
+- [x] Preserve fail-closed behavior at every stage.
+- [x] Apply Ledger-address recovery to the command path.
+- [x] Keep the broker key outside Pi.
+- [x] Preserve exact typed-data bytes sent to DMK.
+- [x] Preserve the existing specific contract reason categories.
+- [x] Add safe stage categories for unknown live failures.
+- [x] Inspect nested causes without returning their text.
+- [x] Add command-path regression coverage.
+- [x] Add stage-category regression coverage.
+- [x] Build all affected packages.
+- [x] Run focused Pi and finityd tests.
+- [x] Run full build, typecheck, and tests.
+- [x] Run lint, diff, and secret scans.
+- [x] Review the scoped diff.
+- [x] Update verified, DX, and decision docs.
+- [x] Record the corrected lesson.
+- [ ] Commit the focused fix.
+- [ ] Push the fix branch.
+- [ ] Open a focused PR.
+- [ ] Wait for CI.
+- [ ] Merge the PR into main.
+
+### Verification
+
+- [x] `/finity mandate new` refuses a mismatched Ledger signature before relay.
+- [x] Live registration stage failures expose only safe categories.
+- [x] Full workspace gates pass.
+
+### Review
+
+#### Changed
+
+- Added local Ledger signature verification to `/finity mandate new`.
+- Classified live contract, receipt, status, HCS topic, and trace-binding stages.
+- Bumped the runtime contract and documented the corrected diagnostic lesson.
+
+#### Verified
+
+- Focused finityd and Pi tests: 88 and 63 passing.
+- Full build, typecheck, tests, lint, diff, and secret scans passed.
+- Live stale daemon rejected: `stale daemon accepted: false`.
+
+#### Risks
+
+- Physical Ledger retry is still required to confirm the new command path on
+  hardware; no new network write was initiated by this debugging pass.
+
+#### Follow-ups
+
+- Retry `/finity mandate new` after the merged build and use the returned safe
+  stage if a live dependency remains unavailable.
+
 ## 2026-09-13 fix stale daemon reuse
 
 ### Plan

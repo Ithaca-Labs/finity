@@ -848,3 +848,14 @@ accepted: false`). The daemon runtime contract version is now bumped with this
 fix; `pnpm agent` starts a current daemon whenever the runtime file is healthy
 but stale, and the Pi onboarding guard applies the same check when the CLI
 passes its expected version.
+
+## 2026-09-13 mandate command-path diagnostics
+
+The repeated `registration_failed` came from `/finity mandate new`, whose
+signature path was not using the local Ledger-address recovery check added to
+natural-language onboarding. That command now verifies the exact assembled
+signature before relay. The live registration dependency also classifies
+contract submission/confirmation, mandate status, HCS trace-topic creation,
+and HCS trace-topic binding failures into redacted response categories, while
+preserving the original specific contract categories when the nested error
+identifies them. No raw error, calldata, signature, or key is returned.
