@@ -21,15 +21,15 @@
 - [x] Review the staged file list.
 - [x] Review the staged diff metadata.
 - [x] Run staged diff whitespace checks.
-- [ ] Commit with a focused subject.
-- [ ] Push the commit to `main`.
-- [ ] Verify remote and local `main` match.
+- [x] Commit with a focused subject.
+- [x] Push the commit to `main`.
+- [x] Verify remote and local `main` match.
 
 ### Verification
 
 - [x] All safe user-added assets are tracked.
 - [x] No secrets are staged.
-- [ ] `main` is clean and synchronized.
+- [x] `main` is clean and synchronized.
 
 ### Review
 
