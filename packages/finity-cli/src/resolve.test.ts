@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FINITYD_RUNTIME_VERSION } from "@finity/finityd";
+import { FINITYD_RUNTIME_VERSION } from "@therick/finityd";
 import { describe, expect, it } from "vitest";
 import { isFinitydRunning, parseDotEnv, resolveFinitydBin, resolvePiPackageRoot } from "./resolve.js";
 

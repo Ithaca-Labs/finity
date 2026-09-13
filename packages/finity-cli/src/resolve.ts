@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { FINITYD_RUNTIME_VERSION } from "@finity/finityd";
+import { FINITYD_RUNTIME_VERSION } from "@therick/finityd";
 
 export function finityHome(): string {
   return process.env.FINITY_HOME ?? join(homedir(), ".finity");
@@ -42,11 +42,11 @@ export function resolvePackageRoot(specifier: string): string {
 }
 
 export function resolvePiPackageRoot(): string {
-  return resolvePackageRoot("@finity/pi-package");
+  return resolvePackageRoot("@therick/pi-package");
 }
 
 export function resolveFinitydBin(): string {
-  return join(resolvePackageRoot("@finity/finityd"), "dist", "daemon.js");
+  return join(resolvePackageRoot("@therick/finityd"), "dist", "daemon.js");
 }
 
 export type FinitydHealthCheck = (baseUrl: string, token: string) => Promise<boolean>;
