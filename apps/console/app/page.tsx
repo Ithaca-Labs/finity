@@ -26,7 +26,7 @@ export default function HomePage() {
           <p className="minimal-description"><strong>Ledger</strong> sets the limit.<br /><strong>Hedera</strong> keeps the receipts.</p>
 
           <div className="demo-wrap">
-            <CopyCommand command="pnpm demo" />
+            <CopyCommand command="npm i @therick/finity" />
           </div>
 
           <div className="minimal-actions">
