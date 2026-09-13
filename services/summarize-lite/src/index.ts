@@ -6,8 +6,8 @@ import {
   type FinityServiceOptions,
   type QuoteRequest,
   type UnsignedServiceManifest,
-} from "@finity/provider-sdk";
-import type { ServiceManifest } from "@finity/schemas";
+} from "@therick/provider-sdk";
+import type { ServiceManifest } from "@therick/schemas";
 
 export const SUMMARIZATION_UNIT_CHARS = 1000;
 export const SUMMARIZATION_UNIT_PRICE_TINYBAR = "1000";
