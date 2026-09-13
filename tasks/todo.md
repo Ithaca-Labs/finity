@@ -29,7 +29,7 @@
 - [x] Run a refusal path and verify no settlement occurs.
 - [x] Update docs, risks, and follow-ups with evidence.
 - [x] Run build, typecheck, tests, lint, diff, and secret scans.
-- [ ] Commit focused changes, push the branch, open a PR, and merge after CI.
+- [x] Commit focused changes, push the branch, open a PR, and merge after CI.
 
 ### Verification
 
