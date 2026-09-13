@@ -1,4 +1,4 @@
-# `@finity/registry-client`
+# `@therick/registry-client`
 
 Hedera testnet Mandate Registry, HCS, mirror-node, and Hashio access.
 

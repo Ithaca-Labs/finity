@@ -8,7 +8,7 @@ import {
   type AgentMandate,
   type HcsEnvelope,
   type ServiceManifest,
-} from "@finity/schemas";
+} from "@therick/schemas";
 import {
   Client as HederaClient,
   TopicCreateTransaction,

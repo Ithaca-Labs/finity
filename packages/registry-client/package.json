@@ -1,9 +1,9 @@
 {
-  "name": "@finity/registry-client",
+  "name": "@therick/registry-client",
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
-    "@finity/schemas": "workspace:*",
+    "@therick/schemas": "workspace:*",
     "@hiero-ledger/sdk": "2.87.0",
     "viem": "2.56.3"
   },
