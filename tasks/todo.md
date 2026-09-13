@@ -1,5 +1,65 @@
 # Todo
 
+## 2026-09-13 reuse initialized Key Ring in setup
+
+### Plan
+
+- [x] Confirm clean main baseline.
+- [x] Reproduce the setup failure with the initialized ring.
+- [x] Verify wallet-cli reports the existing ring safely.
+- [x] Inspect setup and onboarding ring behavior.
+- [x] Define reuse-first setup behavior.
+- [x] Add an optional ring-readiness dependency to the wizard.
+- [x] Preserve ring initialization for first-time setup.
+- [x] Skip duplicate ring initialization when readiness succeeds.
+- [x] Add a clear reuse notification.
+- [x] Wire the real wallet-cli readiness check into the command center.
+- [x] Keep password handling unchanged and secret-safe.
+- [x] Add a test for initialized-ring reuse.
+- [x] Retain coverage for genuine-check failure.
+- [x] Retain coverage for ring-init failure when no ring exists.
+- [x] Update operator documentation.
+- [x] Record the decision in required verification docs.
+- [x] Run package tests.
+- [x] Run build and typecheck.
+- [x] Run lint and diff checks.
+- [x] Run the diff-only secret scan.
+- [x] Review the scoped diff.
+- [x] Commit the focused fix.
+- [x] Push the fix branch.
+- [x] Open a focused PR.
+- [x] Wait for CI.
+- [x] Merge the PR into main.
+
+### Verification
+
+- [x] Existing ring skips `ring init`.
+- [x] Missing ring still invokes `ring init`.
+- [x] Workspace checks pass.
+
+### Review
+
+#### Changed
+
+- Made `/finity setup` reuse an initialized Ledger Key Ring.
+- Added a readiness regression test and updated operator/architecture docs.
+
+#### Verified
+
+- `wallet-cli ring keys --output json` found `broker:default`.
+- `@finity/pi-package` tests: 59 passed.
+- Full build, typecheck, test, lint, diff, and secret checks passed.
+
+#### Risks
+
+- Fresh setup still requires user-controlled Ledger approvals and HBAR
+  funding; this fix only removes the duplicate Key Ring initialization error.
+
+#### Follow-ups
+
+- Re-run `/finity setup`; it should reuse the ring and continue to Spend Account
+  funding. Use `/finity mandate new` if the broker setup is already complete.
+
 ## 2026-09-13 revoke mandate and reset connection
 
 ### Plan

@@ -206,3 +206,13 @@
   supported Pi customization boundary and leaves chat available underneath.
   Live status and transfer actions remain broker-owned: Pi receives only
   public metadata and a transaction result, never the Broker Session Key.
+
+## ADR-016: setup reuses an initialized Ledger Key Ring
+
+- Date: 2026-09-13
+- Decision: `/finity setup` checks `wallet-cli ring keys` before attempting
+  `ring init`. An initialized ring is reused; an unavailable ring still takes
+  the first-time initialization path.
+- Reason: Key Ring initialization is a one-time hardware operation. Repeating
+  it after mandate revocation incorrectly aborts setup even though the existing
+  ring can safely seal a fresh broker bundle.

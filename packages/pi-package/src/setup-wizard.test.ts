@@ -46,6 +46,19 @@ describe("runSetupWizard", () => {
     expect(ringInitCalled).toBe(false);
   });
 
+  it("reuses an initialized Key Ring without calling ring init again", async () => {
+    let ringInitCalled = false;
+    const { ui, messages } = fakeUi();
+    const result = await runSetupWizard(baseDeps({
+      ui,
+      ringReady: async () => true,
+      ringInit: async () => { ringInitCalled = true; return false; },
+    }));
+    expect(result.ok).toBe(true);
+    expect(ringInitCalled).toBe(false);
+    expect(messages).toContain("Ledger Key Ring is already initialized. Reusing it.");
+  });
+
   it("aborts before sealing when ring init fails", async () => {
     let sealed = false;
     const result = await runSetupWizard(baseDeps({ ringInit: async () => false, sealBrokerBundle: async () => { sealed = true; } }));

@@ -793,3 +793,13 @@ already-empty session, and a subsequent session view returned zero accounts.
 The authenticated finityd health check remained `ok`. The historical mandate
 file and sealed broker bundle were intentionally retained for auditability;
 they are not active authority.
+
+## 2026-09-13 setup reuses an initialized Key Ring
+
+`wallet-cli ring keys --output json` returned the existing `broker:default`
+domain. Running `/finity setup` had previously attempted `ring init` again and
+returned `RING_INIT_FAILED`, which is correct wallet-cli behavior for an
+already-initialized ring. The setup wizard now checks ring readiness first,
+reuses the existing ring, and only calls `ring init` when the readiness check
+fails. Unit coverage confirms both branches and keeps the existing
+failure-closed behavior for a genuinely unavailable ring.

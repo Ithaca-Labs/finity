@@ -13,6 +13,7 @@ export type WizardUI = {
 export type SetupWizardDeps = {
   ui: WizardUI;
   genuineCheck(): Promise<boolean>;
+  ringReady?: () => Promise<boolean>;
   ringInit(name: string): Promise<boolean>;
   walletPass: WalletPassProvider;
   bundlesDir: string;
@@ -51,10 +52,15 @@ export async function runSetupWizard(deps: SetupWizardDeps): Promise<SetupWizard
     return { ok: false, reason: "GENUINE_CHECK_FAILED" };
   }
 
-  deps.ui.notify("Initializing your Ledger Key Ring. This needs your device and the password you've already set in WALLET_PASS.", "info");
-  if (!(await deps.ringInit(deps.hostname))) {
-    deps.ui.notify("Key Ring initialization failed. Aborting setup.", "error");
-    return { ok: false, reason: "RING_INIT_FAILED" };
+  const keyRingReady = deps.ringReady ? await deps.ringReady() : false;
+  if (keyRingReady) {
+    deps.ui.notify("Ledger Key Ring is already initialized. Reusing it.", "info");
+  } else {
+    deps.ui.notify("Initializing your Ledger Key Ring. This needs your device and the password you've already set in WALLET_PASS.", "info");
+    if (!(await deps.ringInit(deps.hostname))) {
+      deps.ui.notify("Key Ring initialization failed. Aborting setup.", "error");
+      return { ok: false, reason: "RING_INIT_FAILED" };
+    }
   }
 
   const { brokerSessionKey, brokerAddress } = generateBrokerSessionKey();

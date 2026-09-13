@@ -15,7 +15,7 @@ import { generateIdentity, loadIdentityFile, saveIdentityFile } from "../identit
 import { runSetupWizard, type WizardUI } from "../setup-wizard.js";
 import { signTypedDataOnDevice } from "../ledger.js";
 import { ensureInteractivePurchaseReady } from "../interactive-onboarding.js";
-import { genuineCheck, ringInit } from "../wallet-cli-ops.js";
+import { genuineCheck, ringInit, ringReady } from "../wallet-cli-ops.js";
 import { walletPassFromEnvironmentOrKeychain } from "../wallet-pass.js";
 import { createRegistryClient } from "@finity/registry-client";
 import {
@@ -357,6 +357,7 @@ async function handleSetup(ctx: ExtensionCommandContext): Promise<void> {
   const result = await runSetupWizard({
     ui: wizardUiFrom(ctx),
     genuineCheck,
+    ringReady,
     ringInit,
     walletPass: walletPassFromEnv,
     bundlesDir: join(home, "bundles"),
