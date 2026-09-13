@@ -9,7 +9,7 @@ import {
   hashUnsignedManifest,
   type CanonicalSigner,
 } from "./index.js";
-import type { ServiceManifest } from "@finity/schemas";
+import type { ServiceManifest } from "@therick/schemas";
 
 const signature = `0x${"11".repeat(65)}`;
 const signer: CanonicalSigner = {

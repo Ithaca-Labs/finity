@@ -10,7 +10,7 @@ import {
   type RequestClass,
   type ServiceManifest,
   type UsageReceipt,
-} from "@finity/schemas";
+} from "@therick/schemas";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import type { FacilitatorClient, RoutesConfig } from "@x402/core/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
