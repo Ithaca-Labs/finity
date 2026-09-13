@@ -6,8 +6,8 @@ import {
   type FinityServiceOptions,
   type QuoteRequest,
   type UnsignedServiceManifest,
-} from "@finity/provider-sdk";
-import type { ServiceManifest } from "@finity/schemas";
+} from "@therick/provider-sdk";
+import type { ServiceManifest } from "@therick/schemas";
 import { lookupOpenMeteoWeather, type WeatherLookup, WeatherLookupError } from "./open-meteo.js";
 
 export * from "./open-meteo.js";

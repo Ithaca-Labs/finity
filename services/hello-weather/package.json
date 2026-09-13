@@ -1,11 +1,11 @@
 {
-  "name": "@finity/hello-weather",
+  "name": "@therick/hello-weather",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@finity/provider-sdk": "workspace:*",
-    "@finity/schemas": "workspace:*",
+    "@therick/provider-sdk": "workspace:*",
+    "@therick/schemas": "workspace:*",
     "express": "5.2.1",
     "zod": "3.25.76"
   },
