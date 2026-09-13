@@ -771,3 +771,25 @@ The final rebuilt stack completed a second authorized purchase for Paris:
 - final state `RECONCILED`.
 - provider result: Paris, FR, partly cloudy, 19.9°C, WMO code 3, source Open-Meteo.
 - authenticated daemon health was `ok`; the live registry remained `ACTIVE` with `reserved=0`, `periodConsumed=15000000`, and `lifetimeConsumed=35000000` tinybars.
+
+## 2026-09-13 physical mandate revocation and connection reset
+
+The active mandate `0x6910295d536615ee2b07340daf36aa710447f53ef3abdf112d7ec3dfe12b18ff`
+was re-checked as `ACTIVE` before signing. After the Ledger was unlocked and
+the Ethereum app was open, the physical device approved a fresh Revocation
+typed-data signature with the reason `Reset authority for a fresh Ledger
+initialization`. finityd relayed only that signed authorization through the
+sealed broker path.
+
+The Hedera testnet registry transaction was
+`0x6100b95d5275d75d43f0c9e6a8ae4510d8fef22d82e136a11ae4bcef9248d3c9`; the
+post-transaction registry read returned status `REVOKED` (4), `reserved=0`,
+and trace topic `0.0.10423252`. The HCS `REVOKED` envelope was submitted in
+transaction `0.0.8260226@1789294394.678990016`.
+
+The local `~/.finity/active-mandate.json` pointer was cleared only after the
+on-chain status was confirmed. `wallet-cli session reset` completed with an
+already-empty session, and a subsequent session view returned zero accounts.
+The authenticated finityd health check remained `ok`. The historical mandate
+file and sealed broker bundle were intentionally retained for auditability;
+they are not active authority.
