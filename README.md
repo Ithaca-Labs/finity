@@ -38,6 +38,45 @@ pnpm provider:weather
 pnpm provider:summarize
 ```
 
+## Local end-to-end run
+
+Open-Meteo supplies live geocoding and current weather without an API key. The
+summarizer remains a local deterministic provider, so the full stack works
+without depending on a second paid or rate-sensitive AI API.
+
+Install dependencies, then start the complete local stack in one terminal:
+
+```bash
+pnpm install --frozen-lockfile
+FINITY_PROVIDER_A_PUBLISHED_AT=1789291700 FINITY_PROVIDER_B_PUBLISHED_AT=1789291700 pnpm dev:stack
+```
+
+The timestamp overrides match the currently published testnet manifests. For
+a new registry topic, set stable provider timestamps in `.env` before running
+`pnpm registry:seed`, then omit these overrides.
+
+`dev:stack` builds the workspace, starts both providers on the configured local
+ports, starts `finityd` with the Key Ring password from macOS Keychain, waits
+for all health checks, and keeps the processes alive. It reuses healthy
+processes and only stops processes that it started when you press Ctrl-C.
+
+In a second terminal, run one real Hedera testnet purchase for any city:
+
+```bash
+FINITY_TESTNET=1 pnpm e2e:weather -- --city London
+```
+
+The command uses the active Ledger-approved mandate, discovers the HCS-published
+weather service, gets a signed quote, evaluates the policy, reserves budget,
+settles the x402 HBAR payment, fetches live Open-Meteo data, and waits for
+`RECONCILED`. Use `--data-class 1` to exercise the refusal path; a mandate that
+only permits public data returns `REFUSED` with `DATA_POLICY_VIOLATION` before
+reservation or payment.
+
+To use the Pi buyer agent instead, build first if needed and run
+`pnpm agent`. Ask it for weather in a named city; `finity_buy` encodes that city
+as `weather.current:<city>` and sends it through the same daemon path.
+
 Once both public services are reachable and the HCS operator is funded, publish
 their signed manifests and run the real payment check. Both commands fail closed
 until `FINITY_TESTNET=1` is set deliberately.
