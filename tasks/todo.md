@@ -33,8 +33,8 @@
 - [x] Push the branch to origin.
 - [x] Open the focused pull request.
 - [x] Wait for CI and inspect failures if any.
-- [ ] Merge the pull request into `main`.
-- [ ] Pull the merged `main` and verify it is clean.
+- [x] Merge the pull request into `main`.
+- [x] Pull the merged `main` and verify it is clean.
 
 ### Verification
 
@@ -42,7 +42,7 @@
 - [x] Compiled typed data uses the fresh nonce sent to the Ledger.
 - [x] Full workspace gates pass.
 - [x] CI passes on the pull request.
-- [ ] Merged `main` contains only the focused fix.
+- [x] Merged `main` contains only the focused fix.
 
 ### Review
 
