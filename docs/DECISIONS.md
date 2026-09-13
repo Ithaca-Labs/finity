@@ -274,3 +274,16 @@
   a hardware-backed operator unable to identify the failing boundary. Stage
   categories make the next retry actionable without leaking RPC details or
   private material.
+
+## ADR-022: refresh mandate registration nonces at the command boundary
+
+- Date: 2026-09-13
+- Decision: `/finity mandate new` and the guarded standalone Ledger mandate
+  script overwrite the draft or fixture registration nonce with a fresh
+  timestamp before compiling and signing. The policy draft remains the source
+  of limits, services, methods, and data rules.
+- Reason: `MandateRegistry.usedNonces` is scoped to the Ledger principal and
+  is never cleared by revocation. Reusing a convenient fixture nonce made a
+  valid new Ledger approval fail with `NonceAlreadyUsed`. The command boundary
+  has access to time, while the pure compiler and policy engine must remain
+  deterministic and clock-free.

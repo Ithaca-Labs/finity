@@ -8,6 +8,7 @@ export * from "./identity.js";
 export * from "./interactive-onboarding.js";
 export * from "./ledger.js";
 export * from "./ledger-funding.js";
+export * from "./mandate-nonce.js";
 export * from "./mandate-wizard.js";
 export * from "./onboarding-state.js";
 export * from "./purchase-readiness.js";

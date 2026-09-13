@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { registerMandateOnChain, signTypedDataOnDevice, generateIdentity, loadIdentityFile, saveActiveMandate } from "@finity/pi-package";
+import { registerMandateOnChain, signTypedDataOnDevice, generateIdentity, loadIdentityFile, saveActiveMandate, withFreshMandateNonce } from "@finity/pi-package";
 import { compile, type MandateChoices } from "@finity/mandate-compiler";
 import { POLICY_HASH } from "@finity/policy-engine";
 import { createHcsWriter, createRegistryClient } from "@finity/registry-client";
@@ -45,7 +45,7 @@ async function main(): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   const fixture = JSON.parse(await readFile(join(process.cwd(), "fixtures/mandate-weather.json"), "utf8")) as Record<string, unknown>;
   const agentIdentity = await generateIdentity({ name: "finity-buyer", nativeId: identity.broker.canonical.nativeId, uid: "buyer" });
-  const choices = {
+  const choices = withFreshMandateNonce({
     ...fixture,
     agent: agentIdentity.uaid,
     broker: brokerAddress,
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
     validFrom: now - 60,
     validUntil: now + 365 * 24 * 60 * 60,
     verifyingContract: registryAddress,
-  } as unknown as MandateChoices;
+  } as unknown as MandateChoices);
   const compiled = compile(choices);
   await mkdir(home, { recursive: true });
   await writeFile(join(home, "mandate-draft.json"), `${JSON.stringify(compiled.canonicalMandate, null, 2)}\n`, { mode: 0o600 });

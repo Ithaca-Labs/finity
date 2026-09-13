@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CompiledMandate } from "@finity/mandate-compiler";
+import { withFreshMandateNonce } from "./mandate-nonce.js";
 import { registerMandateOnChain, type TraceTopicCreator } from "./mandate-wizard.js";
 
 const choices = {
@@ -28,6 +29,22 @@ const choices = {
 const FAKE_SIGNATURE = `0x${"11".repeat(65)}` as `0x${string}`;
 const FAKE_REGISTRATION_TX = `0x${"22".repeat(32)}` as `0x${string}`;
 const FAKE_SET_TRACE_TX = `0x${"33".repeat(32)}` as `0x${string}`;
+
+describe("withFreshMandateNonce", () => {
+  it("replaces a draft nonce without changing policy choices", () => {
+    const fresh = withFreshMandateNonce(choices, 1_789_000_123_456);
+
+    expect(fresh.nonce).toBe("1789000123456");
+    expect(fresh.allowedServices).toBe(choices.allowedServices);
+    expect(fresh.maxPerRequest).toBe(choices.maxPerRequest);
+    expect(fresh.predecessor).toBe(choices.predecessor);
+  });
+
+  it("rejects invalid timestamps instead of creating an ambiguous nonce", () => {
+    expect(() => withFreshMandateNonce(choices, -1)).toThrow("mandate nonce timestamp");
+    expect(() => withFreshMandateNonce(choices, Number.MAX_SAFE_INTEGER + 1)).toThrow("mandate nonce timestamp");
+  });
+});
 
 describe("registerMandateOnChain", () => {
   it("signs exactly what compile() produced, then registers and binds a trace topic in order", async () => {
