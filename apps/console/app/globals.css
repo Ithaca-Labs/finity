@@ -56,10 +56,10 @@ button { font: inherit; }
 .command-box button { padding: 0; border: 0; background: transparent; color: var(--quiet); font-size: 10px; cursor: pointer; }
 .command-box button:hover { color: var(--orange); }
 .demo-video { width: 100%; margin-top: 0; text-align: left; animation: rise-in .8s .25s cubic-bezier(.22, 1, .36, 1) both; }
-.video-frame { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 8px; background: #161513; box-shadow: 20px 25px 70px rgba(0,0,0,.18); transition: transform 700ms cubic-bezier(.22, 1, .36, 1), border-color 240ms ease; }
+.video-frame { position: relative; overflow: hidden; aspect-ratio: 1920 / 854; border: 1px solid var(--line); border-radius: 8px; background: #161513; box-shadow: 20px 25px 70px rgba(0,0,0,.18); transition: transform 700ms cubic-bezier(.22, 1, .36, 1), border-color 240ms ease; }
 .video-frame:hover { transform: translateY(-5px) scale(1.01); border-color: #5a554d; }
 .video-frame::before { content: ""; position: absolute; z-index: 1; inset: 0; border: 1px solid rgba(255,255,255,.025); border-radius: inherit; pointer-events: none; }
-.demo-video-player { display: block; width: 100%; height: 100%; background: #080808; object-fit: cover; }
+.demo-video-player { display: block; width: 100%; height: 100%; background: #080808; object-fit: contain; }
 .video-empty { position: absolute; z-index: 2; inset: 0; display: grid; place-items: center; align-content: center; height: 100%; padding: 24px; background: radial-gradient(circle at 50% 35%, rgba(255,113,85,.05), transparent 45%), var(--black-soft); text-align: center; }
 .video-empty .status-dot { margin-bottom: 12px; }
 .video-empty strong { color: var(--text); font-size: 12px; font-weight: 500; }

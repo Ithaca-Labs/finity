@@ -12,9 +12,11 @@ export function DemoVideo() {
       <div className={`video-frame video-${videoState}`}>
         <video
           className="demo-video-player"
-          controls
+          autoPlay
+          loop
+          muted
           playsInline
-          preload="metadata"
+          preload="auto"
           onCanPlay={() => setVideoState("ready")}
           onError={() => setVideoState("missing")}
         >
