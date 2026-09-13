@@ -1,5 +1,70 @@
 # Todo
 
+## 2026-09-13 fix setup funding prompt
+
+### Plan
+
+- [x] Confirm the reported prompt against the current source and dist.
+- [x] Inspect active Pi process start time and command path.
+- [x] Verify whether the current extension contains the old manual handoff.
+- [x] Inspect setup amount selection behavior.
+- [x] Inspect Pi input API usage from installed package code.
+- [x] Preserve explicit environment overrides for scripted runs.
+- [x] Make interactive setup request an amount every time it needs funding.
+- [x] Show a mandate-derived amount only as a non-binding suggestion.
+- [x] Keep amount parsing in HBAR at the UI boundary.
+- [x] Keep tinybar validation before any Ledger operation.
+- [x] Keep the broker alias hidden from manual user entry.
+- [x] Keep Ledger confirmation after fee estimation.
+- [x] Keep transaction signing on the physical Ledger.
+- [x] Keep mirror-node account resolution after receipt confirmation.
+- [x] Add regression coverage for the always-ask behavior.
+- [x] Add regression coverage for draft-derived suggestions.
+- [x] Update setup documentation to describe the live prompt sequence.
+- [x] Record the stale-process cause in lessons.
+- [x] Record the UX decision in the decision log.
+- [x] Run focused Pi setup and funding tests.
+- [x] Build affected packages before generated-type checks.
+- [x] Run workspace typecheck.
+- [x] Run workspace tests.
+- [x] Run lint and diff checks.
+- [x] Scan changed files for secrets.
+- [x] Restore generated Next.js files if the workspace build changes them.
+- [x] Review the final scoped diff.
+- [ ] Commit the focused fix.
+- [ ] Push the branch and open a focused PR.
+- [ ] Wait for CI and merge only after required checks pass.
+- [ ] Pull main and verify the working tree is clean.
+
+### Verification
+
+- [x] A fresh `/finity setup` asks for an HBAR amount.
+- [x] Setup then asks for confirmation before Ledger transaction signing.
+- [x] Setup never asks the user to paste an alias or Spend Account ID.
+- [x] A stale running Pi process is identified as requiring restart.
+- [x] Full workspace gates pass locally; CI remains pending.
+
+### Review
+
+#### Changed
+
+- Made fresh interactive setup ask for an HBAR amount even when a draft can provide a suggested minimum.
+- Added regression tests and documented the need to restart Pi after rebuilding.
+
+#### Verified
+
+- Focused setup tests: 73 passing.
+- Workspace build, typecheck, tests, lint, diff, and secret checks pass locally.
+
+#### Risks
+
+- The currently running Pi process is stale and must be exited before the new extension can load.
+- Physical Ledger funding remains hardware-unverified in this pass.
+
+#### Follow-ups
+
+- Restart `pnpm agent`, run `/finity setup`, enter the amount, and approve the transfer on the Ledger.
+
 ## 2026-09-13 fix control-center setup funding
 
 ### Plan

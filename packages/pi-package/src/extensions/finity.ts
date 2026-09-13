@@ -38,19 +38,22 @@ function finityHome(): string {
   return process.env.FINITY_HOME ?? join(homedir(), ".finity");
 }
 
-async function setupFundingAmount(home: string, ctx: ExtensionCommandContext): Promise<string | undefined> {
+export async function setupFundingAmount(home: string, ctx: ExtensionCommandContext): Promise<string | undefined> {
   const configured = process.env.FINITY_SETUP_FUNDING_TINYBAR;
   if (configured !== undefined && configured !== "") return validateFundingAmountTinybar(configured);
 
+  let suggestedAmount: string | undefined;
   try {
     const draft = JSON.parse(await readFile(join(home, "mandate-draft.json"), "utf8")) as unknown;
-    const derived = fundingAmountFromMandateDraft(draft);
-    if (derived) return derived;
+    suggestedAmount = fundingAmountFromMandateDraft(draft);
   } catch {
     // A draft is optional for standalone broker setup. Ask for an amount below.
   }
 
-  const amount = await ctx.ui.input("Initial broker funding", "How much HBAR should your Ledger send to the new Finity Spend Account? (e.g. 2)");
+  const suggestion = suggestedAmount
+    ? ` The mandate draft suggests at least ${formatTinybars(suggestedAmount)} including the fee reserve.`
+    : "";
+  const amount = await ctx.ui.input("Initial broker funding", `How much HBAR should your Ledger send to the new Finity Spend Account?${suggestion} (e.g. 2)`);
   if (!amount) return undefined;
   return parseHbarToTinybars(amount);
 }

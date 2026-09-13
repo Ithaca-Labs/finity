@@ -300,3 +300,13 @@
   working Ledger transfer path and made rerunning setup create unnecessary
   broker accounts. Setup is now idempotent for valid state while retaining
   explicit Ledger approval for the only new payment it can initiate.
+
+## ADR-024: keep setup funding amount explicit
+
+- Date: 2026-09-13
+- Decision: Fresh interactive setup always asks the Principal for the HBAR
+  amount. When a public mandate draft is present, its lifetime cap plus the
+  fee reserve is shown as a suggestion; it is not silently submitted.
+- Reason: Silent derivation hid the payment boundary the Principal was about
+  to approve. An explicit amount makes the Ledger confirmation predictable
+  while retaining the draft as useful guidance.
