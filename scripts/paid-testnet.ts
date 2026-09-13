@@ -8,6 +8,12 @@ function required(name: string): string {
   return value;
 }
 
+function flag(name: string, fallback: string): string {
+  const args = process.argv.slice(2);
+  const index = args.indexOf(name);
+  return index === -1 || index === args.length - 1 ? fallback : (args[index + 1] ?? fallback);
+}
+
 function serviceOrigin(name: string): string {
   const url = new URL(required(name));
   if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
@@ -39,7 +45,7 @@ async function purchase(label: string, url: string, init?: RequestInit): Promise
 
 const weather = serviceOrigin("FINITY_PROVIDER_A_URL");
 const summarize = serviceOrigin("FINITY_PROVIDER_B_URL");
-await purchase("hello-weather", `${weather}/weather?city=Kolkata`);
+await purchase("hello-weather", `${weather}/weather?city=${encodeURIComponent(flag("--city", "London"))}`);
 await purchase("summarize-lite", `${summarize}/summarize`, {
   method: "POST",
   headers: { "content-type": "application/json" },

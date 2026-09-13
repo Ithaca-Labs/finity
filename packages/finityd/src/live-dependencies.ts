@@ -7,6 +7,7 @@ import { createWalletClient, decodeEventLog, http, type Address, type Hash } fro
 import { privateKeyToAccount, sign } from "viem/accounts";
 import { settlementTransaction, type PaymentRequirementsSubset } from "@finity/commerce-adapter";
 import type { MandateStore, PurchaseDependencies } from "./executor.js";
+import type { Intent } from "./index.js";
 
 export type LiveDependenciesConfig = {
   mandateStore: MandateStore;
@@ -25,18 +26,29 @@ export type LiveDependenciesConfig = {
    * (only quoteEndpoint/healthEndpoint), so the caller must supply one.
    * Defaults to a small map covering the two known Day 2 demo services.
    */
-  resourceUrl?: (manifest: ServiceManifest, methodId: string) => string;
+  resourceUrl?: (manifest: ServiceManifest, methodId: string, intent?: Intent) => string;
 };
 
 const DEMO_RESOURCE_PATHS: Record<string, string> = {
-  "hello-weather@1:weather.current": "/weather?city=Kolkata",
   "summarize-lite@1:summarize.text": "/summarize",
 };
 
 const EVM_WEI_PER_TINYBAR = 10_000_000_000n;
 
-function defaultResourceUrl(manifest: ServiceManifest, methodId: string): string {
-  const path = DEMO_RESOURCE_PATHS[`${manifest.serviceId}:${methodId}`];
+function weatherCity(payloadRef: string): string {
+  const match = /^(?:weather\.current|city):(.+)$/i.exec(payloadRef.trim());
+  const city = match?.[1]?.trim();
+  if (!city) throw new Error("weather payloadRef must be weather.current:<city>");
+  return city;
+}
+
+export function defaultResourceUrl(manifest: ServiceManifest, methodId: string, intent?: Intent): string {
+  const serviceKey = `${manifest.serviceId}:${methodId}`;
+  if (serviceKey === "hello-weather@1:weather.current") {
+    if (!intent) throw new Error("weather resource URL requires the purchase intent");
+    return `${manifest.baseUrl}/weather?city=${encodeURIComponent(weatherCity(intent.payloadRef))}`;
+  }
+  const path = DEMO_RESOURCE_PATHS[serviceKey];
   if (!path) throw new Error(`no known resource path for ${manifest.serviceId}:${methodId}`);
   return `${manifest.baseUrl}${path}`;
 }

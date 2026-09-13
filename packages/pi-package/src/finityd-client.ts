@@ -9,7 +9,7 @@ export class FinitydError extends Error {
   }
 }
 
-export type FinitydRuntimeInfo = { baseUrl: string; token: string };
+export type FinitydRuntimeInfo = { version?: string; baseUrl: string; token: string };
 
 export function defaultRuntimeInfoPath(): string {
   return join(homedir(), ".finity", "finityd.runtime.json");
@@ -27,7 +27,11 @@ export async function loadFinitydRuntimeInfo(path: string = defaultRuntimeInfoPa
   if (typeof parsed.baseUrl !== "string" || typeof parsed.token !== "string") {
     throw new FinitydError(0, "finityd runtime info file is malformed");
   }
-  return { baseUrl: parsed.baseUrl, token: parsed.token };
+  return {
+    ...(typeof parsed.version === "string" ? { version: parsed.version } : {}),
+    baseUrl: parsed.baseUrl,
+    token: parsed.token,
+  };
 }
 
 export type Intent = {

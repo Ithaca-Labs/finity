@@ -8,6 +8,9 @@ import {
   type UnsignedServiceManifest,
 } from "@finity/provider-sdk";
 import type { ServiceManifest } from "@finity/schemas";
+import { lookupOpenMeteoWeather, type WeatherLookup, WeatherLookupError } from "./open-meteo.js";
+
+export * from "./open-meteo.js";
 
 export const helloWeatherManifest: UnsignedServiceManifest = {
   kind: "finity.manifest",
@@ -19,7 +22,7 @@ export const helloWeatherManifest: UnsignedServiceManifest = {
     signingKey: "provider-signing-key-placeholder",
   },
   name: "Hello Weather",
-  description: "Deterministic weather lookup for a requested city.",
+  description: "Live current weather lookup for a requested city using Open-Meteo.",
   baseUrl: "https://hello-weather.example",
   methods: [
     {
@@ -47,6 +50,7 @@ export type HelloWeatherOptions = {
   signer: CanonicalSigner;
   facilitator?: FinityServiceOptions["facilitator"];
   facilitatorUrl?: string;
+  weatherLookup?: WeatherLookup;
 };
 
 export function createHelloWeatherService(options: HelloWeatherOptions): Express {
@@ -69,13 +73,25 @@ export function createHelloWeatherService(options: HelloWeatherOptions): Express
         httpMethod: "GET",
         path: "/weather",
         priceTinybar: "5000000",
-        handler: (request, response) => {
+        handler: async (request, response) => {
           const city = typeof request.query.city === "string" ? request.query.city.trim() : "";
           if (!city) {
             response.status(400).json({ error: "city is required" });
             return;
           }
-          response.json({ city, condition: "clear", temperatureC: 28 });
+          try {
+            response.json(await (options.weatherLookup ?? lookupOpenMeteoWeather)(city));
+          } catch (error) {
+            if (error instanceof WeatherLookupError && error.code === "invalid_city") {
+              response.status(400).json({ error: error.code });
+              return;
+            }
+            if (error instanceof WeatherLookupError && error.code === "city_not_found") {
+              response.status(404).json({ error: error.code });
+              return;
+            }
+            response.status(502).json({ error: error instanceof WeatherLookupError ? error.code : "upstream_unavailable" });
+          }
         },
       },
     ],

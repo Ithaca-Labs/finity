@@ -4,6 +4,6 @@
   "serviceHint": "hello-weather@1",
   "methodId": "weather.current",
   "requestClass": { "unit": "call", "units": "1" },
-  "payloadRef": "city:Kolkata",
+  "payloadRef": "weather.current:London",
   "dataClass": 0
 }
