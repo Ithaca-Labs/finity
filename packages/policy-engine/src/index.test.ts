@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { hashCanonicalJson } from "@finity/schemas";
-import { compile } from "@finity/mandate-compiler";
+import { hashCanonicalJson } from "@therick/schemas";
+import { compile } from "@therick/mandate-compiler";
 import { evaluate, POLICY_HASH, REASON_CODES } from "./index.js";
 
 const manifest = {

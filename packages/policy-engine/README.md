@@ -1,4 +1,4 @@
-# `@finity/policy-engine`
+# `@therick/policy-engine`
 
 Pure, ordered policy evaluation against a time-explicit snapshot.
 

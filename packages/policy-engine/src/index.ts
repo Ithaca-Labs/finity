@@ -6,7 +6,7 @@ import {
   policySnapshotSchema,
   type Hash,
   type PolicySnapshot,
-} from "@finity/schemas";
+} from "@therick/schemas";
 
 export const REASON_CODES = [
   "MANDATE_INACTIVE",
@@ -44,7 +44,7 @@ const LIMIT_REASON_CODES = new Set<ReasonCode>([
 ]);
 
 export const POLICY_DESCRIPTOR = {
-  package: "@finity/policy-engine",
+  package: "@therick/policy-engine",
   version: "0.1.0",
   predicateOrder: REASON_CODES.filter((code) => code !== "CAPABILITY_REPLAY" && code !== "STATE_UNAVAILABLE"),
   decisionMapping: {
