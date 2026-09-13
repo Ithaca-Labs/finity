@@ -29,10 +29,10 @@
 - [x] Run lint and diff checks.
 - [x] Scan changed files for secrets.
 - [x] Inspect the final diff for unrelated changes.
-- [ ] Commit the focused implementation.
-- [ ] Push the branch to origin.
-- [ ] Open the focused pull request.
-- [ ] Wait for CI and inspect failures if any.
+- [x] Commit the focused implementation.
+- [x] Push the branch to origin.
+- [x] Open the focused pull request.
+- [x] Wait for CI and inspect failures if any.
 - [ ] Merge the pull request into `main`.
 - [ ] Pull the merged `main` and verify it is clean.
 
@@ -41,18 +41,29 @@
 - [x] Draft nonce is not reused on consecutive new-mandate preparations.
 - [x] Compiled typed data uses the fresh nonce sent to the Ledger.
 - [x] Full workspace gates pass.
-- [ ] CI passes on the pull request.
+- [x] CI passes on the pull request.
 - [ ] Merged `main` contains only the focused fix.
 
 ### Review
 
 #### Changed
 
+- Added a shared fresh-nonce helper for new mandate registration.
+- Applied it to the Pi command and guarded standalone testnet script.
+- Added regression tests and recorded the registry invariant.
+
 #### Verified
+
+- Local build, typecheck, full tests, lint, diff, and secret scans pass.
+- PR #15 CI passed before the documentation follow-up.
 
 #### Risks
 
+- A physical Ledger retry is still required to confirm the live testnet registration.
+
 #### Follow-ups
+
+- Retry `/finity mandate new` after pulling the merged build.
 
 ## 2026-09-13 fix mandate command registration
 
