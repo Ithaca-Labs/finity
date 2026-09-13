@@ -29,10 +29,10 @@
 - [x] Update verified package/runtime notes.
 - [x] Record the compatibility decision.
 - [x] Commit the focused fix.
-- [ ] Push the fix branch.
-- [ ] Open a focused PR.
-- [ ] Wait for CI.
-- [ ] Merge the PR into main.
+- [x] Push the fix branch.
+- [x] Open a focused PR.
+- [x] Wait for CI.
+- [x] Merge the PR into main.
 
 ### Verification
 
