@@ -14,6 +14,7 @@ import { FinitydClient, FinitydError, loadFinitydRuntimeInfo } from "../finityd-
 import { generateIdentity, loadIdentityFile, saveIdentityFile } from "../identity.js";
 import { runSetupWizard, type WizardUI } from "../setup-wizard.js";
 import { getEthereumAddressOnDevice, signTypedDataOnDevice, verifyTypedDataSignature } from "../ledger.js";
+import { withFreshMandateNonce } from "../mandate-nonce.js";
 import { ensureInteractivePurchaseReady } from "../interactive-onboarding.js";
 import { genuineCheck, ringInit, ringReady } from "../wallet-cli-ops.js";
 import { walletPassFromEnvironmentOrKeychain } from "../wallet-pass.js";
@@ -519,9 +520,9 @@ async function handleMandate(args: string[], ctx: ExtensionCommandContext): Prom
   );
   if (!confirmed) return;
 
-  const compiled = compile({
+  const compiled = compile(withFreshMandateNonce({
     ...choices, agent: agentIdentity.uaid, policyHash: POLICY_HASH, verifyingContract: registryAddress,
-  } as MandateChoices);
+  } as MandateChoices));
   const signature = await signTypedDataOnDevice({
     derivationPath: "44'/60'/0'/0/0",
     typedData: { ...compiled.typedData, types: { AgentMandate: [...compiled.typedData.types.AgentMandate] } },

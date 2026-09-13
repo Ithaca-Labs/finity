@@ -859,3 +859,17 @@ contract submission/confirmation, mandate status, HCS trace-topic creation,
 and HCS trace-topic binding failures into redacted response categories, while
 preserving the original specific contract categories when the nested error
 identifies them. No raw error, calldata, signature, or key is returned.
+
+## 2026-09-13 fresh mandate registration nonce
+
+`MandateRegistry.registerMandate` permanently marks
+`usedNonces[principal][mandate.nonce]` before emitting its registration event;
+revocation does not release that nonce. The local mandate draft still carried
+`nonce: "1"` after the previous mandate was revoked, so a new Ledger signature
+over that draft was correctly rejected during contract submission.
+
+`/finity mandate new` and `pnpm testnet:mandate` now replace the draft or
+fixture nonce with a fresh millisecond timestamp before compilation and Ledger
+signing. The exact compiled typed data is then the same payload sent to
+finityd, and the policy fields remain unchanged. This prevents replaying a
+consumed registration nonce while preserving the Ledger clear-signing flow.

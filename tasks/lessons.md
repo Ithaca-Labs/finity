@@ -39,3 +39,8 @@
 
 - Mistake: A safe generic registration category still hid whether the live failure happened during contract submission, confirmation, or HCS setup, and the command path lacked local Ledger signature verification.
 - Rule: Keep every external registration stage explicitly classified and apply the same local signature check to every Principal mandate command.
+
+## Mandate draft nonce reuse
+
+- Mistake: `/finity mandate new` reused the caller's draft nonce across retries, causing a permanently consumed Hedera registry nonce to reject every fresh Ledger signature.
+- Rule: A human-triggered new mandate must mint a fresh nonce for every registration attempt; draft files provide policy choices, not replayable registration identities.

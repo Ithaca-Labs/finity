@@ -1,5 +1,59 @@
 # Todo
 
+## 2026-09-13 fix mandate contract submission
+
+### Plan
+
+- [x] Confirm the active branch and clean generated files.
+- [x] Read current project lessons before changing code.
+- [x] Inspect the mandate command registration path.
+- [x] Inspect the mandate draft fields used by the command.
+- [x] Inspect the registry contract nonce invariant.
+- [x] Inspect the registry client argument mapping.
+- [x] Reproduce the rejection with safe metadata only.
+- [x] Decide the smallest root-cause fix.
+- [x] Create a focused branch without `codex` in its name.
+- [x] Add a fresh nonce at the human-triggered mandate boundary.
+- [x] Preserve all user policy choices from the draft.
+- [x] Keep signing and registration payloads identical.
+- [x] Add regression coverage for fresh nonce generation.
+- [x] Add regression coverage for preserved policy fields.
+- [x] Keep nonce generation out of pure policy modules.
+- [x] Update verified facts for the nonce invariant.
+- [x] Update decision records for the retry behavior.
+- [x] Update developer-experience notes with the actionable failure.
+- [x] Run focused package tests.
+- [x] Run workspace build before generated-type checks.
+- [x] Run workspace typecheck.
+- [x] Run workspace tests.
+- [x] Run lint and diff checks.
+- [x] Scan changed files for secrets.
+- [x] Inspect the final diff for unrelated changes.
+- [ ] Commit the focused implementation.
+- [ ] Push the branch to origin.
+- [ ] Open the focused pull request.
+- [ ] Wait for CI and inspect failures if any.
+- [ ] Merge the pull request into `main`.
+- [ ] Pull the merged `main` and verify it is clean.
+
+### Verification
+
+- [x] Draft nonce is not reused on consecutive new-mandate preparations.
+- [x] Compiled typed data uses the fresh nonce sent to the Ledger.
+- [x] Full workspace gates pass.
+- [ ] CI passes on the pull request.
+- [ ] Merged `main` contains only the focused fix.
+
+### Review
+
+#### Changed
+
+#### Verified
+
+#### Risks
+
+#### Follow-ups
+
 ## 2026-09-13 fix mandate command registration
 
 ### Plan
