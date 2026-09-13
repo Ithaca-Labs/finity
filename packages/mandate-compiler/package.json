@@ -1,9 +1,9 @@
 {
-  "name": "@finity/mandate-compiler",
+  "name": "@therick/mandate-compiler",
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
-    "@finity/schemas": "workspace:*",
+    "@therick/schemas": "workspace:*",
     "viem": "2.56.3"
   },
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },

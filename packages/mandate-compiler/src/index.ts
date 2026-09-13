@@ -5,7 +5,7 @@ import {
   formatUntilDisplay,
   type AgentMandate,
   type Hash,
-} from "@finity/schemas";
+} from "@therick/schemas";
 import { hashTypedData } from "viem";
 
 export const MANDATE_DOMAIN_NAME = "FinityMandate" as const;
@@ -13,7 +13,7 @@ export const MANDATE_DOMAIN_VERSION = "1" as const;
 export const MANDATE_CHAIN_ID = 296 as const;
 export const MANDATE_DERIVATION_PATH = "44'/60'/0'/0/0" as const;
 
-export { formatDisplay } from "@finity/schemas";
+export { formatDisplay } from "@therick/schemas";
 
 export const agentMandateTypes = [
   { name: "agent", type: "string" },

@@ -1,4 +1,4 @@
-import { mandateAmendmentSchema, revocationSchema, type MandateAmendment, type Revocation } from "@finity/schemas";
+import { mandateAmendmentSchema, revocationSchema, type MandateAmendment, type Revocation } from "@therick/schemas";
 import { hashTypedData } from "viem";
 import { MANDATE_CHAIN_ID, MANDATE_DOMAIN_NAME, MANDATE_DOMAIN_VERSION } from "./index.js";
 
