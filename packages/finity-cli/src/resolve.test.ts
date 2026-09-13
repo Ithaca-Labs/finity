@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { FINITYD_RUNTIME_VERSION } from "@finity/finityd";
 import { describe, expect, it } from "vitest";
 import { isFinitydRunning, parseDotEnv, resolveFinitydBin, resolvePiPackageRoot } from "./resolve.js";
 
@@ -41,7 +42,7 @@ describe("isFinitydRunning", () => {
     const dir = mkdtempSync(join(tmpdir(), "finity-cli-runtime-"));
     const path = join(dir, "finityd.runtime.json");
     try {
-      writeFileSync(path, JSON.stringify({ baseUrl: "http://127.0.0.1:1", token: "tok" }));
+      writeFileSync(path, JSON.stringify({ baseUrl: "http://127.0.0.1:1", token: "tok", version: FINITYD_RUNTIME_VERSION }));
       expect(await isFinitydRunning(path, async () => false)).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -52,7 +53,7 @@ describe("isFinitydRunning", () => {
     const dir = mkdtempSync(join(tmpdir(), "finity-cli-runtime-"));
     const path = join(dir, "finityd.runtime.json");
     try {
-      writeFileSync(path, JSON.stringify({ baseUrl: "http://127.0.0.1:4000", token: "tok" }));
+      writeFileSync(path, JSON.stringify({ baseUrl: "http://127.0.0.1:4000", token: "tok", version: FINITYD_RUNTIME_VERSION }));
       let seenArgs: [string, string] | undefined;
       const result = await isFinitydRunning(path, async (baseUrl, token) => {
         seenArgs = [baseUrl, token];
@@ -60,6 +61,17 @@ describe("isFinitydRunning", () => {
       });
       expect(result).toBe(true);
       expect(seenArgs).toEqual(["http://127.0.0.1:4000", "tok"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("is false when a healthy daemon reports an older runtime version", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "finity-cli-runtime-"));
+    const path = join(dir, "finityd.runtime.json");
+    try {
+      writeFileSync(path, JSON.stringify({ baseUrl: "http://127.0.0.1:4000", token: "tok", version: "old-runtime" }));
+      expect(await isFinitydRunning(path, async () => true)).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

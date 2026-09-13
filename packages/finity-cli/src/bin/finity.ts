@@ -2,6 +2,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { access } from "node:fs/promises";
 import { ensureWalletPassEnvironment } from "@finity/pi-package";
+import { FINITYD_RUNTIME_VERSION } from "@finity/finityd";
 import { finityHome, isFinitydRunning, loadDotEnv, resolveFinitydBin, resolvePiPackageRoot } from "../resolve.js";
 
 const FINITY_SYSTEM_PROMPT = [
@@ -45,7 +46,7 @@ async function main(): Promise<void> {
   }
   if (hasBrokerBundle && !(await isFinitydRunning())) {
     try {
-      console.error("finityd is not running; starting it now...");
+      console.error("finityd is not running or is stale; starting the current runtime now...");
       await startFinitydDetached();
     } catch (error) {
       console.error(`finityd will start during the next purchase: ${(error as Error).message}`);
@@ -55,7 +56,11 @@ async function main(): Promise<void> {
   const piRoot = resolvePiPackageRoot();
   const result = spawnSync("pi", ["--no-builtin-tools", "-e", piRoot, "--use-theme", "finity", "--system-prompt", FINITY_SYSTEM_PROMPT, ...args], {
     stdio: "inherit",
-    env: { ...process.env, FINITY_DAEMON_PATH: resolveFinitydBin() },
+    env: {
+      ...process.env,
+      FINITY_DAEMON_PATH: resolveFinitydBin(),
+      FINITYD_EXPECTED_RUNTIME_VERSION: FINITYD_RUNTIME_VERSION,
+    },
   });
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 0;

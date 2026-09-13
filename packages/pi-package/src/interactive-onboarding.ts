@@ -46,7 +46,11 @@ function hbar(tinybar: string): string {
 
 async function startDaemon(daemonPath: string): Promise<FinitydClient> {
   try {
-    const current = new FinitydClient(await loadFinitydRuntimeInfo());
+    const runtime = await loadFinitydRuntimeInfo();
+    if (process.env.FINITYD_EXPECTED_RUNTIME_VERSION && runtime.version !== process.env.FINITYD_EXPECTED_RUNTIME_VERSION) {
+      throw new Error("stale finityd runtime");
+    }
+    const current = new FinitydClient(runtime);
     await current.health();
     return current;
   } catch {
