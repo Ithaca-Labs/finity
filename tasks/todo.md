@@ -31,10 +31,10 @@
 - [x] Scan changed files for secrets.
 - [x] Restore generated Next.js files if the workspace build changes them.
 - [x] Review the final scoped diff.
-- [ ] Commit the focused fix.
-- [ ] Push the branch and open a focused PR.
-- [ ] Wait for CI and merge only after required checks pass.
-- [ ] Pull main and verify the working tree is clean.
+- [x] Commit the focused fix.
+- [x] Push the branch and open a focused PR.
+- [x] Wait for CI and merge only after required checks pass.
+- [x] Pull main and verify the working tree is clean.
 
 ### Verification
 
@@ -42,7 +42,7 @@
 - [x] Setup then asks for confirmation before Ledger transaction signing.
 - [x] Setup never asks the user to paste an alias or Spend Account ID.
 - [x] A stale running Pi process is identified as requiring restart.
-- [x] Full workspace gates pass locally; CI remains pending.
+- [x] Full workspace gates pass locally and CI passes.
 
 ### Review
 
@@ -55,6 +55,7 @@
 
 - Focused setup tests: 73 passing.
 - Workspace build, typecheck, tests, lint, diff, and secret checks pass locally.
+- PR #17 CI passed and the change is merged into `main` at `326f13b`.
 
 #### Risks
 
