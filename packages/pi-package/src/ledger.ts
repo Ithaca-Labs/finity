@@ -1,4 +1,5 @@
 import type { Address as LedgerAddress, SignerEthBuilder as SignerEthBuilderType, Signature, TypedData } from "@ledgerhq/device-signer-kit-ethereum";
+import { recoverTypedDataAddress, type Address } from "viem";
 import { loadDeviceModules } from "./ledger-runtime.js";
 
 export class LedgerSigningError extends Error {
@@ -27,6 +28,33 @@ export function assembleSignature(signature: Signature): `0x${string}` {
     throw new LedgerSigningError("SIGN_FAILED", "device returned an r or s component that is not 32 bytes");
   }
   return `0x${r}${s}${v.toString(16).padStart(2, "0")}`;
+}
+
+/**
+ * Verifies the exact typed data and assembled signature before a broker relay.
+ * The recovered address is public; no Ledger or Broker private key crosses
+ * this boundary.
+ */
+export async function verifyTypedDataSignature(input: {
+  typedData: TypedData;
+  signature: `0x${string}`;
+  expectedAddress: Address;
+}): Promise<void> {
+  let recoveredAddress: Address;
+  try {
+    recoveredAddress = await recoverTypedDataAddress({
+      domain: input.typedData.domain,
+      types: input.typedData.types,
+      primaryType: input.typedData.primaryType,
+      message: input.typedData.message,
+      signature: input.signature,
+    } as Parameters<typeof recoverTypedDataAddress>[0]);
+  } catch (error) {
+    throw new LedgerSigningError("SIGN_FAILED", "Ledger signature could not be verified locally", { cause: error });
+  }
+  if (recoveredAddress.toLowerCase() !== input.expectedAddress.toLowerCase()) {
+    throw new LedgerSigningError("SIGN_FAILED", "Ledger signature does not match the Ledger principal address");
+  }
 }
 
 export type SignTypedDataOnDeviceOptions = {

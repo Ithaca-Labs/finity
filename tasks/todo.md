@@ -1,5 +1,65 @@
 # Todo
 
+## 2026-09-13 fix mandate registration diagnostics
+
+### Plan
+
+- [x] Confirm the failed purchase reached Ledger signing.
+- [x] Confirm finityd health and broker funding state.
+- [x] Confirm the registry call accepts the mandate shape in simulation.
+- [x] Identify where finityd masks the registration exception.
+- [x] Identify safe public registration failure categories.
+- [x] Preserve the bearer-protected registration route.
+- [x] Preserve fail-closed behavior for malformed mandates.
+- [x] Add Ledger principal-address verification before registration.
+- [x] Keep typed-data verification local and deterministic.
+- [x] Reject a signature that recovers to another address.
+- [x] Keep the broker private key out of the Pi process.
+- [x] Add regression coverage for signature/address mismatch.
+- [x] Add regression coverage for successful signature matching.
+- [x] Add safe registration-stage error mapping.
+- [x] Avoid returning raw RPC, calldata, or signature details.
+- [x] Build updated daemon and Pi artifacts.
+- [x] Run focused mandate and daemon tests.
+- [x] Run full build, typecheck, and tests.
+- [x] Run lint, diff, and secret scans.
+- [x] Review the scoped diff.
+- [x] Update verified runtime and error-handling notes.
+- [x] Record the diagnosis and decision.
+- [ ] Commit the focused fix.
+- [ ] Push the fix branch.
+- [ ] Open a focused PR.
+- [ ] Wait for CI.
+- [ ] Merge the PR into main.
+
+### Verification
+
+- [x] A mismatched Ledger signature fails before network submission.
+- [x] Registration failures expose only a safe category.
+- [x] Full workspace gates pass.
+
+### Review
+
+#### Changed
+
+- Added local EIP-712 recovery against the Ledger-derived principal address.
+- Added redacted mandate registration error categories in finityd.
+- Added regression tests and updated runtime, hardware, DX, and decision docs.
+
+#### Verified
+
+- Focused Pi and finityd tests: 63 and 85 passing.
+- Full build, typecheck, test, lint, diff, and secret scans passed.
+
+#### Risks
+
+- The updated physical retry is still pending; no claim is made for a new
+  hardware-to-Hedera registration until the user reruns it.
+
+#### Follow-ups
+
+- Retry the purchase with the updated Pi and freshly restarted finityd.
+
 ## 2026-09-13 fix Ledger DMK Node runtime loading
 
 ### Plan
