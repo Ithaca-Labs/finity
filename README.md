@@ -4,6 +4,8 @@
 
 # Finity
 
+[![npm](https://img.shields.io/npm/v/@therick/finity.svg)](https://www.npmjs.com/package/@therick/finity)
+
 > **The Ledger signs the rules. The broker enforces them. Every decision lands on Hedera.**
 
 Finity is a Ledger-governed commerce network on Hedera testnet. A human principal

@@ -90,12 +90,19 @@ The scripted equivalent of `/finity mandate new`. Requires a broker identity alr
 
 ## Set up the Ledger-governed buyer agent
 
-`packages/pi-package` is the Pi extension — the `finity_*` tools, the `/finity` command family, and the Finity control-center TUI. `packages/finity-cli` is the `finity` wrapper binary end users install.
+`packages/pi-package` is the Pi extension — the `finity_*` tools, the `/finity` command family, and the Finity control-center TUI. `packages/finity-cli` publishes to npm as `@therick/finity`, the `finity` wrapper binary end users install.
 
 ```bash
 npm i -g @ledgerhq/wallet-cli @earendil-works/pi-coding-agent
-pnpm --filter finity --filter @finity/pi-package --filter @finity/finityd build
-node packages/finity-cli/dist/bin/finity.js   # or, once published: finity
+npm i -g @therick/finity
+finity
+```
+
+To build from source instead:
+
+```bash
+pnpm --filter @therick/finity --filter @therick/pi-package --filter @therick/finityd build
+node packages/finity-cli/dist/bin/finity.js
 ```
 
 For normal use, just ask Pi to buy something. `finity_buy` validates and reuses an existing sealed broker and an `ACTIVE` compatible mandate first. If either is missing, the same chat flow creates and Key-Ring-seals a broker key, asks the Ledger account to fund it, resolves the Hedera account ID, asks the Ledger to sign a one-purchase/one-hour mandate, starts `finityd`, and resumes the original purchase. Returning users see no setup prompts.
@@ -111,12 +118,12 @@ See the [CLI reference](/docs/cli-reference) for the full `finity`, `/finity`, a
 The Next.js console powering this site lives in `apps/console`.
 
 ```bash
-pnpm --filter @finity/console dev
+pnpm --filter @therick/console dev
 ```
 
 For a production build:
 
 ```bash
-pnpm --filter @finity/console build
-pnpm --filter @finity/console start
+pnpm --filter @therick/console build
+pnpm --filter @therick/console start
 ```

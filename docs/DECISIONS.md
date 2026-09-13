@@ -153,6 +153,32 @@
   approval flow end to end for Day 5, documented rather than silently
   worked around.
 
+## ADR-012: published packages use the `@therick` npm scope, not `@finity`
+
+- Date: 2026-09-13
+- Decision: All 14 publishable workspace packages (everything under
+  `packages/*` plus `services/hello-weather` and `services/summarize-lite`)
+  publish to npm under the `@therick` scope - `@therick/schemas`,
+  `@therick/pi-package`, `@therick/finityd`, and so on - not `@finity` as
+  every earlier ADR and `FINITY_BUILD_SPEC.md` assumed. `packages/finity-cli`
+  publishes as `@therick/finity` specifically (not `@therick/cli`); its `bin`
+  entry is still the plain `finity` command regardless of package name.
+- Reason: `@finity` is an arbitrary scope name, not the publishing account's
+  own username - npm requires that scope to exist as a created organization
+  before *any* credential (a logged-in session or an access token) can
+  publish into it, and it was never created. `@therick` is the publishing
+  account's own username scope, which npm always allows without any org
+  setup. Renaming was chosen over creating a `finity` npm org to avoid an
+  extra manual, non-reversible-by-us step (org creation happens on someone's
+  personal npm account) blocking the publish. Earlier ADRs (005, 007, 009)
+  and `FINITY_BUILD_SPEC.md` still say `@finity/*` where they describe
+  decisions made before this rename - that's the correct historical record
+  of what was decided at the time, not a typo to fix.
+- Also noted while publishing: the unscoped name `finity-cli` was originally
+  going to publish as unscoped `finity`, but that exact name was already
+  registered by an unrelated third party on npm, forcing the scoped name
+  regardless of the `@finity` vs `@therick` question above.
+
 ## ADR-012: first purchase is a resumable, reuse-first transaction
 
 - Date: 2026-09-09

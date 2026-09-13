@@ -895,3 +895,28 @@ funding amounts.
 The compiled Pi extension is loaded when `pnpm agent` starts. After rebuilding
 the workspace, an already-running Pi process retains the previous extension
 in memory and must be exited and restarted before setup UI changes appear.
+
+## 2026-09-13 all 14 workspace packages published live to npm
+
+All 14 publishable packages (`packages/*` except `finity-cli`'s renamed
+identity, plus `services/hello-weather` and `services/summarize-lite`) are
+live on the public npm registry under the `@therick` scope - see ADR-012 for
+why `@therick` and not `@finity`. `npm i -g @therick/finity` was verified
+against a real, fresh, isolated install (a clean directory outside this
+repo, not the workspace symlinks) - it resolves and downloads all
+transitive `@therick/*` dependencies automatically (1270 packages), and the
+resulting `finity` binary starts, spawns the installed `pi` CLI with the
+Finity extension loaded, and correctly hands off to Pi's interactive TUI
+(confirmed by observing it block on a real process rather than exit, since
+this test environment itself has no TTY for the TUI to render into).
+
+That same fresh-install test caught a real bug fixed in `@therick/pi-package`
+and `@therick/finity` `0.1.1`: on Windows, `wallet-cli` and `pi` are
+installed as `.cmd` shims, and Node's `child_process.spawn`/`spawnSync`
+cannot execute a `.cmd` file by bare name without `shell: true` - which
+itself is unsafe for the `pi` spawn site since it forwards raw user-typed
+CLI arguments (Node's own `DEP0190` warning). Fixed by switching those four
+spawn sites (`wallet-cli` x3, `pi` x1) to the `cross-spawn` package, the same
+one npm/pnpm/yarn use internally for exactly this problem - verified via the
+same fresh-install test showing the deprecation warning gone and `pi
+--version` correctly proxied through.
