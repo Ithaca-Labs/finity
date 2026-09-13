@@ -1,9 +1,9 @@
-import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import spawn from "cross-spawn";
 import { z } from "zod";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { decryptKeyRingBundle, type WalletPassProvider } from "@finity/vault-worker";
-import { brokerBundleSchema, type BrokerBundle } from "@finity/schemas";
+import { decryptKeyRingBundle, type WalletPassProvider } from "@therick/vault-worker";
+import { brokerBundleSchema, type BrokerBundle } from "@therick/schemas";
 
 export type GeneratedBrokerKey = { brokerSessionKey: `0x${string}`; brokerAddress: `0x${string}` };
 
@@ -33,7 +33,7 @@ const defaultRunWalletCli: WalletCliRunner = (args, input, env) =>
   new Promise((resolve, reject) => {
     const child = spawn("wallet-cli", args, { env, stdio: ["pipe", "ignore", "pipe"] });
     const stderr: Buffer[] = [];
-    child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
+    child.stderr!.on("data", (chunk: Buffer) => stderr.push(chunk));
     child.once("error", (error) => reject(new WalletCliError("RING_ENCRYPT_FAILED", "wallet-cli could not start", { cause: error })));
     child.once("close", (code) => {
       if (code !== 0) {
@@ -42,7 +42,7 @@ const defaultRunWalletCli: WalletCliRunner = (args, input, env) =>
       }
       resolve();
     });
-    child.stdin.end(input);
+    child.stdin!.end(input);
   });
 
 async function encryptPayload(input: {

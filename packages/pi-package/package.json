@@ -1,6 +1,6 @@
 {
-  "name": "@finity/pi-package",
-  "version": "0.1.0",
+  "name": "@therick/pi-package",
+  "version": "0.1.1",
   "type": "module",
   "keywords": ["pi-package"],
   "pi": {
@@ -14,16 +14,17 @@
   },
   "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "test": "vitest run src --passWithNoTests", "lint": "tsc -p tsconfig.json --noEmit" },
   "dependencies": {
-    "@finity/mandate-compiler": "workspace:*",
-    "@finity/negotiator": "workspace:*",
-    "@finity/policy-engine": "workspace:*",
-    "@finity/registry-client": "workspace:*",
-    "@finity/schemas": "workspace:*",
-    "@finity/vault-worker": "workspace:*",
+    "@therick/mandate-compiler": "workspace:*",
+    "@therick/negotiator": "workspace:*",
+    "@therick/policy-engine": "workspace:*",
+    "@therick/registry-client": "workspace:*",
+    "@therick/schemas": "workspace:*",
+    "@therick/vault-worker": "workspace:*",
     "@hashgraphonline/standards-sdk": "0.1.186",
     "@ledgerhq/device-management-kit": "1.9.0",
     "@ledgerhq/device-signer-kit-ethereum": "1.18.0",
     "@ledgerhq/device-transport-kit-node-hid": "1.0.1",
+    "cross-spawn": "7.0.6",
     "rxjs": "7.8.2",
     "viem": "2.56.3",
     "zod": "3.25.76"
@@ -38,6 +39,7 @@
     "@earendil-works/pi-ai": "0.85.1",
     "@earendil-works/pi-coding-agent": "0.85.1",
     "@earendil-works/pi-tui": "0.85.1",
+    "@types/cross-spawn": "6.0.6",
     "@types/node": "26.4.1",
     "typebox": "1.3.28"
   }

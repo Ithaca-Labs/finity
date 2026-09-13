@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { access } from "node:fs/promises";
-import { ensureWalletPassEnvironment } from "@finity/pi-package";
-import { FINITYD_RUNTIME_VERSION } from "@finity/finityd";
+import crossSpawn from "cross-spawn";
+import { ensureWalletPassEnvironment } from "@therick/pi-package";
+import { FINITYD_RUNTIME_VERSION } from "@therick/finityd";
 import { finityHome, isFinitydRunning, loadDotEnv, resolveFinitydBin, resolvePiPackageRoot } from "../resolve.js";
 
 const FINITY_SYSTEM_PROMPT = [
@@ -54,7 +55,7 @@ async function main(): Promise<void> {
   }
 
   const piRoot = resolvePiPackageRoot();
-  const result = spawnSync("pi", ["--no-builtin-tools", "-e", piRoot, "--use-theme", "finity", "--system-prompt", FINITY_SYSTEM_PROMPT, ...args], {
+  const result = crossSpawn.sync("pi", ["--no-builtin-tools", "-e", piRoot, "--use-theme", "finity", "--system-prompt", FINITY_SYSTEM_PROMPT, ...args], {
     stdio: "inherit",
     env: {
       ...process.env,
@@ -62,7 +63,12 @@ async function main(): Promise<void> {
       FINITYD_EXPECTED_RUNTIME_VERSION: FINITYD_RUNTIME_VERSION,
     },
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    if ((result.error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error("`pi` was not found on your PATH. Install it first: npm i -g @earendil-works/pi-coding-agent");
+    }
+    throw result.error;
+  }
   process.exitCode = result.status ?? 0;
 }
 

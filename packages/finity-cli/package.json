@@ -1,6 +1,6 @@
 {
-  "name": "finity",
-  "version": "0.1.0",
+  "name": "@therick/finity",
+  "version": "0.1.1",
   "type": "module",
   "bin": { "finity": "./dist/bin/finity.js" },
   "scripts": {
@@ -10,10 +10,12 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@finity/finityd": "workspace:*",
-    "@finity/pi-package": "workspace:*"
+    "@therick/finityd": "workspace:*",
+    "@therick/pi-package": "workspace:*",
+    "cross-spawn": "7.0.6"
   },
   "devDependencies": {
+    "@types/cross-spawn": "6.0.6",
     "@types/node": "26.4.1"
   }
 }

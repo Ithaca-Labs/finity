@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import spawn from "cross-spawn";
 
 /**
  * Runs a wallet-cli subcommand that needs the device and/or an interactive
