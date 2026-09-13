@@ -29,6 +29,7 @@ function baseDeps(overrides: Partial<SetupWizardDeps> = {}): SetupWizardDeps {
     sealBrokerBundle: async () => undefined,
     verifyBrokerBundleRecovery: async () => true,
     saveIdentityFile: async () => undefined,
+    moveBundle: async () => undefined,
     ...overrides,
   };
 }
@@ -57,6 +58,21 @@ describe("runSetupWizard", () => {
     expect(result.ok).toBe(true);
     expect(ringInitCalled).toBe(false);
     expect(messages).toContain("Ledger Key Ring is already initialized. Reusing it.");
+  });
+
+  it("stages and verifies a replacement before activating the broker bundle", async () => {
+    let sealedPath = "";
+    let verifiedPath = "";
+    let moved: { source: string; destination: string } | undefined;
+    const result = await runSetupWizard(baseDeps({
+      sealBrokerBundle: async ({ outputPath }) => { sealedPath = outputPath; },
+      verifyBrokerBundleRecovery: async ({ bundlePath }) => { verifiedPath = bundlePath; return true; },
+      moveBundle: async (source, destination) => { moved = { source, destination }; },
+    }));
+    expect(result.ok).toBe(true);
+    expect(sealedPath).toMatch(/\.broker\.enc\.[^/]+\.tmp$/);
+    expect(verifiedPath).toBe(sealedPath);
+    expect(moved).toEqual({ source: sealedPath, destination: "/tmp/finity-bundles/broker.enc" });
   });
 
   it("aborts before sealing when ring init fails", async () => {

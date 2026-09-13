@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { mkdir, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { WalletPassProvider } from "@finity/vault-worker";
 import type { BrokerBundle } from "@finity/schemas";
@@ -25,6 +27,7 @@ export type SetupWizardDeps = {
   sealBrokerBundle?: typeof defaultSealBrokerBundle;
   verifyBrokerBundleRecovery?: typeof defaultVerifyBrokerBundleRecovery;
   saveIdentityFile?: typeof defaultSaveIdentityFile;
+  moveBundle?: (source: string, destination: string) => Promise<void>;
 };
 
 export type SetupWizardResult =
@@ -45,6 +48,7 @@ export async function runSetupWizard(deps: SetupWizardDeps): Promise<SetupWizard
   const sealBrokerBundle = deps.sealBrokerBundle ?? defaultSealBrokerBundle;
   const verifyBrokerBundleRecovery = deps.verifyBrokerBundleRecovery ?? defaultVerifyBrokerBundleRecovery;
   const saveIdentityFile = deps.saveIdentityFile ?? defaultSaveIdentityFile;
+  const moveBundle = deps.moveBundle ?? rename;
 
   deps.ui.notify("Checking your Ledger is genuine...");
   if (!(await deps.genuineCheck())) {
@@ -86,9 +90,12 @@ export async function runSetupWizard(deps: SetupWizardDeps): Promise<SetupWizard
 
   const bundle: BrokerBundle = { brokerSessionKey, spendAccountId, brokerUaid: brokerIdentity.uaid };
   const bundlePath = join(deps.bundlesDir, "broker.enc");
+  const stagedBundlePath = join(deps.bundlesDir, `.broker.enc.${randomUUID()}.tmp`);
+  await mkdir(deps.bundlesDir, { recursive: true });
   try {
-    await sealBrokerBundle({ brokerId: deps.brokerId, bundle, outputPath: bundlePath, walletPass: deps.walletPass });
+    await sealBrokerBundle({ brokerId: deps.brokerId, bundle, outputPath: stagedBundlePath, walletPass: deps.walletPass });
   } catch (error) {
+    await rm(stagedBundlePath, { force: true }).catch(() => undefined);
     deps.ui.notify(`Failed to seal the Broker Bundle: ${(error as Error).message}`, "error");
     return { ok: false, reason: "SEAL_FAILED" };
   }
@@ -96,14 +103,24 @@ export async function runSetupWizard(deps: SetupWizardDeps): Promise<SetupWizard
   deps.ui.notify("Verifying the sealed bundle can be recovered before calling the broker active...");
   let recovered: boolean;
   try {
-    recovered = await verifyBrokerBundleRecovery({ brokerId: deps.brokerId, bundlePath, walletPass: deps.walletPass });
+    recovered = await verifyBrokerBundleRecovery({ brokerId: deps.brokerId, bundlePath: stagedBundlePath, walletPass: deps.walletPass });
   } catch (error) {
+    await rm(stagedBundlePath, { force: true }).catch(() => undefined);
     deps.ui.notify(`Recovery test errored: ${(error as Error).message}`, "error");
     return { ok: false, reason: "RECOVERY_FAILED" };
   }
   if (!recovered) {
+    await rm(stagedBundlePath, { force: true }).catch(() => undefined);
     deps.ui.notify("Recovery test failed: the sealed bundle did not decrypt back to the expected shape.", "error");
     return { ok: false, reason: "RECOVERY_FAILED" };
+  }
+
+  try {
+    await moveBundle(stagedBundlePath, bundlePath);
+  } catch (error) {
+    await rm(stagedBundlePath, { force: true }).catch(() => undefined);
+    deps.ui.notify(`Failed to activate the Broker Bundle: ${(error as Error).message}`, "error");
+    return { ok: false, reason: "SEAL_FAILED" };
   }
 
   await saveIdentityFile(deps.identityPath, { broker: brokerIdentity });
