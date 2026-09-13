@@ -37,8 +37,8 @@
 - [x] Push the branch.
 - [x] Open a focused PR.
 - [x] Wait for CI and fix any failures.
-- [ ] Merge the PR into `main`.
-- [ ] Pull `main` and verify it is clean.
+- [x] Merge the PR into `main`.
+- [x] Pull `main` and verify it is clean.
 
 ### Verification
 
@@ -46,7 +46,7 @@
 - [x] Fresh setup requests a Ledger-signed transfer to the broker alias.
 - [x] Setup derives the Hedera account ID from the mirror node.
 - [x] Full workspace gates and CI pass.
-- [ ] Merged `main` is clean.
+- [x] Merged `main` is clean.
 
 ### Review
 
