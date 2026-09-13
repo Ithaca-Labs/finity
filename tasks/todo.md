@@ -1,5 +1,72 @@
 # Todo
 
+## 2026-09-13 live provider stack
+
+### Plan
+
+- [x] Inspect the current provider, daemon, fixture, and startup contracts.
+- [x] Verify Open-Meteo geocoding and forecast endpoints from live docs.
+- [x] Probe both endpoints with a non-Kolkata city.
+- [x] Record the verified API contract in `docs/VERIFIED.md`.
+- [x] Define a typed weather upstream boundary.
+- [x] Add Zod validation for geocoding responses.
+- [x] Add Zod validation for forecast responses.
+- [x] Map WMO weather codes to readable conditions.
+- [x] Add timeout and fail-closed upstream errors.
+- [x] Make the weather service use the requested city.
+- [x] Add injectable fetch behavior for deterministic tests.
+- [x] Cover successful arbitrary-city weather responses.
+- [x] Cover missing-city, malformed, and upstream-failure paths.
+- [x] Pass the purchase payload reference into resource URL resolution.
+- [x] Remove the hardcoded Kolkata resource URL.
+- [x] Update the weather fixture to carry an explicit city.
+- [x] Keep the summarizer provider local and startable without a paid API key.
+- [x] Add a one-command launcher for both providers and `finityd`.
+- [x] Add startup health checks, stale-daemon detection, and clean child-process shutdown.
+- [x] Add package scripts and concise run instructions.
+- [x] Start the local stack and verify all health endpoints.
+- [x] Run live authorized weather purchases with London and Paris.
+- [x] Run a refusal path and verify no settlement occurs.
+- [x] Update docs, risks, and follow-ups with evidence.
+- [x] Run build, typecheck, tests, lint, diff, and secret scans.
+- [ ] Commit focused changes, push the branch, open a PR, and merge after CI.
+
+### Verification
+
+- [x] `pnpm build`
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] `pnpm lint`
+- [x] Live provider and daemon health checks.
+- [x] No secrets in logs, fixtures, or diffs.
+
+### Review
+
+#### Changed
+
+- Live Open-Meteo weather lookup with typed failures and requested-city routing.
+- One-command local provider and daemon launcher plus guarded weather E2E command.
+- Verified testnet manifests, paid purchases, refusal behavior, and operator runbook.
+
+#### Verified
+
+- Open-Meteo endpoint probes succeeded.
+- London and Paris purchases reached `RECONCILED`; data-class refusal reached `REFUSED` before payment.
+- Workspace build, typecheck, tests, lint, diff, and secret-pattern checks passed.
+
+#### Risks
+
+- Open-Meteo is an external free upstream; failures return 502 instead of fabricated data.
+- Current evidence is Hedera testnet/local-stack evidence; public HTTPS deployment remains later work.
+
+#### Follow-ups
+
+- Deploy provider services publicly and rotate the existing testnet credentials before production use.
+
+#### Unresolved questions
+
+- [ ] None.
+
 ## 2026-09-10 Finity control-center TUI
 
 ### Plan

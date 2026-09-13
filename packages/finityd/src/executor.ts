@@ -76,7 +76,7 @@ export type PurchaseDependencies = {
   buildSnapshot: SnapshotBuilder;
   signCapability: CapabilitySigner;
   signReceipt: ReceiptSigner;
-  resourceUrl(manifest: ServiceManifest, methodId: string): string;
+  resourceUrl(manifest: ServiceManifest, methodId: string, intent?: Intent): string;
   spendAccountId: string;
   brokerSessionKey: string;
   brokerAddress: `0x${string}`;
@@ -229,7 +229,7 @@ export function createIntentExecutor(deps: PurchaseDependencies) {
     try {
       response = await paidFetch({
         capability, quote: selectedQuote, spendAccountId: deps.spendAccountId, brokerSessionKey: deps.brokerSessionKey,
-        url: deps.resourceUrl(manifest, selectedQuote.methodId), fetchImpl: deps.fetchImpl, parseChallenges: deps.parseChallenges,
+        url: deps.resourceUrl(manifest, selectedQuote.methodId, intent), fetchImpl: deps.fetchImpl, parseChallenges: deps.parseChallenges,
       });
       if (!response.ok) {
         const body = (await response.clone().text().catch(() => "")).replace(/\s+/g, " ").slice(0, 300);

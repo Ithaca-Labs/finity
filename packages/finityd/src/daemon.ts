@@ -8,6 +8,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { createIntentExecutor } from "./executor.js";
 import { MandateStore, PurchaseStore, startFinityd } from "./index.js";
 import { createLiveDependencies } from "./live-dependencies.js";
+import { FINITYD_RUNTIME_VERSION } from "./runtime-version.js";
 
 /**
  * Long-running finityd: loads locally registered mandates and the sealed
@@ -109,7 +110,7 @@ async function main(): Promise<void> {
 
   await mkdir(home, { recursive: true });
   const runtimePath = join(home, "finityd.runtime.json");
-  await writeFile(runtimePath, `${JSON.stringify({ baseUrl: `http://127.0.0.1:${address.port}`, token: instance.token }, null, 2)}\n`, "utf8");
+  await writeFile(runtimePath, `${JSON.stringify({ version: FINITYD_RUNTIME_VERSION, baseUrl: `http://127.0.0.1:${address.port}`, token: instance.token }, null, 2)}\n`, "utf8");
 
   console.error(`finityd listening on 127.0.0.1:${address.port} with ${mandateCount} mandate(s) loaded; runtime info at ${runtimePath}`);
 

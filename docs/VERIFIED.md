@@ -722,3 +722,52 @@ GSAP context on cleanup. `ScrollTrigger` must be registered with
 `gsap.registerPlugin(...)` before a tween receives its `scrollTrigger`
 configuration. The console uses only reveal-on-entry scroll triggers and
 honours `prefers-reduced-motion`.
+
+## 2026-09-13 live provider stack and Open-Meteo
+
+Open-Meteo's official Geocoding API documents
+`https://geocoding-api.open-meteo.com/v1/search` with required `name` and
+optional `count`, `language`, and `format` parameters. Its Weather Forecast API
+documents `https://api.open-meteo.com/v1/forecast` with required latitude and
+longitude plus the `current` variable list. The implementation requests
+`current=temperature_2m,weather_code` and `timezone=auto`; no API key is used.
+
+Live probes on 2026-09-13 succeeded for London: geocoding returned coordinates
+`51.50853,-0.12574` and country code `GB`; the forecast response returned
+`temperature_2m=18.9`, `weather_code=51`, and an ISO current timestamp. The
+provider now validates both responses with Zod, maps WMO codes to readable
+conditions, and fails closed on invalid, missing, or unavailable upstream data.
+
+The local stack launcher was exercised from the repository with
+`pnpm dev:stack`. It built the workspace, started `hello-weather` on
+`http://127.0.0.1:3001`, started `summarize-lite` on
+`http://127.0.0.1:3002`, and confirmed authenticated `finityd` health on its
+local runtime port. Weather resource URLs now require an explicit city in the
+purchase payload reference; there is no Kolkata fallback.
+
+After the provider description and implementation changed, the signed
+manifests were republished to the existing topic with a newer stable
+`publishedAt` (`1789291700`) so discovery could select them. The new manifest
+hashes and HCS transaction IDs were:
+
+- `hello-weather@1`: `0x2b3737085ae488549e6de187a1802ddd902ad0aaf0133e30330f59f441f51ef4`, transaction `0.0.8260226@1789291704.512433270`.
+- `summarize-lite@1`: `0x423120df785292455730f682e1a40e456fee1ab680f60cfa676aa79c8a023d6b`, transaction `0.0.8260226@1789291703.911032622`.
+
+The rebuilt stack then completed an authorized purchase for London:
+
+- correlation ID `f66ffcb2-2764-482d-861f-f51d69266ed3`.
+- final state `RECONCILED`.
+- provider result: London, GB, drizzle, 19°C, WMO code 51, source Open-Meteo.
+- registry status remained `ACTIVE`, `reserved=0`, `periodConsumed=10000000`, and `lifetimeConsumed=30000000` tinybars.
+
+The matched refusal used the same city with `dataClass=1` and returned
+`REFUSED` with `DATA_POLICY_VIOLATION` before reservation or x402 settlement.
+Its correlation ID was `f6447ab7-338c-4870-91a7-84691cd3c94d`; the registry
+remained `reserved=0`.
+
+The final rebuilt stack completed a second authorized purchase for Paris:
+
+- correlation ID `77803df9-45fd-4f09-a250-68201910382e`.
+- final state `RECONCILED`.
+- provider result: Paris, FR, partly cloudy, 19.9°C, WMO code 3, source Open-Meteo.
+- authenticated daemon health was `ok`; the live registry remained `ACTIVE` with `reserved=0`, `periodConsumed=15000000`, and `lifetimeConsumed=35000000` tinybars.

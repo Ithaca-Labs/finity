@@ -163,7 +163,7 @@ export default function finityExtension(pi: ExtensionAPI) {
     promptSnippet: "Buy a Finity service and onboard the Principal only when required",
     promptGuidelines: [
       "Use finity_buy directly for a user purchase request; it performs discovery, quoting, readiness checks, and purchase.",
-      "For current Kolkata weather use serviceId hello-weather@1, methodId weather.current, unit call, units 1, payloadRef weather.current:Kolkata, dataClass 0.",
+      "For current weather use serviceId hello-weather@1, methodId weather.current, unit call, units 1, payloadRef weather.current:<city>, dataClass 0.",
       "Never ask for a private key, password, seed phrase, or account ID.",
     ],
     parameters: Type.Object({
@@ -171,7 +171,7 @@ export default function finityExtension(pi: ExtensionAPI) {
       methodId: Type.String({ description: "Exact method ID, e.g. weather.current" }),
       unit: StringEnum(REQUEST_UNITS),
       units: Type.String({ description: "Unsigned integer string, e.g. \"1\"" }),
-      payloadRef: Type.String({ description: "Opaque request reference, e.g. weather.current:Kolkata" }),
+      payloadRef: Type.String({ description: "Opaque request reference, e.g. weather.current:London" }),
       dataClass: Type.Integer({ minimum: 0, maximum: 2 }),
       preferCheapest: Type.Optional(Type.Boolean()),
     }),

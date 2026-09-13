@@ -1,5 +1,26 @@
 # Architecture decisions
 
+## ADR-013: Use Open-Meteo for live weather without an API key
+
+- Date: 2026-09-13
+- Decision: `hello-weather@1` geocodes the city in the paid request with
+  Open-Meteo, then reads current `temperature_2m` and `weather_code` from its
+  forecast API. The upstream boundary is injectable and Zod-validated; errors
+  return a typed provider failure rather than fabricated weather.
+- Reason: The service must answer the requested city with live data while
+  remaining runnable from a clean local setup without provisioning another API
+  key. The free upstream is isolated behind the paid provider route, so the
+  provider never exposes data before x402 settlement.
+
+## ADR-014: Keep summarize-lite local for the baseline stack
+
+- Date: 2026-09-13
+- Decision: Start `summarize-lite@1` alongside weather, but keep its
+  deterministic local implementation instead of adding an unauthenticated
+  third-party summarization API.
+- Reason: A free text-generation endpoint would add availability, privacy, and
+  output-determinism risk without improving the payment-path qualification.
+
 ## ADR-001: Phase branches and focused commits
 
 - Date: 2026-09-07
