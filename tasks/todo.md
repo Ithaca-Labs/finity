@@ -1,5 +1,66 @@
 # Todo
 
+## 2026-09-13 stage broker bundle replacements
+
+### Plan
+
+- [x] Confirm clean main baseline.
+- [x] Reproduce the setup failure after a new broker address is generated.
+- [x] Verify the existing broker bundle path is present.
+- [x] Verify wallet-cli encrypt has no overwrite flag.
+- [x] Preserve the old bundle until the replacement is valid.
+- [x] Add a unique staging bundle path.
+- [x] Ensure the bundles directory exists.
+- [x] Encrypt the fresh bundle to the staging path.
+- [x] Run the recovery check against the staging path.
+- [x] Fail closed if encryption fails.
+- [x] Fail closed if recovery fails.
+- [x] Remove a failed staging artifact.
+- [x] Atomically activate the verified replacement.
+- [x] Keep the old bundle intact if activation fails.
+- [x] Preserve existing password handling.
+- [x] Add staging and activation regression coverage.
+- [x] Update setup documentation.
+- [x] Record the behavior decision in required docs.
+- [x] Run focused package tests.
+- [x] Run full build and typecheck.
+- [x] Run full tests and lint.
+- [x] Run diff and secret scans.
+- [x] Review the scoped diff.
+- [x] Commit the focused fix.
+- [x] Push the fix branch.
+- [x] Open a focused PR.
+- [x] Wait for CI.
+- [x] Merge the PR into main.
+
+### Verification
+
+- [x] Existing bundle is not overwritten before recovery succeeds.
+- [x] Recovered staging bundle becomes the active bundle.
+- [x] Workspace checks pass.
+
+### Review
+
+#### Changed
+
+- Stage fresh broker bundles, recover them, then activate them over the old bundle.
+- Preserve the previous bundle on encryption or recovery failure.
+
+#### Verified
+
+- `wallet-cli ring keys --output json` confirms the existing Key Ring.
+- Pi package tests: 60 passed.
+- Full build, typecheck, tests, lint, diff, and secret scans passed.
+
+#### Risks
+
+- The final activation rename depends on normal filesystem replacement semantics;
+  the current target environment is macOS.
+
+#### Follow-ups
+
+- Restart Pi and rerun `/finity setup`; it should now proceed past `SEAL_FAILED`.
+
 ## 2026-09-13 reuse initialized Key Ring in setup
 
 ### Plan

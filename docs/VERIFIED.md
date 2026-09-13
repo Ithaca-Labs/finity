@@ -803,3 +803,9 @@ already-initialized ring. The setup wizard now checks ring readiness first,
 reuses the existing ring, and only calls `ring init` when the readiness check
 fails. Unit coverage confirms both branches and keeps the existing
 failure-closed behavior for a genuinely unavailable ring.
+
+The setup wizard also writes a fresh broker bundle to a unique temporary path,
+runs the Key Ring recovery check there, and only then replaces
+`~/.finity/bundles/broker.enc`. This avoids wallet-cli's no-overwrite failure
+when rerunning setup and preserves the previously active bundle if encryption
+or recovery fails.

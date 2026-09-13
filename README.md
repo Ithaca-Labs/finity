@@ -121,7 +121,8 @@ On macOS the wrapper loads `WALLET_PASS` from Keychain service
 `ledger-wallet-cli`, account `default`; it never enters the chat. Manual
 `/finity setup` and `/finity mandate new` remain available for diagnostics.
 Setup reuses an initialized Ledger Key Ring; it only runs `ring init` on a
-machine that does not have one yet.
+machine that does not have one yet. Fresh broker bundles are staged and
+verified before replacing an existing bundle.
 
 To permanently stop the active authority, connect and unlock the Ledger,
 open the Ethereum app, then run `/finity revoke` (or include a mandate ID).

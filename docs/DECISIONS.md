@@ -216,3 +216,11 @@
 - Reason: Key Ring initialization is a one-time hardware operation. Repeating
   it after mandate revocation incorrectly aborts setup even though the existing
   ring can safely seal a fresh broker bundle.
+
+## ADR-017: stage broker bundle replacement
+
+- Date: 2026-09-13
+- Decision: Setup encrypts and recovers a fresh Broker Bundle at a unique
+  staging path, then activates it with an atomic rename to `broker.enc`.
+- Reason: wallet-cli refuses to overwrite an existing output file. Staging
+  keeps the current bundle usable until the replacement has passed recovery.
