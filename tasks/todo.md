@@ -30,7 +30,7 @@
 - [x] Push the fix branch.
 - [x] Open a focused PR.
 - [x] Wait for CI.
-- [ ] Merge the PR into main.
+- [x] Merge the PR into main.
 
 ### Verification
 
