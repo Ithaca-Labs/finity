@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { quoteSchema, serviceManifestSchema, type Quote, type RequestClass, type ServiceManifest } from "@finity/schemas";
-import { readTopicMessages, type MirrorFetcher } from "@finity/registry-client";
+import { quoteSchema, serviceManifestSchema, type Quote, type RequestClass, type ServiceManifest } from "@therick/schemas";
+import { readTopicMessages, type MirrorFetcher } from "@therick/registry-client";
 
 export class NegotiatorError extends Error {
   constructor(readonly code: "NO_QUOTES" | "QUOTE_INVALID", message: string) {

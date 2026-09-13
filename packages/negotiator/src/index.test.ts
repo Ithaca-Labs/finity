@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Quote, ServiceManifest } from "@finity/schemas";
+import type { Quote, ServiceManifest } from "@therick/schemas";
 import { NegotiatorError, discover, quote, select } from "./index.js";
 
 const helloWeather: ServiceManifest = {
