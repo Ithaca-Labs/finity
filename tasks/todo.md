@@ -33,10 +33,10 @@
 - [x] Run workspace tests.
 - [x] Run lint, diff, and secret checks.
 - [x] Inspect the final scoped diff.
-- [ ] Commit the focused implementation.
-- [ ] Push the branch.
-- [ ] Open a focused PR.
-- [ ] Wait for CI and fix any failures.
+- [x] Commit the focused implementation.
+- [x] Push the branch.
+- [x] Open a focused PR.
+- [x] Wait for CI and fix any failures.
 - [ ] Merge the PR into `main`.
 - [ ] Pull `main` and verify it is clean.
 
@@ -52,11 +52,23 @@
 
 #### Changed
 
+- Added reuse-first setup detection for valid Broker Bundles.
+- Routed fresh setup funding through the Ledger transaction approval flow.
+- Resolved the Hedera Spend Account automatically and removed copy/paste setup.
+- Added tests, environment documentation, hardware TODO, DX notes, and ADR.
+
 #### Verified
+
+- 71 Pi-package tests and full workspace gates pass locally.
+- PR #16 workspace CI and Vercel checks pass.
 
 #### Risks
 
+- Physical Ledger approval and the live testnet transfer still require one user-run retry.
+
 #### Follow-ups
+
+- Restart the built agent and run `/finity setup` with the Ledger connected.
 
 ## 2026-09-13 fix mandate contract submission
 
