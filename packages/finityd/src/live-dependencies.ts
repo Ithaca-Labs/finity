@@ -101,6 +101,21 @@ export type LiveDependencies = PurchaseDependencies & {
   };
 };
 
+export type MandateRegistrationStage =
+  | "contract_submission"
+  | "contract_confirmation"
+  | "mandate_status"
+  | "trace_topic_creation"
+  | "trace_topic_binding_submission"
+  | "trace_topic_binding_confirmation";
+
+export class MandateRegistrationError extends Error {
+  constructor(readonly registrationStage: MandateRegistrationStage, message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "MandateRegistrationError";
+  }
+}
+
 export function createLiveDependencies(config: LiveDependenciesConfig): LiveDependencies {
   const registryClient: RegistryClient = createRegistryClient({
     contractAddress: config.registryAddress,
@@ -236,14 +251,39 @@ export function createLiveDependencies(config: LiveDependenciesConfig): LiveDepe
     },
     registerMandate: async (signedMandate) => {
       const { signature, mandateId, ...mandate } = signedMandate;
-      const registrationTx = await registryClient.registerMandate(mandate, signature);
-      await registryClient.publicClient.waitForTransactionReceipt({ hash: registrationTx });
-      if ((await registryClient.readStatus(mandateId as Hash)) !== 1) {
-        throw new Error("registered mandate ID does not match its signed EIP-712 digest");
+      let registrationTx: Hash;
+      try {
+        registrationTx = await registryClient.registerMandate(mandate, signature);
+      } catch (error) {
+        throw new MandateRegistrationError("contract_submission", "mandate contract submission failed", { cause: error });
       }
-      const topic = await getHcsWriter().createTopic(`Finity mandate trace ${mandateId}`);
-      const setTraceTopicTx = await registryClient.setTraceTopic(mandateId as Hash, topic.topicId);
-      await registryClient.publicClient.waitForTransactionReceipt({ hash: setTraceTopicTx });
+      try {
+        await registryClient.publicClient.waitForTransactionReceipt({ hash: registrationTx });
+      } catch (error) {
+        throw new MandateRegistrationError("contract_confirmation", "mandate contract confirmation failed", { cause: error });
+      }
+      try {
+        if ((await registryClient.readStatus(mandateId as Hash)) !== 1) throw new Error("registered mandate is not active after confirmation");
+      } catch (error) {
+        throw new MandateRegistrationError("mandate_status", "registered mandate status could not be confirmed", { cause: error });
+      }
+      let topic: { topicId: string; transactionId: string };
+      try {
+        topic = await getHcsWriter().createTopic(`Finity mandate trace ${mandateId}`);
+      } catch (error) {
+        throw new MandateRegistrationError("trace_topic_creation", "mandate trace topic creation failed", { cause: error });
+      }
+      let setTraceTopicTx: Hash;
+      try {
+        setTraceTopicTx = await registryClient.setTraceTopic(mandateId as Hash, topic.topicId);
+      } catch (error) {
+        throw new MandateRegistrationError("trace_topic_binding_submission", "mandate trace topic binding failed", { cause: error });
+      }
+      try {
+        await registryClient.publicClient.waitForTransactionReceipt({ hash: setTraceTopicTx });
+      } catch (error) {
+        throw new MandateRegistrationError("trace_topic_binding_confirmation", "mandate trace topic binding confirmation failed", { cause: error });
+      }
       config.mandateStore.set(mandateId as Hash, signedMandate);
       return { mandateId, registrationTx, traceTopicId: topic.topicId, traceTopicTx: topic.transactionId, setTraceTopicTx };
     },

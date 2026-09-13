@@ -83,10 +83,53 @@ type MandateRegistrationErrorCode =
   | "nonce_already_used"
   | "mandate_already_registered"
   | "broker_funding_insufficient"
+  | "contract_submission_failed"
+  | "contract_confirmation_failed"
+  | "mandate_status_failed"
+  | "trace_topic_creation_failed"
+  | "trace_topic_binding_failed"
+  | "trace_topic_confirmation_failed"
   | "registration_failed";
 
+function registrationStage(error: unknown): string | undefined {
+  if (!error || typeof error !== "object" || !("registrationStage" in error)) return undefined;
+  const stage = (error as { registrationStage?: unknown }).registrationStage;
+  return typeof stage === "string" ? stage : undefined;
+}
+
+function registrationErrorText(error: unknown): string {
+  const messages: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current; depth += 1) {
+    if (current instanceof Error) messages.push(current.message);
+    if (typeof current === "object") {
+      const value = current as { shortMessage?: unknown; details?: unknown; cause?: unknown };
+      if (typeof value.shortMessage === "string") messages.push(value.shortMessage);
+      if (typeof value.details === "string") messages.push(value.details);
+      current = value.cause;
+    } else {
+      break;
+    }
+  }
+  return messages.join(" ").toLowerCase();
+}
+
 function classifyMandateRegistrationError(error: unknown): MandateRegistrationErrorCode {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  const message = registrationErrorText(error);
+  const stage = registrationStage(error);
+  if (stage === "contract_submission") {
+    if (message.includes("invalidsignature") || message.includes("invalid signature")) return "invalid_signature";
+    if (message.includes("invalidmandate") || message.includes("invalid mandate")) return "invalid_mandate";
+    if (message.includes("noncealreadyused") || message.includes("nonce already used")) return "nonce_already_used";
+    if (message.includes("mandatealreadyregistered") || message.includes("mandate already registered")) return "mandate_already_registered";
+    if (message.includes("insufficient funds") || message.includes("insufficient balance") || message.includes("balance is too low")) return "broker_funding_insufficient";
+    return "contract_submission_failed";
+  }
+  if (stage === "contract_confirmation") return "contract_confirmation_failed";
+  if (stage === "mandate_status") return "mandate_status_failed";
+  if (stage === "trace_topic_creation") return "trace_topic_creation_failed";
+  if (stage === "trace_topic_binding_submission") return "trace_topic_binding_failed";
+  if (stage === "trace_topic_binding_confirmation") return "trace_topic_confirmation_failed";
   if (message.includes("invalidsignature") || message.includes("invalid signature")) return "invalid_signature";
   if (message.includes("invalidmandate") || message.includes("invalid mandate")) return "invalid_mandate";
   if (message.includes("noncealreadyused") || message.includes("nonce already used")) return "nonce_already_used";

@@ -261,3 +261,16 @@
   current registration and policy code. Reusing a healthy process from before a
   rebuild caused the fixed route to remain inactive and surfaced the old
   generic `invalid_request` response.
+
+## ADR-021: classify every mandate registration stage
+
+- Date: 2026-09-13
+- Decision: The finityd live registration dependency wraps contract submission,
+  receipt confirmation, registry status, HCS topic creation, and trace-topic
+  binding as separate internal stages. The HTTP route exposes only a stable
+  redacted category and recursively inspects nested causes only for known safe
+  contract reason codes.
+- Reason: `registration_failed` proved that a generic safe fallback still left
+  a hardware-backed operator unable to identify the failing boundary. Stage
+  categories make the next retry actionable without leaking RPC details or
+  private material.

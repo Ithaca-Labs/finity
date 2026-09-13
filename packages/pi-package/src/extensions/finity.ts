@@ -13,7 +13,7 @@ import { approveEscalation, type ProposedAmendment } from "../escalation-wizard.
 import { FinitydClient, FinitydError, loadFinitydRuntimeInfo } from "../finityd-client.js";
 import { generateIdentity, loadIdentityFile, saveIdentityFile } from "../identity.js";
 import { runSetupWizard, type WizardUI } from "../setup-wizard.js";
-import { signTypedDataOnDevice } from "../ledger.js";
+import { getEthereumAddressOnDevice, signTypedDataOnDevice, verifyTypedDataSignature } from "../ledger.js";
 import { ensureInteractivePurchaseReady } from "../interactive-onboarding.js";
 import { genuineCheck, ringInit, ringReady } from "../wallet-cli-ops.js";
 import { walletPassFromEnvironmentOrKeychain } from "../wallet-pass.js";
@@ -525,6 +525,13 @@ async function handleMandate(args: string[], ctx: ExtensionCommandContext): Prom
   const signature = await signTypedDataOnDevice({
     derivationPath: "44'/60'/0'/0/0",
     typedData: { ...compiled.typedData, types: { AgentMandate: [...compiled.typedData.types.AgentMandate] } },
+  });
+  ctx.ui.notify("Verifying the Ledger signature locally before registration.", "info");
+  const principalAddress = await getEthereumAddressOnDevice({ derivationPath: "44'/60'/0'/0/0" });
+  await verifyTypedDataSignature({
+    typedData: { ...compiled.typedData, types: { AgentMandate: [...compiled.typedData.types.AgentMandate] } },
+    signature,
+    expectedAddress: principalAddress,
   });
   const signedMandate: SignedAgentMandate = { ...compiled.canonicalMandate, signature, mandateId: compiled.mandateId };
   ctx.ui.notify("Ledger signature received. Registering the mandate through finityd...", "info");

@@ -34,3 +34,8 @@
 
 - Mistake: A healthy long-running finityd from before a code fix was reused because startup checked health but not the daemon runtime version.
 - Rule: Every broker startup check must require the current runtime contract version, so rebuilt code cannot silently run against a stale daemon.
+
+## Registration-stage diagnostics
+
+- Mistake: A safe generic registration category still hid whether the live failure happened during contract submission, confirmation, or HCS setup, and the command path lacked local Ledger signature verification.
+- Rule: Keep every external registration stage explicitly classified and apply the same local signature check to every Principal mandate command.
