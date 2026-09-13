@@ -883,10 +883,15 @@ and made setup appear stuck after the Key Ring step.
 
 Setup now checks for a valid existing `broker.enc` plus broker identity and
 reuses them without a second payment. For a fresh setup it derives funding as
-the public mandate draft's `maxLifetime` plus a 2 HBAR fee reserve, or asks for
-an HBAR amount when no draft exists. `fundBrokerFromLedger` then derives the
-Ledger address, estimates the fee, requests confirmation, signs the transfer
-on the Ledger Ethereum app, broadcasts it through Hashio, and waits for the
-mirror node to resolve the new Hedera account ID. A
+the public mandate draft's `maxLifetime` plus a 2 HBAR fee reserve and shows
+that value as a suggestion in the interactive HBAR amount prompt. The entered
+amount is then passed to `fundBrokerFromLedger`, which derives the Ledger
+address, estimates the fee, requests confirmation, signs the transfer on the
+Ledger Ethereum app, broadcasts it through Hashio, and waits for the mirror
+node to resolve the new Hedera account ID. A
 `FINITY_SETUP_FUNDING_TINYBAR` override is available for intentional custom
 funding amounts.
+
+The compiled Pi extension is loaded when `pnpm agent` starts. After rebuilding
+the workspace, an already-running Pi process retains the previous extension
+in memory and must be exited and restarted before setup UI changes appear.

@@ -5,9 +5,9 @@
 - `HW-UNVERIFIED`: Complete and record second-host Key Ring recovery/enrollment.
 - `HW-UNVERIFIED`: Run the first-purchase and `/finity setup` funding paths end
   to end: Ledger `getAddress(..., checkOnDevice: true)`, review a chain-296
-  native transfer, `signTransaction` over the serialized transaction, broadcast
-  through Hashio, and confirm hollow-account completion plus broker alias
-  creation.
+  native transfer after entering the explicit HBAR amount, `signTransaction`
+  over the serialized transaction, broadcast through Hashio, and confirm
+  hollow-account completion plus broker alias creation.
 - `HW-UNVERIFIED`: Run DMK Node HID discovery/connect/signing with Ethereum app open (`@finity/pi-package`'s `signTypedDataOnDevice`). In particular, confirm the r/s/v → 65-byte-hex assembly in `assembleSignature` against a real device response — the v-below-27 normalization mirrors `MandateRegistry.sol`'s `_recover` but has never been checked against what the Ethereum app actually returns.
 - `HW-UNVERIFIED`: Photograph Ledger clear-signing fields and record exact string/uint rendering in `docs/dx/`.
 - `HW-UNVERIFIED`: Verify Node HID permissions on the actual target OS (macOS/Linux udev rules, or Windows driver access — this workspace is Windows; `node-hid`'s and `usb`'s native builds installed cleanly via prebuilt binaries here, but no device has been plugged in to confirm HID access itself).
