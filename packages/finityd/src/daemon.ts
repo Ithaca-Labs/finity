@@ -2,8 +2,8 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { decryptKeyRingBundle } from "@finity/vault-worker";
-import { brokerBundleSchema, signedAgentMandateSchema, type Hash } from "@finity/schemas";
+import { decryptKeyRingBundle } from "@therick/vault-worker";
+import { brokerBundleSchema, signedAgentMandateSchema, type Hash } from "@therick/schemas";
 import { privateKeyToAccount } from "viem/accounts";
 import { createIntentExecutor } from "./executor.js";
 import { MandateStore, PurchaseStore, startFinityd } from "./index.js";

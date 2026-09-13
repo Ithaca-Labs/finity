@@ -1,4 +1,4 @@
-# `@finity/finityd`
+# `@therick/finityd`
 
 Local-only intent API and reducer-driven broker orchestration state machine.
 

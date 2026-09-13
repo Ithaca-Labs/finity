@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { compile } from "@finity/mandate-compiler";
-import { POLICY_HASH } from "@finity/policy-engine";
-import { hashCanonicalJson, type Hash, type HcsEnvelope, type PolicySnapshot, type PurchaseEvent, type ServiceManifest, type SignedAgentMandate } from "@finity/schemas";
-import type { RegistryRecord } from "@finity/registry-client";
+import { compile } from "@therick/mandate-compiler";
+import { POLICY_HASH } from "@therick/policy-engine";
+import { hashCanonicalJson, type Hash, type HcsEnvelope, type PolicySnapshot, type PurchaseEvent, type ServiceManifest, type SignedAgentMandate } from "@therick/schemas";
+import type { RegistryRecord } from "@therick/registry-client";
 import { createIntentExecutor, MandateStore, type PurchaseDependencies, type SnapshotInput } from "./executor.js";
 import type { Intent, Purchase } from "./index.js";
 

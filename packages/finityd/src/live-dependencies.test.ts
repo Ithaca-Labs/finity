@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parsePaymentChallenges, defaultResourceUrl } from "./live-dependencies.js";
 import type { Intent } from "./index.js";
-import type { ServiceManifest } from "@finity/schemas";
+import type { ServiceManifest } from "@therick/schemas";
 
 const accepts = [{ scheme: "exact", network: "hedera:testnet", amount: "5000000", asset: "0.0.0", payTo: "0.0.1", extra: { feePayer: "0.0.2" } }];
 

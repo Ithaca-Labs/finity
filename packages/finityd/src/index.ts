@@ -2,9 +2,9 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import Database from "better-sqlite3";
-import { discover, quote, type QuoteFetcher } from "@finity/negotiator";
-import type { MirrorFetcher, RegistryRecord } from "@finity/registry-client";
-import { reducePurchase, requestClassSchema, revocationSchema, signature as signatureSchema, signedAgentMandateSchema, type Hash, type PurchaseEvent, type PurchaseState, type Revocation } from "@finity/schemas";
+import { discover, quote, type QuoteFetcher } from "@therick/negotiator";
+import type { MirrorFetcher, RegistryRecord } from "@therick/registry-client";
+import { reducePurchase, requestClassSchema, revocationSchema, signature as signatureSchema, signedAgentMandateSchema, type Hash, type PurchaseEvent, type PurchaseState, type Revocation } from "@therick/schemas";
 import { EscalationStore, type ProposedAmendment } from "./escalation-store.js";
 import type { MandateStore } from "./executor.js";
 
@@ -171,7 +171,7 @@ export type BrokerAccountDependencies = {
 };
 
 export type MandateRegistrationDependencies = {
-  register(mandate: import("@finity/schemas").SignedAgentMandate): Promise<Record<string, unknown>>;
+  register(mandate: import("@therick/schemas").SignedAgentMandate): Promise<Record<string, unknown>>;
 };
 
 export type MandateRevocationDependencies = {
@@ -340,7 +340,7 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
         // mandate. Same trust level as the whole bearer-token-gated local API
         // and the ~/.finity/mandates/*.json files this daemon already loads
         // unverified at boot: no real signature/on-chain verification gates
-        // this either, since that scheme is still undecided (@finity/verifier's
+        // this either, since that scheme is still undecided (@therick/verifier's
         // job). Not a new privilege beyond what already holding the token or
         // filesystem access implies, but worth tightening once that scheme exists.
         if (!options.services) return json(response, 501, { error: "day2_dependency_unavailable" });

@@ -1,5 +1,5 @@
 {
-  "name": "@finity/finityd",
+  "name": "@therick/finityd",
   "version": "0.1.0",
   "type": "module",
   "exports": {
@@ -19,19 +19,19 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@finity/capability": "workspace:*",
-    "@finity/commerce-adapter": "workspace:*",
-    "@finity/negotiator": "workspace:*",
-    "@finity/policy-engine": "workspace:*",
-    "@finity/registry-client": "workspace:*",
-    "@finity/schemas": "workspace:*",
-    "@finity/trace-builder": "workspace:*",
-    "@finity/vault-worker": "workspace:*",
+    "@therick/capability": "workspace:*",
+    "@therick/commerce-adapter": "workspace:*",
+    "@therick/negotiator": "workspace:*",
+    "@therick/policy-engine": "workspace:*",
+    "@therick/registry-client": "workspace:*",
+    "@therick/schemas": "workspace:*",
+    "@therick/trace-builder": "workspace:*",
+    "@therick/vault-worker": "workspace:*",
     "better-sqlite3": "12.6.2",
     "viem": "2.56.3"
   },
   "devDependencies": {
-    "@finity/mandate-compiler": "workspace:*",
+    "@therick/mandate-compiler": "workspace:*",
     "@types/better-sqlite3": "7.6.13"
   }
 }

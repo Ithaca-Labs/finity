@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Hash } from "@finity/schemas";
+import type { Hash } from "@therick/schemas";
 
 /** Mirrors policy-engine's ProposedAmendment shape without importing the package, so this stays a plain data type. */
 export type ProposedAmendment = {

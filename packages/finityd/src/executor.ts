@@ -7,13 +7,13 @@ import {
   type Quote,
   type ServiceManifest,
   type SignedAgentMandate,
-} from "@finity/schemas";
-import { discover, quote as requestQuote, select, type QuoteFetcher } from "@finity/negotiator";
-import type { MirrorFetcher, RegistryRecord } from "@finity/registry-client";
-import { evaluate } from "@finity/policy-engine";
-import { mintCapability, type CapabilitySigner } from "@finity/capability";
-import { paidFetch, type ChallengeParser } from "@finity/commerce-adapter";
-import { buildDecisionReceipt, buildEnvelope, type ReceiptSigner } from "@finity/trace-builder";
+} from "@therick/schemas";
+import { discover, quote as requestQuote, select, type QuoteFetcher } from "@therick/negotiator";
+import type { MirrorFetcher, RegistryRecord } from "@therick/registry-client";
+import { evaluate } from "@therick/policy-engine";
+import { mintCapability, type CapabilitySigner } from "@therick/capability";
+import { paidFetch, type ChallengeParser } from "@therick/commerce-adapter";
+import { buildDecisionReceipt, buildEnvelope, type ReceiptSigner } from "@therick/trace-builder";
 import type { Intent, Purchase, Transition } from "./index.js";
 
 function listIncludes(csv: string, value: string): boolean {
@@ -55,7 +55,7 @@ export type SnapshotInput = {
 /**
  * Assembles the PolicySnapshot the policy engine evaluates. Real signature
  * verification for the mandate/quote/manifest and on-chain principal
- * recovery are @finity/verifier's job (no digest/recovery scheme has been
+ * recovery are @therick/verifier's job (no digest/recovery scheme has been
  * decided yet); this seam lets the executor stay fully wired and testable
  * ahead of that decision.
  */

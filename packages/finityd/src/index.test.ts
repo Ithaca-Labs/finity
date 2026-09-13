@@ -2,9 +2,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, afterEach } from "vitest";
-import { compile } from "@finity/mandate-compiler";
-import type { RegistryRecord } from "@finity/registry-client";
-import type { Revocation, ServiceManifest, SignedAgentMandate } from "@finity/schemas";
+import { compile } from "@therick/mandate-compiler";
+import type { RegistryRecord } from "@therick/registry-client";
+import type { Revocation, ServiceManifest, SignedAgentMandate } from "@therick/schemas";
 import { MandateStore, PurchaseStore, startFinityd, type Finityd } from "./index.js";
 
 let running: Finityd | undefined;

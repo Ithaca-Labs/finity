@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { createHcsWriter, createRegistryClient, hederaTestnetChain, mandateRegistryAbi, type RegistryClient } from "@finity/registry-client";
-import { POLICY_HASH } from "@finity/policy-engine";
-import { hashCanonicalJson, type Revocation, type ServiceManifest, type SignedAgentMandate } from "@finity/schemas";
-import { buildEnvelope } from "@finity/trace-builder";
+import { createHcsWriter, createRegistryClient, hederaTestnetChain, mandateRegistryAbi, type RegistryClient } from "@therick/registry-client";
+import { POLICY_HASH } from "@therick/policy-engine";
+import { hashCanonicalJson, type Revocation, type ServiceManifest, type SignedAgentMandate } from "@therick/schemas";
+import { buildEnvelope } from "@therick/trace-builder";
 import { createWalletClient, decodeEventLog, http, type Address, type Hash } from "viem";
 import { privateKeyToAccount, sign } from "viem/accounts";
-import { settlementTransaction, type PaymentRequirementsSubset } from "@finity/commerce-adapter";
+import { settlementTransaction, type PaymentRequirementsSubset } from "@therick/commerce-adapter";
 import type { MandateStore, PurchaseDependencies } from "./executor.js";
 import type { Intent } from "./index.js";
 
@@ -80,7 +80,7 @@ export async function parsePaymentChallenges(response: Response): Promise<Paymen
  * two don't drift.
  *
  * Real signature verification for the mandate/quote/manifest is not yet
- * decided anywhere in this codebase (that's @finity/verifier's job), so the
+ * decided anywhere in this codebase (that's @therick/verifier's job), so the
  * snapshot builder trusts them unconditionally rather than inventing a
  * scheme - callers relying on this for anything but local/gated-testnet use
  * should know that gap exists.
