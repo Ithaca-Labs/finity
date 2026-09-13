@@ -1,8 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { FINITYD_RUNTIME_VERSION } from "@finity/finityd";
-import { ensureWalletPassEnvironment, loadFinitydRuntimeInfo } from "@finity/pi-package";
+import { FINITYD_RUNTIME_VERSION } from "@therick/finityd";
+import { ensureWalletPassEnvironment, loadFinitydRuntimeInfo } from "@therick/pi-package";
 
 type ManagedProcess = { label: string; child: ChildProcess };
 

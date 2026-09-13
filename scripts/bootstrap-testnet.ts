@@ -8,8 +8,8 @@ import {
   Hbar,
   PrivateKey,
 } from "@hiero-ledger/sdk";
-import { generateIdentity, saveIdentityFile, sealBrokerBundle, verifyBrokerBundleRecovery } from "@finity/pi-package";
-import { createHcsWriter, hederaTestnetChain } from "@finity/registry-client";
+import { generateIdentity, saveIdentityFile, sealBrokerBundle, verifyBrokerBundleRecovery } from "@therick/pi-package";
+import { createHcsWriter, hederaTestnetChain } from "@therick/registry-client";
 import { http, createPublicClient, createWalletClient, type Abi, type Address, type Hex } from "viem";
 import { deployContract } from "viem/actions";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";

@@ -1,4 +1,4 @@
-import { createHelloWeatherService, helloWeatherManifest } from "@finity/hello-weather";
+import { createHelloWeatherService, helloWeatherManifest } from "@therick/hello-weather";
 import { loadProviderRuntime } from "./provider-runtime.js";
 
 const runtime = await loadProviderRuntime("A", helloWeatherManifest);

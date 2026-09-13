@@ -1,4 +1,4 @@
-import { createSummarizeLiteService, summarizeLiteManifest } from "@finity/summarize-lite";
+import { createSummarizeLiteService, summarizeLiteManifest } from "@therick/summarize-lite";
 import { loadProviderRuntime } from "./provider-runtime.js";
 
 const runtime = await loadProviderRuntime("B", summarizeLiteManifest);

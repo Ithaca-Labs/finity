@@ -1,7 +1,7 @@
-import { createHcsWriter } from "@finity/registry-client";
-import { hashCanonicalJson } from "@finity/schemas";
-import { helloWeatherManifest } from "@finity/hello-weather";
-import { summarizeLiteManifest } from "@finity/summarize-lite";
+import { createHcsWriter } from "@therick/registry-client";
+import { hashCanonicalJson } from "@therick/schemas";
+import { helloWeatherManifest } from "@therick/hello-weather";
+import { summarizeLiteManifest } from "@therick/summarize-lite";
 import { loadProviderRuntime } from "./provider-runtime.js";
 
 function required(name: string): string {

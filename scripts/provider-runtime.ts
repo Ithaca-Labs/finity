@@ -2,8 +2,8 @@ import {
   signManifest,
   type CanonicalSigner,
   type UnsignedServiceManifest,
-} from "@finity/provider-sdk";
-import type { ServiceManifest } from "@finity/schemas";
+} from "@therick/provider-sdk";
+import type { ServiceManifest } from "@therick/schemas";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { privateKeyToAccount } from "viem/accounts";

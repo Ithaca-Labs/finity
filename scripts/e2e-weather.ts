@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { FinitydClient, loadActiveMandate, loadFinitydRuntimeInfo } from "@finity/pi-package";
+import { FinitydClient, loadActiveMandate, loadFinitydRuntimeInfo } from "@therick/pi-package";
 
 function flag(name: string, fallback: string): string {
   const args = process.argv.slice(2);

@@ -1,11 +1,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { registerMandateOnChain, signTypedDataOnDevice, generateIdentity, loadIdentityFile, saveActiveMandate, withFreshMandateNonce } from "@finity/pi-package";
-import { compile, type MandateChoices } from "@finity/mandate-compiler";
-import { POLICY_HASH } from "@finity/policy-engine";
-import { createHcsWriter, createRegistryClient } from "@finity/registry-client";
-import { signedAgentMandateSchema } from "@finity/schemas";
+import { registerMandateOnChain, signTypedDataOnDevice, generateIdentity, loadIdentityFile, saveActiveMandate, withFreshMandateNonce } from "@therick/pi-package";
+import { compile, type MandateChoices } from "@therick/mandate-compiler";
+import { POLICY_HASH } from "@therick/policy-engine";
+import { createHcsWriter, createRegistryClient } from "@therick/registry-client";
+import { signedAgentMandateSchema } from "@therick/schemas";
 
 function required(name: string): string {
   const value = process.env[name];

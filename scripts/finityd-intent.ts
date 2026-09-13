@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
-import { compile } from "@finity/mandate-compiler";
-import { POLICY_HASH } from "@finity/policy-engine";
-import { createIntentExecutor, createLiveDependencies, MandateStore, type Intent, type Purchase } from "@finity/finityd";
+import { compile } from "@therick/mandate-compiler";
+import { POLICY_HASH } from "@therick/policy-engine";
+import { createIntentExecutor, createLiveDependencies, MandateStore, type Intent, type Purchase } from "@therick/finityd";
 import { PrivateKey } from "@x402/hedera";
 
 /**

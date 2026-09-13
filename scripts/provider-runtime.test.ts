@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { helloWeatherManifest } from "@finity/hello-weather";
+import { helloWeatherManifest } from "@therick/hello-weather";
 import { loadProviderRuntime } from "./provider-runtime.js";
 
 const original = { ...process.env };
