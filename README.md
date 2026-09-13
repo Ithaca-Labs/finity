@@ -57,26 +57,26 @@ refusal `f6447ab7-338c-4870-91a7-84691cd3c94d` stopped before reservation.
 
 ## Architecture
 
-```
-┌──────────────────── Principal's laptop (USB) ────────────────────┐
-│  Pi TUI ── /finity setup ──► wallet-cli genuine-check, ring init │
-│         ── /finity mandate ─► DMK → Ethereum app → signTypedData │
-│                  (Ledger screen shows the readable mandate)      │
-└──────────────────────────────┬───────────────────────────────────┘
-                               │ signed mandate + sealed bundles (ciphertext only)
-┌──────────────────────────────▼────────── Broker host ────────────┐
-│  A: Buyer agent (Pi, --no-builtin-tools + @finity/pi-package)    │
-│     finity_* tools only — no secrets, no keys                    │
-│  B: finityd — discover → quote → policy → capability → trace     │
-│  C: vault-worker — Key Ring decrypt, x402 Hedera signer,         │
-│     egress allowlist, credential injection under lease           │
-└──────┬───────────────────────┬──────────────────────┬────────────┘
-       │ x402 HTTP             │ JSON-RPC (Hashio)    │ HCS / mirror
-┌──────▼────────┐     ┌────────▼─────────┐   ┌────────▼─────────────┐
-│ Provider svcs │────►│ Blocky402        │   │ Hedera testnet       │
-│ (@x402/express│     │ facilitator      │──►│ MandateRegistry.sol  │
-│  + quotes)    │     │ hedera:testnet   │   │ HCS topics           │
-└───────────────┘     └──────────────────┘   └──────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Laptop["Principal's laptop (USB)"]
+        TUI["Pi TUI"]
+        TUI -->|"/finity setup"| WalletCli["wallet-cli genuine-check, ring init"]
+        TUI -->|"/finity mandate"| DMK["DMK → Ethereum app → signTypedData<br/>(Ledger screen shows the readable mandate)"]
+    end
+
+    Laptop -->|"signed mandate + sealed bundles<br/>(ciphertext only)"| Broker
+
+    subgraph Broker["Broker host"]
+        A["A: Buyer agent (Pi, --no-builtin-tools + @therick/pi-package)<br/>finity_* tools only — no secrets, no keys"]
+        B["B: finityd — discover → quote → policy → capability → trace"]
+        C["C: vault-worker — Key Ring decrypt, x402 Hedera signer,<br/>egress allowlist, credential injection under lease"]
+    end
+
+    Broker -->|"x402 HTTP"| Provider["Provider svcs<br/>(@x402/express + quotes)"]
+    Broker -->|"JSON-RPC (Hashio)"| Facilitator["Blocky402 facilitator<br/>hedera:testnet"]
+    Broker -->|"HCS / mirror"| Hedera["Hedera testnet<br/>MandateRegistry.sol · HCS topics"]
+    Facilitator --> Hedera
 ```
 
 ## How a purchase works
