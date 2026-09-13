@@ -249,3 +249,15 @@
   trace operation. Local recovery prevents a bad signature from reaching the
   network and makes the likely Ledger/address mismatch actionable without
   exposing private material.
+
+## ADR-020: reject stale healthy finityd processes
+
+- Date: 2026-09-13
+- Decision: finityd writes a runtime contract version, and the CLI requires
+  that version to match before treating the daemon as reusable. The CLI passes
+  the expected version into Pi, whose onboarding path rejects a mismatched
+  runtime as well.
+- Reason: Health alone cannot prove that a long-running daemon has loaded the
+  current registration and policy code. Reusing a healthy process from before a
+  rebuild caused the fixed route to remain inactive and surfaced the old
+  generic `invalid_request` response.

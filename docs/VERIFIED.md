@@ -836,3 +836,15 @@ failures to safe categories (`invalid_signature`, `invalid_mandate`,
 `broker_funding_insufficient`, or `registration_failed`) without returning raw
 RPC details, calldata, signatures, or keys. The full physical retry remains
 hardware-unverified until the updated flow completes on the connected device.
+
+## 2026-09-13 stale daemon prevention
+
+The repeated `invalid_request` occurred because the running finityd process was
+started at 15:06 while the rebuilt daemon artifact containing the registration
+diagnostics was generated at 17:12. The old process still answered health
+checks, so `pnpm agent` incorrectly reused it. After rebuilding finityd and the
+CLI, the live old runtime was rejected by the startup check (`stale daemon
+accepted: false`). The daemon runtime contract version is now bumped with this
+fix; `pnpm agent` starts a current daemon whenever the runtime file is healthy
+but stale, and the Pi onboarding guard applies the same check when the CLI
+passes its expected version.

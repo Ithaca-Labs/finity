@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { FINITYD_RUNTIME_VERSION } from "@finity/finityd";
 
 export function finityHome(): string {
   return process.env.FINITY_HOME ?? join(homedir(), ".finity");
@@ -59,7 +60,7 @@ const defaultHealthCheck: FinitydHealthCheck = async (baseUrl, token) => {
   }
 };
 
-/** True only if finityd's runtime info file exists *and* it actually answers a health check. */
+/** True only if the current finityd runtime exists, matches this CLI, and answers health. */
 export async function isFinitydRunning(runtimeInfoPath = join(finityHome(), "finityd.runtime.json"), healthCheck: FinitydHealthCheck = defaultHealthCheck): Promise<boolean> {
   let raw: string;
   try {
@@ -67,12 +68,12 @@ export async function isFinitydRunning(runtimeInfoPath = join(finityHome(), "fin
   } catch {
     return false;
   }
-  let parsed: { baseUrl?: unknown; token?: unknown };
+  let parsed: { baseUrl?: unknown; token?: unknown; version?: unknown };
   try {
     parsed = JSON.parse(raw);
   } catch {
     return false;
   }
-  if (typeof parsed.baseUrl !== "string" || typeof parsed.token !== "string") return false;
+  if (typeof parsed.baseUrl !== "string" || typeof parsed.token !== "string" || parsed.version !== FINITYD_RUNTIME_VERSION) return false;
   return healthCheck(parsed.baseUrl, parsed.token);
 }

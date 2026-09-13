@@ -1,5 +1,68 @@
 # Todo
 
+## 2026-09-13 fix stale daemon reuse
+
+### Plan
+
+- [x] Reproduce the repeated `invalid_request` report.
+- [x] Inspect the active finityd process start time.
+- [x] Compare the process runtime with the rebuilt daemon artifact.
+- [x] Confirm the current registration diagnostics exist in dist.
+- [x] Confirm health-only startup accepts the stale process.
+- [x] Locate every finityd startup and reuse check.
+- [x] Verify the existing runtime contract version mechanism.
+- [x] Bump the daemon runtime contract version.
+- [x] Require the current version in CLI liveness checks.
+- [x] Preserve malformed runtime-file rejection.
+- [x] Preserve health failure rejection.
+- [x] Pass the expected version into Pi.
+- [x] Reject stale runtimes in interactive onboarding.
+- [x] Preserve automatic daemon startup for missing runtimes.
+- [x] Avoid killing arbitrary user processes during replacement.
+- [x] Add regression coverage for stale runtime rejection.
+- [x] Update the healthy runtime fixture.
+- [x] Build finityd and CLI artifacts together.
+- [x] Verify the live stale daemon is rejected after rebuild.
+- [x] Run focused CLI, Pi, and finityd tests.
+- [x] Run full build, typecheck, and tests.
+- [x] Run lint, diff, and secret scans.
+- [x] Review the scoped diff.
+- [x] Update verified runtime and DX notes.
+- [x] Record the startup decision.
+- [ ] Commit the focused fix.
+- [ ] Push the fix branch.
+- [ ] Open a focused PR.
+- [ ] Wait for CI.
+- [ ] Merge the PR into main.
+
+### Verification
+
+- [x] A stale healthy daemon is not reused.
+- [x] A current healthy daemon remains reusable.
+- [x] Full workspace gates pass.
+
+### Review
+
+#### Changed
+
+- Versioned finityd runtime freshness across CLI and Pi startup paths.
+- Added stale-runtime regression coverage and recorded the observed process
+  reuse failure.
+
+#### Verified
+
+- Live old daemon rejected: `stale daemon accepted: false`.
+- Full build, typecheck, test, lint, and diff checks passed.
+
+#### Risks
+
+- The old daemon process remains running until manually stopped; the new CLI
+  will no longer route work to it. No arbitrary process termination was added.
+
+#### Follow-ups
+
+- Run `pnpm agent` once to start the current daemon, then retry the purchase.
+
 ## 2026-09-13 fix mandate registration diagnostics
 
 ### Plan

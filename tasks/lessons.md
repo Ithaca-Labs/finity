@@ -29,3 +29,8 @@
 
 - Mistake: Described fresh provisioning as the only path after setup already produced reusable broker and mandate state.
 - Rule: First-purchase onboarding must validate and reuse existing state before generating keys, funding accounts, or requesting Ledger signatures.
+
+## Daemon runtime freshness
+
+- Mistake: A healthy long-running finityd from before a code fix was reused because startup checked health but not the daemon runtime version.
+- Rule: Every broker startup check must require the current runtime contract version, so rebuilt code cannot silently run against a stale daemon.
