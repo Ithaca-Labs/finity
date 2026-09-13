@@ -1,5 +1,68 @@
 # Todo
 
+## 2026-09-13 revoke mandate and reset connection
+
+### Plan
+
+- [x] Confirm branch and clean worktree.
+- [x] Read the active mandate pointer.
+- [x] Validate the mandate ID format.
+- [x] Load the deployed registry address without exposing secrets.
+- [x] Read the current on-chain mandate status.
+- [x] Confirm the status is ACTIVE.
+- [x] Confirm the Ledger Ethereum app is the signing target.
+- [x] Generate a fresh revocation nonce.
+- [x] Compile the contract-compatible Revocation typed data.
+- [x] Show the revocation intent before hardware signing.
+- [x] Discover the physical Ledger over USB HID.
+- [x] Connect one Ledger session.
+- [x] Check the device is unlocked and ready.
+- [x] Check the Ethereum app is open.
+- [x] Request a clear-signature on the Ledger.
+- [x] Wait for explicit device approval.
+- [x] Relay only the signed revocation through finityd.
+- [x] Wait for the Hedera transaction receipt.
+- [x] Verify registry status is REVOKED.
+- [x] Verify the local active-mandate pointer is cleared.
+- [x] Reset the wallet-cli local session.
+- [x] Confirm no active mandate remains locally.
+- [x] Confirm the daemon remains healthy or stop its stale connection.
+- [x] Record non-secret transaction evidence in required docs.
+- [x] Run focused tests and diff/secret checks.
+- [x] Commit the scoped evidence update and push the branch.
+- [x] Open and merge the focused PR if CI passes.
+
+### Verification
+
+- [x] Registry status read before and after revocation.
+- [x] Physical Ledger approval completed.
+- [x] `wallet-cli session reset` completed.
+- [x] Required workspace checks pass.
+
+### Review
+
+#### Changed
+
+- Revoked the active Ledger-signed mandate on Hedera testnet.
+- Cleared the local active-mandate pointer and reset the wallet-cli session.
+
+#### Verified
+
+- Pre-revocation registry status was `ACTIVE` (1); post-revocation status is
+  `REVOKED` (4) with zero reserved tinybars.
+- The physical Ledger approved a fresh Revocation typed-data signature.
+- finityd relayed the signed authorization and submitted the HCS `REVOKED`
+  trace; authenticated daemon health remains `ok`.
+
+#### Risks
+
+- The old broker bundle and historical mandate file remain intentionally
+  preserved for audit and recovery; fresh setup may reuse the Key Ring.
+
+#### Follow-ups
+
+- Start a fresh `/finity mandate new` or `finity_buy` flow from Pi.
+
 ## 2026-09-13 live provider stack
 
 ### Plan
