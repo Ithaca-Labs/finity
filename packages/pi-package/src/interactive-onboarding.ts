@@ -14,7 +14,7 @@ import {
 import { FinitydClient, loadFinitydRuntimeInfo } from "./finityd-client.js";
 import { generateIdentity, loadIdentityFile, saveIdentityFile } from "./identity.js";
 import { fundBrokerFromLedger, resolveHederaAccountId } from "./ledger-funding.js";
-import { signTypedDataOnDevice } from "./ledger.js";
+import { getEthereumAddressOnDevice, signTypedDataOnDevice, verifyTypedDataSignature } from "./ledger.js";
 import { loadOnboardingState, saveOnboardingState } from "./onboarding-state.js";
 import { ensureReadyForPurchase, type BrokerState } from "./purchase-readiness.js";
 import { saveActiveMandate } from "./active-mandate.js";
@@ -181,6 +181,13 @@ export async function ensureInteractivePurchaseReady(input: {
       const signature = await signTypedDataOnDevice({
         derivationPath: MANDATE_DERIVATION_PATH,
         typedData: { ...compiled.typedData, types: { AgentMandate: [...compiled.typedData.types.AgentMandate] } },
+      });
+      input.ui.notify("Verifying the Ledger signature locally before registration.", "info");
+      const principalAddress = await getEthereumAddressOnDevice({ derivationPath: MANDATE_DERIVATION_PATH });
+      await verifyTypedDataSignature({
+        typedData: { ...compiled.typedData, types: { AgentMandate: [...compiled.typedData.types.AgentMandate] } },
+        signature,
+        expectedAddress: principalAddress,
       });
       const signedMandate: SignedAgentMandate = { ...compiled.canonicalMandate, signature, mandateId: compiled.mandateId };
       input.ui.notify("Ledger signature received. Registering mandate through the broker.", "info");

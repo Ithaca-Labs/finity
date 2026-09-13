@@ -373,6 +373,21 @@ describe("finityd HTTP API mandates routes", () => {
     expect(mandateStore.get(compiled.mandateId)?.mandate).toEqual(mandate);
   });
 
+  it("returns a safe category when mandate relay rejects the signature", async () => {
+    running = startFinityd({
+      services: { mandateStore: new MandateStore(), topicId: "0.0.1" },
+      mandateRegistration: { register: async () => { throw new Error("ContractFunctionExecutionError: InvalidSignature()"); } },
+    });
+    const url = await baseUrl(running);
+    const response = await fetch(`${url}/v1/mandates/register`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${running.token}`, "content-type": "application/json" },
+      body: JSON.stringify(mandate),
+    });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "invalid_signature" });
+  });
+
   it("relays only a valid Ledger-signed revocation through the broker", async () => {
     const revocation = { mandateId: compiled.mandateId as `0x${string}`, nonce: "123", reason: "rotate broker" };
     const signature = `0x${"ab".repeat(65)}` as `0x${string}`;

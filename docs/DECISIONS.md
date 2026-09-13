@@ -235,3 +235,17 @@
   `./src` directory import before any Ledger operation starts. The installed
   CommonJS entrypoints expose the same verified API and resolve correctly on
   the supported Node runtime, so this is the smallest compatibility fix.
+
+## ADR-019: verify Ledger mandate signatures before relay
+
+- Date: 2026-09-13
+- Decision: After DMK returns an EIP-712 signature, the Pi signing boundary
+  verifies that the assembled signature recovers to the public address returned
+  by the same Ledger derivation path. Only a locally verified signed mandate is
+  sent to finityd. finityd maps relay failures to a small safe error taxonomy
+  instead of exposing raw viem/RPC errors.
+- Reason: A failed registration previously surfaced only as `invalid_request`,
+  hiding whether the contract rejected the signature, the mandate, or a later
+  trace operation. Local recovery prevents a bad signature from reaching the
+  network and makes the likely Ledger/address mismatch actionable without
+  exposing private material.

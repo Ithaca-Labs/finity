@@ -818,3 +818,21 @@ runs the Key Ring recovery check there, and only then replaces
 `~/.finity/bundles/broker.enc`. This avoids wallet-cli's no-overwrite failure
 when rerunning setup and preserves the previously active bundle if encryption
 or recovery fails.
+
+## 2026-09-13 mandate registration failure diagnostics
+
+A physical Ledger run reached `Ledger signature received` but the following
+broker response was the generic `invalid_request`. finityd was masking any
+exception from on-chain registration and HCS trace setup behind that one
+response, so the failing stage was not observable. The registry call accepts
+the same mandate shape in a local simulation; no new on-chain registration was
+broadcast by the failed run.
+
+The Pi flow now recovers the EIP-712 signer from the exact typed data and
+assembled Ledger signature before calling finityd, comparing it with the
+address returned by the same Ledger derivation path. finityd maps registration
+failures to safe categories (`invalid_signature`, `invalid_mandate`,
+`nonce_already_used`, `mandate_already_registered`,
+`broker_funding_insufficient`, or `registration_failed`) without returning raw
+RPC details, calldata, signatures, or keys. The full physical retry remains
+hardware-unverified until the updated flow completes on the connected device.

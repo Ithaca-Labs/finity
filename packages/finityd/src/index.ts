@@ -76,6 +76,27 @@ export class PurchaseStore {
 function json(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); response.end(JSON.stringify(body));
 }
+
+type MandateRegistrationErrorCode =
+  | "invalid_signature"
+  | "invalid_mandate"
+  | "nonce_already_used"
+  | "mandate_already_registered"
+  | "broker_funding_insufficient"
+  | "registration_failed";
+
+function classifyMandateRegistrationError(error: unknown): MandateRegistrationErrorCode {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("invalidsignature") || message.includes("invalid signature")) return "invalid_signature";
+  if (message.includes("invalidmandate") || message.includes("invalid mandate")) return "invalid_mandate";
+  if (message.includes("noncealreadyused") || message.includes("nonce already used")) return "nonce_already_used";
+  if (message.includes("mandatealreadyregistered") || message.includes("mandate already registered")) return "mandate_already_registered";
+  if (message.includes("insufficient funds") || message.includes("insufficient balance") || message.includes("balance is too low")) {
+    return "broker_funding_insufficient";
+  }
+  return "registration_failed";
+}
+
 async function readBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
@@ -247,7 +268,14 @@ export function startFinityd(options: { store?: PurchaseStore; executor?: Intent
         if (!options.services || !options.mandateRegistration) return json(response, 501, { error: "registration_unavailable" });
         const parsed = signedAgentMandateSchema.safeParse(await readBody(request));
         if (!parsed.success) return json(response, 400, { error: "invalid_mandate" });
-        const registered = await options.mandateRegistration.register(parsed.data);
+        let registered: Record<string, unknown>;
+        try {
+          registered = await options.mandateRegistration.register(parsed.data);
+        } catch (error) {
+          const code = classifyMandateRegistrationError(error);
+          console.error(`[finityd] mandate registration failed: ${code}`);
+          return json(response, 502, { error: code });
+        }
         options.services.mandateStore.set(parsed.data.mandateId as Hash, parsed.data);
         return json(response, 201, registered);
       }
