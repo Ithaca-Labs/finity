@@ -1,5 +1,52 @@
 # Todo
 
+## 2026-09-13 commit project assets
+
+### Plan
+
+- [x] Confirm the current branch and repository state.
+- [x] Inventory tracked modifications.
+- [x] Inventory untracked files.
+- [x] Identify newly added assets.
+- [x] Check asset file types.
+- [x] Check asset dimensions.
+- [x] Check asset sizes.
+- [x] Check asset names and paths.
+- [x] Check for ignored secret files.
+- [x] Check for private keys in changed text.
+- [x] Check for accidental build artifacts.
+- [x] Preserve user-added assets unchanged.
+- [x] Stage only the verified asset files.
+- [x] Stage the task log update.
+- [x] Review the staged file list.
+- [x] Review the staged diff metadata.
+- [x] Run staged diff whitespace checks.
+- [ ] Commit with a focused subject.
+- [ ] Push the commit to `main`.
+- [ ] Verify remote and local `main` match.
+
+### Verification
+
+- [x] All safe user-added assets are tracked.
+- [x] No secrets are staged.
+- [ ] `main` is clean and synchronized.
+
+### Review
+
+#### Changed
+
+- Added the three user-provided console PNG assets.
+
+#### Verified
+
+- All three assets are valid RGB PNGs with expected dimensions and no text secrets staged.
+
+#### Risks
+
+- None identified.
+
+#### Follow-ups
+
 ## 2026-09-13 fix setup funding prompt
 
 ### Plan
