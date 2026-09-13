@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { providerAccessBundleSchema, type Capability, type ProviderAccessBundle } from "@finity/schemas";
+import { providerAccessBundleSchema, type Capability, type ProviderAccessBundle } from "@therick/schemas";
 
 export type VaultErrorCode = "EGRESS_BLOCKED" | "CAPABILITY_REPLAY" | "CAPABILITY_EXPIRED" | "VAULT_DECRYPT_FAILED";
 export class VaultError extends Error {

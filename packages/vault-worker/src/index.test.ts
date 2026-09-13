@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { VaultError, VaultWorker, redact } from "./index.js";
-import type { Capability, ProviderAccessBundle } from "@finity/schemas";
+import type { Capability, ProviderAccessBundle } from "@therick/schemas";
 
 const capability: Capability = {
   kind: "finity.capability", capabilityId: `0x${"01".repeat(32)}`, mandateId: `0x${"02".repeat(32)}`, mandateVersion: "1", agent: "did:aid:agent", broker: `0x${"03".repeat(20)}`,

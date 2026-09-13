@@ -1,5 +1,5 @@
 {
-  "name": "@finity/vault-worker",
+  "name": "@therick/vault-worker",
   "version": "0.1.0",
   "type": "module",
   "exports": {
@@ -15,7 +15,7 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@finity/schemas": "workspace:*",
+    "@therick/schemas": "workspace:*",
     "undici": "7.22.0"
   },
   "devDependencies": {
