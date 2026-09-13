@@ -353,6 +353,15 @@ union (`DeviceActionStatus.Completed` carries `{ output: Signature }`,
 `.Error` carries `{ error }`); `Signature = { r: HexaString, s: HexaString,
 v: number }`.
 
+Node runtime compatibility re-checked on 2026-09-13: DMK 1.9.0's ESM entry
+point imports `./src` as a directory, which native Node ESM rejects with
+`ERR_UNSUPPORTED_DIR_IMPORT`. The same installed package exposes a CommonJS
+entry point that loads successfully. The Finity Ledger adapter therefore uses
+lazy `createRequire(import.meta.url)` loading for the DMK, Node HID transport,
+and Ethereum signer packages. A compiled-output smoke check reaches Ledger
+device discovery without the module-resolution error; physical device access
+still requires the Ledger to be connected and remains covered by `HW_TODO.md`.
+
 Real, verified: Hiero SDK's `PrivateKey.fromString(text)` is deprecated
 (prints a runtime warning) in favor of `fromStringECDSA(text)` for a raw
 hex-encoded ECDSA key or `fromStringDer(text)` for a DER-prefixed one.
