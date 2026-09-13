@@ -1,4 +1,4 @@
-# `@finity/pi-package`
+# `@therick/pi-package`
 
 Pi extension, buyer skill, Finity control-center TUI, commands, and built-in tool blocker.
 

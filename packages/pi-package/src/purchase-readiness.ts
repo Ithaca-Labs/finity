@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { signedAgentMandateSchema, type SignedAgentMandate } from "@finity/schemas";
+import { signedAgentMandateSchema, type SignedAgentMandate } from "@therick/schemas";
 import { loadActiveMandate, type ActiveMandate } from "./active-mandate.js";
 import { loadIdentityFile, type Identity } from "./identity.js";
 

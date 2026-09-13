@@ -4,9 +4,9 @@ import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { compile, compileRevocation, type MandateChoices } from "@finity/mandate-compiler";
-import { POLICY_HASH } from "@finity/policy-engine";
-import type { SignedAgentMandate } from "@finity/schemas";
+import { compile, compileRevocation, type MandateChoices } from "@therick/mandate-compiler";
+import { POLICY_HASH } from "@therick/policy-engine";
+import type { SignedAgentMandate } from "@therick/schemas";
 import { clearActiveMandate, loadActiveMandate, saveActiveMandate, type ActiveMandate } from "../active-mandate.js";
 import { explainRefusal, pollPurchase } from "../buyer-tools.js";
 import { approveEscalation, type ProposedAmendment } from "../escalation-wizard.js";
@@ -19,7 +19,7 @@ import { ensureInteractivePurchaseReady } from "../interactive-onboarding.js";
 import { genuineCheck, ringInit, ringReady } from "../wallet-cli-ops.js";
 import { walletPassFromEnvironmentOrKeychain } from "../wallet-pass.js";
 import { fundingAmountFromMandateDraft, validateFundingAmountTinybar } from "../setup-funding.js";
-import { createRegistryClient } from "@finity/registry-client";
+import { createRegistryClient } from "@therick/registry-client";
 import {
   FinityControlCenter,
   finityFooter,
@@ -564,7 +564,7 @@ async function handleMandate(args: string[], ctx: ExtensionCommandContext): Prom
     // finityd's MandateStore needs the full signed mandate content, not just
     // an ID: MandateRegistry.record() only exposes consumption/status
     // on-chain, never the original allowedServices/allowedMethods/asset
-    // text (see @finity/finityd's MandateStore doc comment).
+    // text (see @therick/finityd's MandateStore doc comment).
     await mkdir(join(home, "mandates"), { recursive: true });
   await writeFile(join(home, "mandates", `${compiled.mandateId}.json`), `${JSON.stringify(signedMandate, null, 2)}\n`, "utf8");
   await saveActiveMandate(join(home, "active-mandate.json"), { mandateId: compiled.mandateId, agentUaid: agentIdentity.uaid, brokerUaid: identity.broker.uaid });

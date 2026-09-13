@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { access, mkdir, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
-import type { WalletPassProvider } from "@finity/vault-worker";
-import type { BrokerBundle } from "@finity/schemas";
+import type { WalletPassProvider } from "@therick/vault-worker";
+import type { BrokerBundle } from "@therick/schemas";
 import { generateBrokerSessionKey as defaultGenerateBrokerSessionKey, sealBrokerBundle as defaultSealBrokerBundle, verifyBrokerBundleRecovery as defaultVerifyBrokerBundleRecovery } from "./broker-bundle.js";
 import { fundBrokerFromLedger as defaultFundBrokerFromLedger, resolveHederaAccountId as defaultResolveHederaAccountId } from "./ledger-funding.js";
 import { generateIdentity as defaultGenerateIdentity, loadIdentityFile as defaultLoadIdentityFile, saveIdentityFile as defaultSaveIdentityFile, type Identity } from "./identity.js";

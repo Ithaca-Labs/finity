@@ -1,4 +1,4 @@
-import type { ReasonCode } from "@finity/policy-engine";
+import type { ReasonCode } from "@therick/policy-engine";
 
 const TERMINAL_STATES = new Set([
   "RECONCILED", "REFUSED", "ESCALATION_REQUIRED",

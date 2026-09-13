@@ -2,11 +2,11 @@ import { spawn } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { compile, MANDATE_DERIVATION_PATH } from "@finity/mandate-compiler";
-import { discover, quote } from "@finity/negotiator";
-import { POLICY_HASH } from "@finity/policy-engine";
-import { createRegistryClient } from "@finity/registry-client";
-import type { RequestClass, SignedAgentMandate } from "@finity/schemas";
+import { compile, MANDATE_DERIVATION_PATH } from "@therick/mandate-compiler";
+import { discover, quote } from "@therick/negotiator";
+import { POLICY_HASH } from "@therick/policy-engine";
+import { createRegistryClient } from "@therick/registry-client";
+import type { RequestClass, SignedAgentMandate } from "@therick/schemas";
 import {
   generateBrokerSessionKey, recoverBrokerBundle, recoverPendingBrokerBundle, sealBrokerBundle,
   sealPendingBrokerBundle, verifyBrokerBundleRecovery,

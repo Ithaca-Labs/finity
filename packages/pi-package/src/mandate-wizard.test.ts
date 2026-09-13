@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CompiledMandate } from "@finity/mandate-compiler";
+import type { CompiledMandate } from "@therick/mandate-compiler";
 import { withFreshMandateNonce } from "./mandate-nonce.js";
 import { registerMandateOnChain, type TraceTopicCreator } from "./mandate-wizard.js";
 

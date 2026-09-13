@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { encodeAbiParameters, keccak256 } from "viem";
-import type { CompiledAmendment } from "@finity/mandate-compiler";
-import type { SignedAgentMandate } from "@finity/schemas";
+import type { CompiledAmendment } from "@therick/mandate-compiler";
+import type { SignedAgentMandate } from "@therick/schemas";
 import { approveEscalation } from "./escalation-wizard.js";
 
 const mandateId = `0x${"01".repeat(32)}` as const;

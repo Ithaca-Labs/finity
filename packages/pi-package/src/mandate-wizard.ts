@@ -1,6 +1,6 @@
-import { compile, type CompiledMandate, type MandateChoices } from "@finity/mandate-compiler";
-import type { RegistryClient } from "@finity/registry-client";
-import type { Hash, SignedAgentMandate } from "@finity/schemas";
+import { compile, type CompiledMandate, type MandateChoices } from "@therick/mandate-compiler";
+import type { RegistryClient } from "@therick/registry-client";
+import type { Hash, SignedAgentMandate } from "@therick/schemas";
 
 export type MandateSigner = (typedData: CompiledMandate["typedData"]) => Promise<`0x${string}`>;
 export type TraceTopicCreator = (memo: string) => Promise<{ topicId: string; transactionId: string }>;

@@ -7,7 +7,7 @@ import {
   type Hex,
 } from "viem";
 import type { Signature as LedgerSignature } from "@ledgerhq/device-signer-kit-ethereum";
-import { hederaTestnetChain } from "@finity/registry-client";
+import { hederaTestnetChain } from "@therick/registry-client";
 import { getEthereumAddressOnDevice, signTransactionOnDevice } from "./ledger.js";
 
 const EVM_WEI_PER_TINYBAR = 10_000_000_000n;

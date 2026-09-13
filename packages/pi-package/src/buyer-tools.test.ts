@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { REASON_CODES } from "@finity/policy-engine";
+import { REASON_CODES } from "@therick/policy-engine";
 import { explainRefusal, pollPurchase } from "./buyer-tools.js";
 
 describe("pollPurchase", () => {

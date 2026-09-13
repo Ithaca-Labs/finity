@@ -1,6 +1,6 @@
-import { compileAmendment, type CompiledAmendment } from "@finity/mandate-compiler";
-import type { RegistryClient } from "@finity/registry-client";
-import type { Hash, SignedAgentMandate } from "@finity/schemas";
+import { compileAmendment, type CompiledAmendment } from "@therick/mandate-compiler";
+import type { RegistryClient } from "@therick/registry-client";
+import type { Hash, SignedAgentMandate } from "@therick/schemas";
 import { encodeAbiParameters, keccak256 } from "viem";
 
 export type ProposedAmendment = {

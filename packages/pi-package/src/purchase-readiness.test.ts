@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { SignedAgentMandate } from "@finity/schemas";
+import type { SignedAgentMandate } from "@therick/schemas";
 import { ensureReadyForPurchase, mandateAllows, type BrokerState, type PurchaseReadinessDeps } from "./purchase-readiness.js";
 
 const mandateId = `0x${"11".repeat(32)}`;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Signature } from "@ledgerhq/device-signer-kit-ethereum";
-import { compile } from "@finity/mandate-compiler";
+import { compile } from "@therick/mandate-compiler";
 import { privateKeyToAccount } from "viem/accounts";
 import { LedgerSigningError, assembleSignature, verifyTypedDataSignature } from "./ledger.js";
 

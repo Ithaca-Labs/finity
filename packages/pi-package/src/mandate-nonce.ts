@@ -1,4 +1,4 @@
-import type { MandateChoices } from "@finity/mandate-compiler";
+import type { MandateChoices } from "@therick/mandate-compiler";
 
 /**
  * Return registration choices for a new mandate.
