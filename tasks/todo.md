@@ -29,11 +29,11 @@
 - [x] Review the scoped diff.
 - [x] Update verified, DX, and decision docs.
 - [x] Record the corrected lesson.
-- [ ] Commit the focused fix.
-- [ ] Push the fix branch.
-- [ ] Open a focused PR.
-- [ ] Wait for CI.
-- [ ] Merge the PR into main.
+- [x] Commit the focused fix.
+- [x] Push the fix branch.
+- [x] Open a focused PR.
+- [x] Wait for CI.
+- [x] Merge the PR into main.
 
 ### Verification
 
