@@ -1,7 +1,7 @@
 import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
 import { decodePaymentResponseHeader } from "@x402/core/http";
 import { ExactHederaScheme, PrivateKey, createClientHederaSigner } from "@x402/hedera";
-import { hashCanonicalJson, type Capability, type Quote } from "@finity/schemas";
+import { hashCanonicalJson, type Capability, type Quote } from "@therick/schemas";
 
 export type PaymentRequirementsSubset = { scheme: string; network: string; amount: string; asset: string; payTo: string; extra?: { feePayer?: string } };
 export class CommerceError extends Error {

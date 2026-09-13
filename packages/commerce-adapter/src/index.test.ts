@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { encodePaymentResponseHeader } from "@x402/core/http";
 import { CommerceError, assertAuthorizedChallenge, settlementTransaction } from "./index.js";
-import type { Quote } from "@finity/schemas";
+import type { Quote } from "@therick/schemas";
 
 const quote: Quote = {
   kind: "finity.quote", serviceId: "hello-weather@1", methodId: "GET:/weather", manifestHash: `0x${"01".repeat(32)}`,

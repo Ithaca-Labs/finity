@@ -1,5 +1,5 @@
 {
-  "name": "@finity/commerce-adapter",
+  "name": "@therick/commerce-adapter",
   "version": "0.1.0",
   "type": "module",
   "exports": {
@@ -15,7 +15,7 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@finity/schemas": "workspace:*",
+    "@therick/schemas": "workspace:*",
     "@x402/core": "2.25.0",
     "@x402/fetch": "2.25.0",
     "@x402/hedera": "2.25.0"
