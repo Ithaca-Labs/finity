@@ -1,6 +1,6 @@
-import { compile, type MandateChoices } from "@finity/mandate-compiler";
-import { POLICY_HASH } from "@finity/policy-engine";
-import type { RegistryRecord } from "@finity/registry-client";
+import { compile, type MandateChoices } from "@therick/mandate-compiler";
+import { POLICY_HASH } from "@therick/policy-engine";
+import type { RegistryRecord } from "@therick/registry-client";
 import {
   canonicalizeJson,
   type DecisionReceipt,
@@ -8,8 +8,8 @@ import {
   type ServiceManifest,
   type Quote,
   type SignedAgentMandate,
-} from "@finity/schemas";
-import { decisionReceiptCommitment } from "@finity/trace-builder";
+} from "@therick/schemas";
+import { decisionReceiptCommitment } from "@therick/trace-builder";
 import { hashMessage, recoverAddress, recoverPublicKey, recoverTypedDataAddress } from "viem";
 
 export type CheckStatus = "pass" | "fail" | "insufficient_disclosure";
@@ -34,7 +34,7 @@ export function checkReceiptHashIntegrity(receipt: DecisionReceipt): CheckResult
     : fail("receiptHashIntegrity", `receiptId ${receiptId} does not match the recomputed commitment ${recomputed}`);
 }
 
-/** The receipt's brokerSignature is a raw secp256k1 signature over receiptId (no EIP-191/712 wrapping) - see @finity/finityd's createLiveDependencies signBrokerHash. */
+/** The receipt's brokerSignature is a raw secp256k1 signature over receiptId (no EIP-191/712 wrapping) - see @therick/finityd's createLiveDependencies signBrokerHash. */
 export async function checkBrokerSignature(receipt: DecisionReceipt, expectedBroker: `0x${string}`): Promise<CheckResult> {
   let recovered: `0x${string}`;
   try {
@@ -50,7 +50,7 @@ export async function checkBrokerSignature(receipt: DecisionReceipt, expectedBro
 /** A receipt signed against a since-changed policy is not wrong, but it is not directly comparable to the live policy engine's behavior either. */
 export function checkPolicyHashCurrent(receipt: DecisionReceipt): CheckResult {
   return receipt.policyHash === POLICY_HASH
-    ? pass("policyHashCurrent", "receipt.policyHash matches the live @finity/policy-engine POLICY_HASH")
+    ? pass("policyHashCurrent", "receipt.policyHash matches the live @therick/policy-engine POLICY_HASH")
     : fail("policyHashCurrent", `receipt.policyHash ${receipt.policyHash} does not match the live POLICY_HASH ${POLICY_HASH}`);
 }
 

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { compile } from "@finity/mandate-compiler";
-import { POLICY_HASH } from "@finity/policy-engine";
-import type { RegistryRecord } from "@finity/registry-client";
-import { canonicalizeJson, type DecisionReceipt, type Hash, type Quote, type ServiceManifest, type SignedAgentMandate } from "@finity/schemas";
-import { decisionReceiptCommitment } from "@finity/trace-builder";
+import { compile } from "@therick/mandate-compiler";
+import { POLICY_HASH } from "@therick/policy-engine";
+import type { RegistryRecord } from "@therick/registry-client";
+import { canonicalizeJson, type DecisionReceipt, type Hash, type Quote, type ServiceManifest, type SignedAgentMandate } from "@therick/schemas";
+import { decisionReceiptCommitment } from "@therick/trace-builder";
 import { generatePrivateKey, privateKeyToAccount, sign } from "viem/accounts";
 import { verify } from "./verify.js";
 

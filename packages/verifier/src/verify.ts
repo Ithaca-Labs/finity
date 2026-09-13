@@ -1,5 +1,5 @@
-import { readTopicMessages, type MirrorFetcher, type RegistryClient } from "@finity/registry-client";
-import type { DecisionReceipt, Hash, Quote, ServiceManifest, SignedAgentMandate } from "@finity/schemas";
+import { readTopicMessages, type MirrorFetcher, type RegistryClient } from "@therick/registry-client";
+import type { DecisionReceipt, Hash, Quote, ServiceManifest, SignedAgentMandate } from "@therick/schemas";
 import {
   checkBrokerSignature,
   checkHcsInclusion,

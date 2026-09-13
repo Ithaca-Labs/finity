@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { createRegistryClient } from "@finity/registry-client";
-import type { DecisionReceipt, Quote, ServiceManifest, SignedAgentMandate } from "@finity/schemas";
+import { createRegistryClient } from "@therick/registry-client";
+import type { DecisionReceipt, Quote, ServiceManifest, SignedAgentMandate } from "@therick/schemas";
 import { verify } from "./verify.js";
 
 /**
