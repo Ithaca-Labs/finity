@@ -44,3 +44,8 @@
 
 - Mistake: `/finity mandate new` reused the caller's draft nonce across retries, causing a permanently consumed Hedera registry nonce to reject every fresh Ledger signature.
 - Rule: A human-triggered new mandate must mint a fresh nonce for every registration attempt; draft files provide policy choices, not replayable registration identities.
+
+## Manual setup funding handoff
+
+- Mistake: `/finity setup` generated a broker alias, then stopped and asked the user to fund it manually and type the resulting account ID even though the Ledger transfer path already existed elsewhere.
+- Rule: Principal funding must be a Ledger-approved transfer initiated by setup, followed by mirror-node account resolution; never make the user copy an alias or account ID between tools.

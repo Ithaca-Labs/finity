@@ -1,5 +1,75 @@
 # Todo
 
+## 2026-09-13 fix control-center setup funding
+
+### Plan
+
+- [x] Confirm the current branch and restore generated files.
+- [x] Read lessons from the previous setup and nonce fixes.
+- [x] Inspect the control-center setup action.
+- [x] Inspect the setup wizard state machine.
+- [x] Inspect the existing Ledger funding implementation.
+- [x] Inspect the mirror-node account resolver.
+- [x] Inspect the interactive onboarding funding behavior.
+- [x] Inspect the current setup tests and fixtures.
+- [x] Define idempotent setup detection behavior.
+- [x] Define a safe funding amount source.
+- [x] Reuse the Ledger transaction approval boundary.
+- [x] Remove the manual broker-address funding handoff.
+- [x] Remove manual Spend Account ID entry.
+- [x] Resolve the funded alias after receipt confirmation.
+- [x] Preserve Key Ring and bundle trust boundaries.
+- [x] Preserve fail-closed behavior on funding failure.
+- [x] Add setup funding dependency seams for tests.
+- [x] Add existing-bundle reuse coverage.
+- [x] Add Ledger funding invocation coverage.
+- [x] Add mirror-resolution failure coverage.
+- [x] Add funding amount validation coverage.
+- [x] Update environment and user-facing setup documentation.
+- [x] Update verified facts, decisions, DX notes, and lessons.
+- [x] Run focused setup, funding, and TUI tests.
+- [x] Run workspace build before generated-type checks.
+- [x] Run workspace typecheck.
+- [x] Run workspace tests.
+- [x] Run lint, diff, and secret checks.
+- [x] Inspect the final scoped diff.
+- [x] Commit the focused implementation.
+- [x] Push the branch.
+- [x] Open a focused PR.
+- [x] Wait for CI and fix any failures.
+- [ ] Merge the PR into `main`.
+- [ ] Pull `main` and verify it is clean.
+
+### Verification
+
+- [x] Existing valid setup is detected without a new Ledger transfer.
+- [x] Fresh setup requests a Ledger-signed transfer to the broker alias.
+- [x] Setup derives the Hedera account ID from the mirror node.
+- [x] Full workspace gates and CI pass.
+- [ ] Merged `main` is clean.
+
+### Review
+
+#### Changed
+
+- Added reuse-first setup detection for valid Broker Bundles.
+- Routed fresh setup funding through the Ledger transaction approval flow.
+- Resolved the Hedera Spend Account automatically and removed copy/paste setup.
+- Added tests, environment documentation, hardware TODO, DX notes, and ADR.
+
+#### Verified
+
+- 71 Pi-package tests and full workspace gates pass locally.
+- PR #16 workspace CI and Vercel checks pass.
+
+#### Risks
+
+- Physical Ledger approval and the live testnet transfer still require one user-run retry.
+
+#### Follow-ups
+
+- Restart the built agent and run `/finity setup` with the Ledger connected.
+
 ## 2026-09-13 fix mandate contract submission
 
 ### Plan

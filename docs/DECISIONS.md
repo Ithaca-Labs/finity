@@ -287,3 +287,16 @@
   valid new Ledger approval fail with `NonceAlreadyUsed`. The command boundary
   has access to time, while the pure compiler and policy engine must remain
   deterministic and clock-free.
+
+## ADR-023: make setup reuse-first and Ledger-funded
+
+- Date: 2026-09-13
+- Decision: `/finity setup` first validates an existing Broker Bundle and
+  public broker identity. If none exists, it derives an initial funding amount
+  from the mandate draft's lifetime cap plus a fixed 2 HBAR fee reserve, then
+  requests a transfer from the Ledger Principal and resolves the resulting
+  Hedera account ID through the mirror node.
+- Reason: The previous manual alias-funding and account-ID entry duplicated a
+  working Ledger transfer path and made rerunning setup create unnecessary
+  broker accounts. Setup is now idempotent for valid state while retaining
+  explicit Ledger approval for the only new payment it can initiate.
