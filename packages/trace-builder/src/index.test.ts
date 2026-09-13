@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashCanonicalJson, type DecisionReceipt } from "@finity/schemas";
+import { hashCanonicalJson, type DecisionReceipt } from "@therick/schemas";
 import { assertTraceLink, buildDecisionReceipt, buildEnvelope, decisionReceiptCommitment, receiptHash } from "./index.js";
 
 const mandateId = `0x${"01".repeat(32)}` as const;

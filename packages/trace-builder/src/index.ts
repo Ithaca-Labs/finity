@@ -1,4 +1,4 @@
-import { decisionReceiptSchema, hashCanonicalJson, hcsEnvelopeSchema, type DecisionReceipt, type Hash, type HcsEnvelope } from "@finity/schemas";
+import { decisionReceiptSchema, hashCanonicalJson, hcsEnvelopeSchema, type DecisionReceipt, type Hash, type HcsEnvelope } from "@therick/schemas";
 
 export type TraceEvent = HcsEnvelope["t"];
 

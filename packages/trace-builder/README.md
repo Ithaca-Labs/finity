@@ -1,4 +1,4 @@
-# `@finity/trace-builder`
+# `@therick/trace-builder`
 
 Pure decision receipts, hash chains, and compact HCS envelopes.
 
