@@ -1,4 +1,4 @@
-import { capabilitySchema, hashCanonicalJson, type Capability, type Hash } from "@finity/schemas";
+import { capabilitySchema, hashCanonicalJson, type Capability, type Hash } from "@therick/schemas";
 
 export type CapabilityDraft = Omit<Capability, "kind" | "capabilityId" | "brokerSignature">;
 export type CapabilitySigner = (commitment: Hash) => Promise<`0x${string}`>;

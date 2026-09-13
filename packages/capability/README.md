@@ -1,4 +1,4 @@
-# `@finity/capability`
+# `@therick/capability`
 
 Pure single-use capability minting and validation.
 
