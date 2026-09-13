@@ -26,10 +26,10 @@
 - [x] Review the scoped diff.
 - [x] Update verified runtime and error-handling notes.
 - [x] Record the diagnosis and decision.
-- [ ] Commit the focused fix.
-- [ ] Push the fix branch.
-- [ ] Open a focused PR.
-- [ ] Wait for CI.
+- [x] Commit the focused fix.
+- [x] Push the fix branch.
+- [x] Open a focused PR.
+- [x] Wait for CI.
 - [ ] Merge the PR into main.
 
 ### Verification
