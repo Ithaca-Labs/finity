@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="apps/console/public/finityclick.png" alt="Finity" width="480" />
+</p>
+
 # Finity
 
 > **The Ledger signs the rules. The broker enforces them. Every decision lands on Hedera.**
