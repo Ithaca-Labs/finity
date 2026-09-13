@@ -120,9 +120,16 @@ in the broker account.
 On macOS the wrapper loads `WALLET_PASS` from Keychain service
 `ledger-wallet-cli`, account `default`; it never enters the chat. Manual
 `/finity setup` and `/finity mandate new` remain available for diagnostics.
-Setup reuses an initialized Ledger Key Ring; it only runs `ring init` on a
-machine that does not have one yet. Fresh broker bundles are staged and
-verified before replacing an existing bundle.
+Setup reuses an initialized Ledger Key Ring and detects a valid existing Broker
+Bundle, so rerunning it after a mandate revocation does not generate a second
+broker or request another payment. For a fresh setup it derives the initial
+funding amount from the mandate draft's lifetime cap plus a fee reserve, then
+asks the Ledger to approve the HBAR transfer to the new Spend Account. The
+mirror node resolves the resulting Hedera account ID automatically; no manual
+alias funding or account-ID copy/paste is required. Set
+`FINITY_SETUP_FUNDING_TINYBAR` only when you intentionally want to override the
+derived amount. Fresh broker bundles are staged and verified before replacing
+an existing bundle.
 
 To permanently stop the active authority, connect and unlock the Ledger,
 open the Ethereum app, then run `/finity revoke` (or include a mandate ID).

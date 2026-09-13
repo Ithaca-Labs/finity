@@ -13,4 +13,5 @@ export * from "./mandate-wizard.js";
 export * from "./onboarding-state.js";
 export * from "./purchase-readiness.js";
 export * from "./setup-wizard.js";
+export * from "./setup-funding.js";
 export * from "./wallet-pass.js";

@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rename, rm } from "node:fs/promises";
+import { access, mkdir, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { WalletPassProvider } from "@finity/vault-worker";
 import type { BrokerBundle } from "@finity/schemas";
 import { generateBrokerSessionKey as defaultGenerateBrokerSessionKey, sealBrokerBundle as defaultSealBrokerBundle, verifyBrokerBundleRecovery as defaultVerifyBrokerBundleRecovery } from "./broker-bundle.js";
-import { generateIdentity as defaultGenerateIdentity, saveIdentityFile as defaultSaveIdentityFile, type Identity } from "./identity.js";
+import { fundBrokerFromLedger as defaultFundBrokerFromLedger, resolveHederaAccountId as defaultResolveHederaAccountId } from "./ledger-funding.js";
+import { generateIdentity as defaultGenerateIdentity, loadIdentityFile as defaultLoadIdentityFile, saveIdentityFile as defaultSaveIdentityFile, type Identity } from "./identity.js";
+import { formatAddress, formatTinybars } from "./finity-tui.js";
+import { validateFundingAmountTinybar } from "./setup-funding.js";
 
 export type WizardUI = {
   notify(message: string, kind?: "info" | "error" | "success"): void;
@@ -28,15 +31,68 @@ export type SetupWizardDeps = {
   verifyBrokerBundleRecovery?: typeof defaultVerifyBrokerBundleRecovery;
   saveIdentityFile?: typeof defaultSaveIdentityFile;
   moveBundle?: (source: string, destination: string) => Promise<void>;
+  fundingAmountTinybar?: string;
+  getFundingAmount?: () => Promise<string | undefined>;
+  fundBroker?: typeof defaultFundBrokerFromLedger;
+  resolveHederaAccountId?: typeof defaultResolveHederaAccountId;
+  rpcUrl?: string;
+  mirrorNodeUrl?: string;
+  derivationPath?: string;
 };
 
 export type SetupWizardResult =
-  | { ok: true; brokerAddress: `0x${string}`; spendAccountId: string; brokerUaid: string }
+  | { ok: true; brokerAddress?: `0x${string}`; spendAccountId: string; brokerUaid: string }
   | { ok: false; reason: string };
+
+async function existingBrokerBundlePath(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function reuseExistingSetup(
+  deps: SetupWizardDeps,
+  bundlePath: string,
+  verifyBrokerBundleRecovery: typeof defaultVerifyBrokerBundleRecovery,
+): Promise<SetupWizardResult | undefined> {
+  if (!(await existingBrokerBundlePath(bundlePath))) return undefined;
+
+  let identity: Awaited<ReturnType<typeof defaultLoadIdentityFile>>;
+  try {
+    identity = await defaultLoadIdentityFile(deps.identityPath);
+  } catch {
+    deps.ui.notify("Existing broker setup is unreadable. No new Ledger payment was requested.", "error");
+    return { ok: false, reason: "EXISTING_BROKER_INVALID" };
+  }
+  const spendAccountId = identity?.broker?.canonical.nativeId.match(/^hedera:testnet:(0\.0\.[1-9][0-9]*)$/)?.[1];
+  if (!identity?.broker || !spendAccountId) {
+    deps.ui.notify("Existing broker setup is missing a valid Hedera Spend Account. No new Ledger payment was requested.", "error");
+    return { ok: false, reason: "EXISTING_BROKER_INVALID" };
+  }
+
+  let recovered = false;
+  try {
+    recovered = await verifyBrokerBundleRecovery({ brokerId: deps.brokerId, bundlePath, walletPass: deps.walletPass });
+  } catch {
+    // Do not overwrite a bundle that cannot be recovered. The password or
+    // Key Ring may be temporarily unavailable; setup must fail closed.
+  }
+  if (!recovered) {
+    deps.ui.notify("Existing Broker Bundle could not be recovered. Check WALLET_PASS and the Ledger Key Ring, then retry.", "error");
+    return { ok: false, reason: "EXISTING_BROKER_INVALID" };
+  }
+
+  deps.ui.notify(`Existing Finity broker detected for Spend Account ${spendAccountId}. Reusing it; no Ledger payment is needed.`, "success");
+  return { ok: true, spendAccountId, brokerUaid: identity.broker.uaid };
+}
 
 /**
  * `/finity setup` (FINITY_BUILD_SPEC.md step 14): genuine-check, ring init,
- * generate the Broker Session Key, fund the Spend Account, seal the Broker
+ * generate the Broker Session Key, request Ledger funding for the Spend Account, seal the Broker
  * Bundle, and run the recovery test before the broker is considered active
  * (user story 5). WALLET_PASS is read from the environment by walletPass -
  * never asked for through ui.input, so it can never land in the session
@@ -67,17 +123,48 @@ export async function runSetupWizard(deps: SetupWizardDeps): Promise<SetupWizard
     }
   }
 
+  const bundlePath = join(deps.bundlesDir, "broker.enc");
+  const existing = await reuseExistingSetup(deps, bundlePath, verifyBrokerBundleRecovery);
+  if (existing) return existing;
+
   const { brokerSessionKey, brokerAddress } = generateBrokerSessionKey();
-  deps.ui.notify(
-    `Fund this address with HBAR (at least your mandate's lifetime cap plus a fee reserve) to create the Spend Account: ${brokerAddress}`,
-  );
-  const spendAccountId = await deps.ui.input(
-    "Spend Account",
-    "Once funded, look up the resulting Hedera account ID (0.0.x) on the mirror node and enter it here:",
-  );
-  if (!spendAccountId) {
-    deps.ui.notify("Setup cancelled: no Spend Account ID was provided.", "error");
-    return { ok: false, reason: "NO_SPEND_ACCOUNT" };
+
+  let fundingAmountTinybar: string | undefined;
+  try {
+    fundingAmountTinybar = validateFundingAmountTinybar(deps.fundingAmountTinybar ?? await deps.getFundingAmount?.() ?? "");
+  } catch {
+    deps.ui.notify("Setup cancelled: choose a positive initial HBAR funding amount.", "error");
+    return { ok: false, reason: "INVALID_FUNDING_AMOUNT" };
+  }
+
+  const fundBroker = deps.fundBroker ?? defaultFundBrokerFromLedger;
+  const resolveHederaAccountId = deps.resolveHederaAccountId ?? defaultResolveHederaAccountId;
+  deps.ui.notify(`Requesting ${formatTinybars(fundingAmountTinybar)} from your Ledger wallet for the new Spend Account.`, "info");
+  let funding: Awaited<ReturnType<typeof defaultFundBrokerFromLedger>>;
+  try {
+    funding = await fundBroker({
+      brokerAddress,
+      amountTinybar: fundingAmountTinybar,
+      rpcUrl: deps.rpcUrl,
+      derivationPath: deps.derivationPath ?? "44'/60'/0'/0/0",
+      confirm: ({ principalAddress, brokerAddress: destination, amountTinybar, maxFeeTinybar }) => deps.ui.confirm(
+        "Fund Finity from Ledger",
+        `Request ${formatTinybars(amountTinybar)} from Ledger ${formatAddress(principalAddress)} to the new Spend Account ${formatAddress(destination)}. Estimated maximum network fee: ${formatTinybars(maxFeeTinybar)}. Approve the transfer on your Ledger?`,
+      ),
+    });
+  } catch (error) {
+    const cancelled = error instanceof Error && /cancelled/i.test(error.message);
+    deps.ui.notify(cancelled ? "Ledger funding cancelled. No broker bundle was activated." : "Ledger funding failed. Check the device and Hedera testnet balance, then retry.", "error");
+    return { ok: false, reason: cancelled ? "FUNDING_CANCELLED" : "FUNDING_FAILED" };
+  }
+
+  deps.ui.notify("Ledger payment confirmed. Resolving the new Hedera Spend Account...", "info");
+  let spendAccountId: string;
+  try {
+    spendAccountId = await resolveHederaAccountId(brokerAddress, { mirrorNodeUrl: deps.mirrorNodeUrl });
+  } catch {
+    deps.ui.notify(`Ledger payment succeeded (${funding.transactionHash}), but the new Spend Account is not visible on the mirror yet. Retry setup after a short wait; do not fund another address.`, "error");
+    return { ok: false, reason: "ACCOUNT_RESOLUTION_FAILED" };
   }
 
   let brokerIdentity: Identity;
@@ -89,7 +176,6 @@ export async function runSetupWizard(deps: SetupWizardDeps): Promise<SetupWizard
   }
 
   const bundle: BrokerBundle = { brokerSessionKey, spendAccountId, brokerUaid: brokerIdentity.uaid };
-  const bundlePath = join(deps.bundlesDir, "broker.enc");
   const stagedBundlePath = join(deps.bundlesDir, `.broker.enc.${randomUUID()}.tmp`);
   await mkdir(deps.bundlesDir, { recursive: true });
   try {

@@ -18,6 +18,7 @@ import { withFreshMandateNonce } from "../mandate-nonce.js";
 import { ensureInteractivePurchaseReady } from "../interactive-onboarding.js";
 import { genuineCheck, ringInit, ringReady } from "../wallet-cli-ops.js";
 import { walletPassFromEnvironmentOrKeychain } from "../wallet-pass.js";
+import { fundingAmountFromMandateDraft, validateFundingAmountTinybar } from "../setup-funding.js";
 import { createRegistryClient } from "@finity/registry-client";
 import {
   FinityControlCenter,
@@ -35,6 +36,23 @@ const BLOCKED_BUILTIN_TOOLS = new Set(["bash", "write", "edit"]);
 
 function finityHome(): string {
   return process.env.FINITY_HOME ?? join(homedir(), ".finity");
+}
+
+async function setupFundingAmount(home: string, ctx: ExtensionCommandContext): Promise<string | undefined> {
+  const configured = process.env.FINITY_SETUP_FUNDING_TINYBAR;
+  if (configured !== undefined && configured !== "") return validateFundingAmountTinybar(configured);
+
+  try {
+    const draft = JSON.parse(await readFile(join(home, "mandate-draft.json"), "utf8")) as unknown;
+    const derived = fundingAmountFromMandateDraft(draft);
+    if (derived) return derived;
+  } catch {
+    // A draft is optional for standalone broker setup. Ask for an amount below.
+  }
+
+  const amount = await ctx.ui.input("Initial broker funding", "How much HBAR should your Ledger send to the new Finity Spend Account? (e.g. 2)");
+  if (!amount) return undefined;
+  return parseHbarToTinybars(amount);
 }
 
 async function walletPassFromEnv(): Promise<string> {
@@ -365,6 +383,9 @@ async function handleSetup(ctx: ExtensionCommandContext): Promise<void> {
     identityPath: join(home, "identity.json"),
     brokerId: "default",
     hostname: hostname(),
+    getFundingAmount: () => setupFundingAmount(home, ctx),
+    rpcUrl: process.env.FINITY_RPC_URL,
+    mirrorNodeUrl: process.env.FINITY_MIRROR_NODE_URL,
   });
   if (!result.ok) ctx.ui.notify(`Setup did not complete: ${result.reason}`, "error");
 }

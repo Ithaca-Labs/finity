@@ -37,7 +37,7 @@ export const FINITY_ACTIONS: Array<{ action: FinityAction; key: string; label: s
   { action: "services", key: "d", label: "View allowed services", hint: "mandate-scoped" },
   { action: "withdraw", key: "w", label: "Withdraw broker funds", hint: "to Ledger principal" },
   { action: "escalations", key: "e", label: "Review escalations", hint: "approve from Ledger" },
-  { action: "setup", key: "s", label: "Run Ledger setup", hint: "genuine check + Key Ring" },
+  { action: "setup", key: "s", label: "Run Ledger setup", hint: "fund from Ledger + Key Ring" },
   { action: "revoke", key: "v", label: "Revoke active mandate", hint: "Ledger approval" },
   { action: "kill", key: "k", label: "Toggle purchase kill switch", hint: "broker emergency stop" },
 ];
@@ -61,7 +61,7 @@ export function parseHbarToTinybars(value: string): string {
   }
   const [whole = "", fraction = ""] = normalized.split(".");
   const tinybars = BigInt(whole) * 100_000_000n + BigInt(fraction.padEnd(8, "0"));
-  if (tinybars <= 0n) throw new Error("withdrawal amount must be greater than 0 HBAR");
+  if (tinybars <= 0n) throw new Error("HBAR amount must be greater than 0");
   return tinybars.toString();
 }
 
