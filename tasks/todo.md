@@ -1,5 +1,71 @@
 # Todo
 
+## 2026-09-13 fix Ledger DMK Node runtime loading
+
+### Plan
+
+- [x] Confirm the reported failure on the current main build.
+- [x] Confirm the failure occurs before Ledger discovery.
+- [x] Inspect installed Ledger package exports.
+- [x] Inspect the failing DMK ESM entrypoint.
+- [x] Verify Node's ESM resolver rejects the package entrypoint.
+- [x] Verify the installed CommonJS DMK entrypoint loads.
+- [x] Verify the installed HID transport CommonJS entrypoint loads.
+- [x] Verify the installed Ethereum signer CommonJS entrypoint loads.
+- [x] Confirm the package versions match the pinned project versions.
+- [x] Preserve type-only imports and public Ledger APIs.
+- [x] Add a Node-compatible runtime loader seam.
+- [x] Keep Ledger module loading lazy until a hardware operation is requested.
+- [x] Preserve device discovery timeout behavior.
+- [x] Preserve disconnect and DMK cleanup behavior.
+- [x] Add regression coverage for the runtime module loader.
+- [x] Build the Pi package and CLI artifacts.
+- [x] Run the loader smoke check against compiled output.
+- [x] Run focused Ledger tests.
+- [x] Run full typecheck and tests.
+- [x] Run full lint and build.
+- [x] Run diff and secret scans.
+- [x] Review the diff for unrelated changes.
+- [x] Update verified package/runtime notes.
+- [x] Record the compatibility decision.
+- [x] Commit the focused fix.
+- [ ] Push the fix branch.
+- [ ] Open a focused PR.
+- [ ] Wait for CI.
+- [ ] Merge the PR into main.
+
+### Verification
+
+- [x] Compiled Ledger adapter loads without ESM resolution errors.
+- [x] The installed Ledger CommonJS modules load without ESM resolution errors.
+- [x] No secrets or private keys appear in output or diffs.
+- [x] Workspace checks pass.
+
+### Review
+
+#### Changed
+
+- Load the pinned Ledger runtime packages through their Node-compatible
+  CommonJS entrypoints while keeping the modules lazy.
+- Document the upstream ESM packaging incompatibility and the verified
+  workaround.
+
+#### Verified
+
+- Reproduced the native Node ESM directory-import failure.
+- DMK, HID transport, and Ethereum signer CommonJS loads passed.
+- `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint`, diff check, and
+  secret scan passed.
+
+#### Risks
+
+- This compatibility path depends on the CommonJS entrypoints remaining
+  published by the pinned Ledger packages.
+
+#### Follow-ups
+
+- Confirm the full address and mandate signing flow on the connected Ledger.
+
 ## 2026-09-13 stage broker bundle replacements
 
 ### Plan

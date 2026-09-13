@@ -224,3 +224,14 @@
   staging path, then activates it with an atomic rename to `broker.enc`.
 - Reason: wallet-cli refuses to overwrite an existing output file. Staging
   keeps the current bundle usable until the replacement has passed recovery.
+
+## ADR-018: load Ledger runtime packages through CommonJS on Node
+
+- Date: 2026-09-13
+- Decision: Keep Ledger package type imports, but load the DMK, Node HID
+  transport, and Ethereum signer at runtime with lazy `createRequire()` calls.
+- Reason: `@ledgerhq/device-management-kit@1.9.0` publishes an ESM entrypoint
+  with extensionless and directory imports. Native Node ESM rejects its
+  `./src` directory import before any Ledger operation starts. The installed
+  CommonJS entrypoints expose the same verified API and resolve correctly on
+  the supported Node runtime, so this is the smallest compatibility fix.

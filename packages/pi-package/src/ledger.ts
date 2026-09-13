@@ -1,6 +1,5 @@
-import type { DeviceActionStatus as DeviceActionStatusType, DeviceManagementKitBuilder as DeviceManagementKitBuilderType } from "@ledgerhq/device-management-kit";
-import type { nodeHidIdentifier as nodeHidIdentifierType, nodeHidTransportFactory as nodeHidTransportFactoryType } from "@ledgerhq/device-transport-kit-node-hid";
 import type { Address as LedgerAddress, SignerEthBuilder as SignerEthBuilderType, Signature, TypedData } from "@ledgerhq/device-signer-kit-ethereum";
+import { loadDeviceModules } from "./ledger-runtime.js";
 
 export class LedgerSigningError extends Error {
   constructor(
@@ -41,17 +40,8 @@ export type LedgerDeviceOptions = {
   discoveryTimeoutMs?: number;
 };
 
-type DeviceModules = Awaited<ReturnType<typeof loadDeviceModules>>;
+type DeviceModules = ReturnType<typeof loadDeviceModules>;
 type EthSigner = ReturnType<SignerEthBuilderType["build"]>;
-
-async function loadDeviceModules() {
-  const [dmkModule, transportModule, signerModule] = await Promise.all([
-    import("@ledgerhq/device-management-kit") as Promise<{ DeviceActionStatus: typeof DeviceActionStatusType; DeviceManagementKitBuilder: typeof DeviceManagementKitBuilderType }>,
-    import("@ledgerhq/device-transport-kit-node-hid") as Promise<{ nodeHidIdentifier: typeof nodeHidIdentifierType; nodeHidTransportFactory: typeof nodeHidTransportFactoryType }>,
-    import("@ledgerhq/device-signer-kit-ethereum") as Promise<{ SignerEthBuilder: typeof SignerEthBuilderType }>,
-  ]);
-  return { ...dmkModule, ...transportModule, ...signerModule };
-}
 
 async function withLedgerSigner<T>(
   options: LedgerDeviceOptions,
