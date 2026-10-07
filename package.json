@@ -10,7 +10,8 @@
     "probe:xzec": "tsx scripts/probe-xzec.ts",
     "probe:cors": "tsx scripts/probe-cors.ts",
     "probe:unit": "tsx scripts/probe-unit.ts",
-    "phase1": "tsx scripts/phase1.ts"
+    "phase1": "tsx scripts/phase1.ts",
+    "phase3": "tsx scripts/phase3.ts"
   },
   "dependencies": {
     "@nktkas/hyperliquid": "0.33.3",

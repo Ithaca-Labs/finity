@@ -67,3 +67,25 @@ Passed on replay fixtures and unit tests only. Open items:
 - Indexer: `https://testnet.zec.rocks:443` works; `lightwalletd.testnet.electriccoin.co:9067` refused; the built-in server sweep found nothing
 - Receive address: `utest10l2ehwun0ruswarh3cufm3lxsyhjwpxepskckhthsetnqz8kpkvc2tyee5d6k4e0qugup7g06qsf8uk35qen97th5fhzr23wcq343y8r`
 - Balance: 0 at height 4,475,074. Faucets `faucet.zecpages.com` and `faucet.testnet.z.cash` do not respond; `testnet.zecfaucet.com` does not resolve. Mining with zebrad was declined. Next: request ~0.2 TAZ from the community.
+
+# Phase 3 status (7 Oct 2026)
+
+| What | Evidence |
+|---|---|
+| Spot conversion module (`src/lib/hl/spot.ts`): token-ID resolution, order asset vs spotSend selector, spot price rule, book-walk quote, 10 USDC minimum, IOC with partial handling | 7 unit tests + **tx** both directions on substitute pair PURR/USDC |
+| XZEC ⇄ USDC conversion | **not demonstrated**: testnet XZEC book has no bids; planner refuses honestly |
+| Order journal (`src/lib/hl/orders.ts`): cloid journaled before send, signed `expiresAfter`, unknown/pending blocks new orders across reloads and tabs (Web Locks), duplicate-click lock, reduce-only never blocked, persistent per-account nonces | 13 unit tests + **tx** lost-response injection on testnet |
+| Reconciliation by cloid (order status + fills) incl. partial and not-landed after deadline | unit tests + **tx** |
+| Account mode → spot/perps transfer decision; builder status/approval, 10-approval limit handling, builder never attached to closes or when unapproved | unit tests + tx (approval from Phase 1b; status read live) |
+| `/trade` screen: key in memory only, balances, mode transfer, conversion quote/confirm, builder consent, BTC/ETH order review (size, leverage, margin, fee), reduce-only close, cancel, journal + fills | `next build` passes; **not exercised in a browser** |
+
+## Phase 3 gate: partially passed (7 Oct)
+
+- [x] Balances reconcile after fill, partial (unit), rejection (tx: 10 USDC minimum), timeout/lost response (tx)
+- [x] Retry after an unknown result cannot create duplicate exposure (tx + unit, including the info-lag case)
+- [x] Attributed testnet fills exist (builderFee on fills), but builder = own account: mechanics only, not revenue
+- [ ] Real XZEC conversion (no testnet liquidity)
+- [ ] `/trade` exercised in a real browser (two tabs, reload)
+- [ ] Builder = a separate team builder account with ≥100 USDC perps value
+
+New constraints learned: HL minimum order value is 10 USDC (applies to conversions both ways, so small residuals cannot be converted); spot buy fees are taken in the base token; info API can lag the exchange by >1.5 s.

@@ -1,11 +1,12 @@
 import { ExchangeClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid";
+import { ApiRequestError } from "@nktkas/hyperliquid/api/exchange";
 import type { PrivateKeyAccount } from "viem/accounts";
 import type { Network } from "../bridge/guardians";
 
-export function createHl(network: Network, wallet?: PrivateKeyAccount) {
+export function createHl(network: Network, wallet?: PrivateKeyAccount, opts?: { nonceManager?: (address: string) => number }) {
   const transport = new HttpTransport({ isTestnet: network === "testnet" });
   const info = new InfoClient({ transport });
-  const exchange = wallet ? new ExchangeClient({ transport, wallet }) : undefined;
+  const exchange = wallet ? new ExchangeClient({ transport, wallet, nonceManager: opts?.nonceManager }) : undefined;
   return { info, exchange, network };
 }
 export type Hl = ReturnType<typeof createHl>;
@@ -81,7 +82,7 @@ export async function placeIoc(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     // A transport error after submission may still have landed: caller must reconcile by cloid.
-    return /rejected|insufficient|invalid/i.test(msg) ? { kind: "rejected", cloid, error: msg } : { kind: "unknown", cloid, error: msg };
+    return e instanceof ApiRequestError ? { kind: "rejected", cloid, error: msg } : { kind: "unknown", cloid, error: msg };
   }
 }
 

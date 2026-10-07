@@ -350,11 +350,13 @@ Dates below are planning targets from 3 October, not estimates of completed work
 
 **Target:** 6–7 October.
 
-- [ ] Implement Unit token → USDC and USDC → Unit token as separate operations with price bounds and partial-fill handling.
-- [ ] Test the correct testnet token if live liquidity exists. Otherwise test conversions with controlled liquidity or fixtures and record the limitation.
-- [ ] Implement mode-dependent margin transfer and explicit builder-fee approval signed by the trading account's own key. Fund the builder account with at least 100 USDC in perps account value, in standard mode. Keep ordinary close/cancel access available if builder setup fails.
-- [ ] Add client order IDs, account-scoped nonce coordination and unknown-outcome reconciliation.
-- [ ] Finish one-perp trading UI, order review, cancellation, reduce-only close and fill evidence.
+**Status (7 Oct):** built; gate passed for HL testnet orders, not for XZEC conversion. See `docs/STATUS.md` and `docs/TEST_EVIDENCE.md`.
+
+- [x] Implement Unit token → USDC and USDC → Unit token as separate operations with price bounds and partial-fill handling. *(7 Oct: `src/lib/hl/spot.ts`; 10 USDC HL minimum enforced)*
+- [x] Test the correct testnet token if live liquidity exists. Otherwise test conversions with controlled liquidity or fixtures and record the limitation. *(7 Oct: XZEC has no bids, so it is refused; both directions filled on substitute PURR/USDC, labelled as not XZEC evidence)*
+- [x] Implement mode-dependent margin transfer and explicit builder-fee approval signed by the trading account's own key. Keep ordinary close/cancel access available if builder setup fails. *(7 Oct: builder still = own account; a separate funded builder account is open)*
+- [x] Add client order IDs, account-scoped nonce coordination and unknown-outcome reconciliation. *(7 Oct: signed `expiresAfter`; a live run caught and fixed a false "not landed" caused by info-API lag)*
+- [x] Finish one-perp trading UI, order review, cancellation, reduce-only close and fill evidence. *(7 Oct: `/trade`; builds, not yet run in a browser)*
 
 **Gate:** balances reconcile after a fill, partial fill, rejection and timeout. A retry after an unknown result cannot create duplicate exposure. Revenue evidence requires actual attributed testnet fills; fixtures do not count.
 

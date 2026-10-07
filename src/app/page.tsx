@@ -4,6 +4,7 @@ export default function Home() {
       <div style={{ background: "#fde68a", padding: 8, borderRadius: 6 }}>TESTNET PROTOTYPE: no real funds</div>
       <h1>Fund a fresh trading account from Zcash.</h1>
       <p>Keep your wallet history separate. The bridge leg, trades and return transfers stay publicly observable; this is not a confidential-positions product.</p>
+      <p><a href="/fund">Fund (testnet)</a> · <a href="/trade">Trade (testnet)</a></p>
     </main>
   );
 }

@@ -29,3 +29,26 @@ Not yet tested: `--exit` against a live position, second-machine restore, builde
 | Close | filled, cloid `0x31bfb67b5e884613ba701c33221561f6` |
 
 Caveat: builder = the trader's own account, so this proves attribution mechanics only, not revenue.
+
+## Phase 3: conversion, builder, unknown-outcome reconciliation (7 Oct 2026, `npm run phase3`)
+
+Account `0x1f20…85c0`, mode `default` (spot USDC is not perps margin, so `usdClassTransfer` is required).
+
+| Step | Result |
+|---|---|
+| Resolve official XZEC by token ID | token 1526, `@1401`, order asset 11401, spotSend selector `XZEC:0xc8e8…759d`, szDecimals 4 |
+| Plan XZEC → USDC 0.1 | **refused: no bids.** Real XZEC conversion is not demonstrated on testnet |
+| Substitute pair PURR/USDC (resolved by token ID `0xc4bf…96c2`), **not evidence for XZEC** | |
+| Buy 2 PURR (~9.25 USDC) | rejected by HL: "Order must have minimum value of 10 USDC". The planner now refuses below 10 USDC before signing |
+| Buy 3 PURR | filled 3.0 @ 4.6252, cloid `0x139058dd10365c0f16a194f09df1cd31`; **received 2.9979** (fee taken in base token) |
+| Sell back | refused by planner: 2.9979 floors to 2 PURR (szDecimals 0) = 9.16 USDC < 10 minimum |
+| Buy 3 more, then sell 5 | buy cloid `0x698f0a58650c55c63429f2a60462435c`; sell filled 5.0 @ 4.5795, cloid `0x43c77e8ed8aecae1ac6878ce3702dba4` |
+| Residual | 0.9958 PURR dust (below size step/minimum), recorded, not lost |
+| Builder status (self as builder) | approved, maxBuilderFee 50 |
+| BTC open with response **dropped after HL received it** (injected) | journaled `unknown`, cloid `0x18a91816d3a42ad8419b4ba2bd15bcb8` |
+| Second order on the account | **blocked** (`OrderBlockedError`), nothing sent |
+| Reconcile by cloid | `filled` 0.00015 @ 83305, evidence `reconciled_order_status`; builderFee 0.006247 in fills |
+| Reduce-only close | filled 0.00015 @ 83324, cloid `0xcf52f29edfef0f75c7635342014e34a0` |
+| End | perps 399.894328, 0 positions; spot USDC 95.13027175 + PURR 0.9958 |
+
+**Bug found and fixed in the first run** (cloid `0x38f32c7ec90bb145578a064fbb3da818`): reconciling ~1.5 s after submission returned `unknownOid` and no fills for an order that HAD filled, and the code marked it `not_landed`, which would have allowed a duplicate. Seconds later the same query showed it filled. Fix: every order is now signed with `expiresAfter` (20 s), and `unknownOid` stays `unknown` (blocking) until that deadline + 15 s has passed.
