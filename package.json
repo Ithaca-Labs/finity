@@ -14,18 +14,25 @@
   },
   "dependencies": {
     "@nktkas/hyperliquid": "0.33.3",
+    "@noble/hashes": "2.4.0",
+    "@scure/base": "1.2.6",
     "next": "16.4.0",
+    "qrcode": "1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "viem": "2.57.3"
   },
   "devDependencies": {
     "@types/node": "26.6.4",
+    "@types/qrcode": "1.5.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.3"
   },
-  "type": "module"
+  "type": "module",
+  "optionalDependencies": {
+    "@rolldown/binding-darwin-arm64": "1.2.12"
+  }
 }

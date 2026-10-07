@@ -22,3 +22,6 @@ Levels: **live** = observed from live API; **tx** = transaction demonstrated; **
 | `approveBuilderFee` by main key + attributed fill (builderFee field on fill) | tx | Self-as-builder test only |
 | Zcash testnet faucet `testnet.zecfaucet.com` | open | Domain does not resolve from this machine; earlier link was unverified. Source a current faucet or Zcash Discord |
 | Colosseum FAQ: 2-3 min pitch video, demo <= 3 min, hackathon ends 12 Oct | doc | Exact cutoff/timezone not on the public page; check the portal |
+| Unit testnet `/gen` returns `tm…` but `/operations` lists the same mapping as `textest1…`; both decode to the same pubkey hash | live + unit test | Testnet uses TEX too. We pay exactly what `/gen` returns and reject the mapping if `/operations` lists a different key. Open: which encoding Unit expects us to pay on testnet |
+| Guardian signatures verify for a TEX address through its P2PKH form | unit test | `src/lib/bridge/unit.test.ts` |
+| Testnet XZEC tokenId resolves to token 1526 for balance reads | live | `src/lib/hl/xzec.ts` |

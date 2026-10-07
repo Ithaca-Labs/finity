@@ -306,9 +306,9 @@ Dates below are planning targets from 3 October, not estimates of completed work
 - [ ] Replace public example addresses with team-controlled addresses before transaction testing; never fund the examples used in this research.
 - [ ] In an actual browser, verify generation/status access and any needed preflights.
 - [ ] Select a compatible Zcash testnet wallet (zcash-cli, Zingo or similar; Zodl testnet is unconfirmed) and obtain valueless test coins. Test address parsing and shielded sending.
-- [ ] Attempt one real Unit testnet deposit and, if supported, one withdrawal. Record failure bodies and operation states. Timebox; address generation alone does not mark this complete.
-- [ ] Confirm official XZEC liquidity or arrange explicitly labeled testnet liquidity if available without substantial additional work.
-- [ ] Confirm a team wallet that has deposited on mainnet exists, so it can claim faucet mock USDC.
+- [ ] *(7 Oct: blocked, no Zcash testnet coins yet)* Attempt one real Unit testnet deposit and, if supported, one withdrawal. Record failure bodies and operation states. Timebox; address generation alone does not mark this complete.
+- [ ] Confirm official XZEC liquidity or arrange explicitly labeled testnet liquidity if available without substantial additional work. *(7 Oct: XZEC, UZEC and BZEC books all empty; no liquidity arranged)*
+- [x] Confirm a team wallet that has deposited on mainnet exists, so it can claim faucet mock USDC. *(7 Oct: team wallet claimed and sent 500 mock USDC)*
 - [ ] Test Zodl's mainnet TEX/ZIP-321 handoff and return-address UI with a teammate's wallet preview; actual transfer remains later.
 - [ ] Confirm submission requirements in the current portal. Prepare a 2–3 minute pitch and a technical demo no longer than three minutes; the original five-minute plan conflicts with the current FAQ.
 
@@ -322,23 +322,27 @@ Dates below are planning targets from 3 October, not estimates of completed work
 
 **Build**
 
-- [ ] Scaffold the app, freeze network/token configuration, guardian keys and dependency versions.
-- [ ] Implement one user-controlled account. Test candidate sign-to-derive and its recovery; use the dedicated-wallet fallback if the gate fails.
-- [ ] Claim faucet mock USDC with the team wallet that has deposited on mainnet, then transfer it to the fresh testnet trading account. Record the transfer as test-only funding and record who paid activation.
-- [ ] Read balances and metadata; place and close a small BTC or ETH testnet position without builder fees first.
-- [ ] Ship the basic recovery client and nonsecret public operation journal.
+- [x] Scaffold the app, freeze network/token configuration, guardian keys and dependency versions.
+- [x] Implement one user-controlled account. Test candidate sign-to-derive and its recovery; use the dedicated-wallet fallback if the gate fails. *(7 Oct: dedicated-key fallback; sign-to-derive not built)*
+- [x] Claim faucet mock USDC with the team wallet that has deposited on mainnet, then transfer it to the fresh testnet trading account. Record the transfer as test-only funding and record who paid activation. *(7 Oct: done; activation payer still unconfirmed)*
+- [x] Read balances and metadata; place and close a small BTC or ETH testnet position without builder fees first. *(7 Oct: see docs/TEST_EVIDENCE.md)*
+- [x] Ship the basic recovery client and nonsecret public operation journal.
 
 **Gate:** a second browser restores the same account after local data loss; a teammate can read balance, close and control the remaining funds with the app server unavailable. If recovery fails, block deposit QR generation and new-risk actions. Do not wait until the post-hackathon roadmap to build recovery.
+
+**Gate status (7 Oct): passed.** From a fresh clone with no app server, the recovery client read the account (0 positions, 399.93 USDC perps, 100 USDC spot) and the key from `.env` was confirmed to control `0x1f20…85c0`. `--exit` was shown closing a live position in Phase 1b. Known gap: the code expects `TRADING_PRIVATE_KEY` in `.env.local`, but the key is stored as `TESTNET_TRADING_PRIVATE_KEY` in `.env`.
 
 ### Phase 2 — Funding and bridge status, using the selected lane
 
 **Target:** 5–6 October.
 
-- [ ] Implement Unit address generation, 2-of-3 guardian checks bound to the address against pinned keys, network/address-type parsing, fees, minimum enforcement and operation states.
-- [ ] Implement ZIP-321 QR with a network check, plus address-copy fallback in the chosen wallet.
+**Status (7 Oct):** built and unit-tested on replay fixtures; the gate is met only for the fixture lane. **Gate not yet passed:** a real testnet deposit is blocked on Zcash testnet coins (team zingo-cli testnet wallet created, balance 0; faucets down), and `/fund` has not been run in a browser.
+
+- [x] Implement Unit address generation, 2-of-3 guardian checks bound to the address against pinned keys, network/address-type parsing, fees, minimum enforcement and operation states. *(7 Oct: `src/lib/bridge/unit.ts`, `funding.ts`, `src/lib/zcash/address.ts`)*
+- [x] Implement ZIP-321 QR with a network check, plus address-copy fallback in the chosen wallet. *(7 Oct: `/fund`; not yet scanned by a real wallet)*
 - [ ] Follow a real testnet deposit if the Phase 0 lane settled successfully.
-- [ ] Where necessary, implement small replay fixtures for absent responses, delays (including the ~125-minute confirmation window), failures and partial states. Label the fixture lane on every relevant screen.
-- [ ] Confirm funds by token balance and operation evidence; deduplicate deposits by actual transaction/output identity.
+- [x] Where necessary, implement small replay fixtures for absent responses, delays (including the ~125-minute confirmation window), failures and partial states. Label the fixture lane on every relevant screen.
+- [x] Confirm funds by token balance and operation evidence; deduplicate deposits by actual transaction/output identity. *(7 Oct: unit tests only; no real deposit yet)*
 
 **Gate:** the UI shows the correct funding state after a reload, preserves existing operations after provider errors, and cannot suggest a second deposit because polling failed. Only a real settlement trace is labeled bridge-demonstrated.
 

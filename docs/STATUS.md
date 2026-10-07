@@ -37,3 +37,33 @@ Labels follow the PRD: **tx** = real testnet transaction, **live** = live API ob
 
 ## Secrets
 The testnet-only private key is in `.env.local`, which is gitignored and not committed.
+
+# Phase 2 status (7 Oct 2026)
+
+| What | Evidence |
+|---|---|
+| Zcash address parsing (t1/t3/tm/t2, TEX, sapling, unified), checksum, network check; TEX↔P2PKH | 7 unit tests, incl. the live tm/textest pair |
+| ZIP-321 URI with wrong-network rejection, exact zatoshi amounts | unit tests |
+| Unit adapter: verified address (2-of-3, pinned keys, TEX via P2PKH), mapping cross-check, live fees, 0.07 ZEC + fee floor, 2 ZEC pilot cap | unit tests + live fee read |
+| Funding state: dedupe by source tx, ops never dropped, poll errors keep state and hide the payment request, done needs token balance | 8 unit tests |
+| Replay adapter (testnet-only, labelled; real captured signatures, synthetic operations) | unit tests |
+| `/fund` screen: lane select, recovery + consent gates, QR, polling, persisted record | `next build` passes; **not exercised in a browser** |
+
+Not tested: real deposit (no testnet ZEC), browser CORS from the page, wallet scanning the QR, reload behaviour in a real browser.
+Tooling note: the lockfile was missing rolldown's native binding (vitest failed on macOS); `@rolldown/binding-darwin-arm64` is now an optional dep.
+
+## Phase 2 gate: NOT fully passed (7 Oct)
+
+Passed on replay fixtures and unit tests only. Open items:
+- [ ] Real Unit testnet deposit followed to XZEC (blocked: no testnet ZEC)
+- [ ] `/fund` exercised in a real browser: CORS, reload, provider-error behaviour
+- [ ] A real wallet scans the ZIP-321 QR
+- [ ] Which encoding Unit expects us to pay on testnet (`tm…` vs `textest1…`)
+
+## Team Zcash testnet wallet
+
+- Tool: zingo-cli 0.1.1 (Rust light wallet), binary at `~/Desktop/tyr/.tools/bin/zingo-cli`; this build skips the mixnet, so the indexer sees our IP (testnet only)
+- Data: `.zcash-testnet-wallet/` (gitignored; seed never printed or committed)
+- Indexer: `https://testnet.zec.rocks:443` works; `lightwalletd.testnet.electriccoin.co:9067` refused; the built-in server sweep found nothing
+- Receive address: `utest10l2ehwun0ruswarh3cufm3lxsyhjwpxepskckhthsetnqz8kpkvc2tyee5d6k4e0qugup7g06qsf8uk35qen97th5fhzr23wcq343y8r`
+- Balance: 0 at height 4,475,074. Faucets `faucet.zecpages.com` and `faucet.testnet.z.cash` do not respond; `testnet.zecfaucet.com` does not resolve. Mining with zebrad was declined. Next: request ~0.2 TAZ from the community.
