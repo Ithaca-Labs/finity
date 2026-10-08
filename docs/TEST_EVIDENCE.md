@@ -52,3 +52,48 @@ Account `0x1f20…85c0`, mode `default` (spot USDC is not perps margin, so `usdC
 | End | perps 399.894328, 0 positions; spot USDC 95.13027175 + PURR 0.9958 |
 
 **Bug found and fixed in the first run** (cloid `0x38f32c7ec90bb145578a064fbb3da818`): reconciling ~1.5 s after submission returned `unknownOid` and no fills for an order that HAD filled, and the code marked it `not_landed`, which would have allowed a duplicate. Seconds later the same query showed it filled. Fix: every order is now signed with `expiresAfter` (20 s), and `unknownOid` stays `unknown` (blocking) until that deadline + 15 s has passed.
+
+## Phase 4: return leg and recovery under failure (8 Oct 2026)
+
+Run: `npx tsx scripts/phase4.ts` (and `scripts/phase4-withdraw.ts`, `scripts/account-balances.ts`).
+
+### A. Unit withdrawal address generation
+| Network | Destination encodings tried | Result |
+|---|---|---|
+| testnet | `tm…`, `textest1…`, `t1…` | HTTP 400 `address failed verification` for all three. Also 400 for a unified address. Real testnet return is not possible. |
+| mainnet | `tm…`, `textest1…` | HTTP 400 (wrong network) |
+| mainnet | `t1…` (probe-only address, never funded) | HTTP 200, protocol address `0x4E6091f91c8174466337E09F79b37056B150c3a1`, **3 of 3 guardians verify** |
+
+Guardian payload for a withdrawal: `nodeId:user-ethereum-zcash-<zcash destination>-<hl protocol address>` (`coinType = "ethereum"`),
+found by search; not stated in Unit's docs. Nothing was sent to the protocol address.
+
+### B. Transfer journal against real Hyperliquid testnet
+| Step | Result |
+|---|---|
+| Journal, then real `spotSend` of 1 USDC to a second throwaway testnet account; response deliberately discarded | state `unknown`, signed nonce `1791447174436`, account blocked |
+| Second send attempted | refused (`TransferBlockedError`) |
+| All local storage wiped; journal entry re-imported | state restored from the exported nonsecret record |
+| `reconcileTransfer` against `userNonFundingLedgerUpdates` | **found by nonce**: state `sent`, evidence `reconciled_ledger`, hash `0x6cb7207d8170603c6e30042b30065b0000f238631c737f0e107fcbd040743a27` |
+| Funds moved exactly once | sender spot 95.13027175 -> 93.13027175 (1 amount + **1.0 USDC fee**), receiver 0 -> 1 |
+
+Fee finding: Hyperliquid charged the **sender** 1.0 USDC to send to a new account. The ledger entry that funded the trading
+account shows the same: 500.0 delivered, `fee: 1.0` paid by the team wallet. **Activation payer = sender**, closing the open item.
+
+### C. Alternate USDC route (HL bridge withdrawal)
+`withdraw3` to the account's own address returned `Error withdrawing from bridge` at 5, 10 and 50 USDC; nothing appeared in the
+ledger and `withdrawable` was unchanged. **Attempt failed**; the route is labelled `attempt_failed` and is not advertised.
+
+### D. Account reconciliation (`scripts/account-balances.ts`)
+Trading account: received 500 (sender paid a 1.0 fee), sent 1 (+1.0 fee), perp PnL 0.00676, perp fees 0.112432, spot USDC flow -4.8537,
+spot fee 0.016028. Expected 493.024600, actual spot 93.13027175 + perps 399.894328 = 493.024600. **USDC unexplained: 0.000000**
+(the self-builder fee of 0.024595 is paid to the same account, so it nets to zero). Receiver holds 1.0 USDC.
+**Not accounted for:** the Phase 3 PURR test trades imply about 0.9958 PURR (~4.6 testnet USDC) still held, but the spot balance
+shows no PURR. Cause not found. It is test money, but the gate "every balance accounted" is therefore not fully met for PURR.
+
+### E. Automated failure injection (`npm test`, `src/lib/bridge/withdraw.test.ts`)
+Journal-before-send; timeout leaves `unknown` and blocks a second send; exchange rejection is final and does not block; two
+concurrent clicks send once; fresh increasing nonces; self-send refused; reconcile after storage wipe; ledger entries with a
+different nonce/destination/sender are ignored; provider 503 leaves the record unknown and blocking; override only after the
+settling period and recorded; broken or missing storage does not crash reads; tampered protocol address, destination or fewer than
+2 guardian signatures rejected; shielded/unified/TEX/wrong-network destinations refused; below-minimum, over-balance and
+fee-eats-amount cases; shielding labels cannot reach "wallet confirmed" without wallet evidence.

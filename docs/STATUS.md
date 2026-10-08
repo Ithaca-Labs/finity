@@ -89,3 +89,43 @@ Passed on replay fixtures and unit tests only. Open items:
 - [ ] Builder = a separate team builder account with ≥100 USDC perps value
 
 New constraints learned: HL minimum order value is 10 USDC (applies to conversions both ways, so small residuals cannot be converted); spot buy fees are taken in the base token; info API can lag the exchange by >1.5 s.
+
+---
+
+# Phase 4 status: return and recovery under failure (8 Oct 2026)
+
+## Tested
+
+| What | Evidence | How to reproduce |
+|---|---|---|
+| Unit withdrawal address generation and 2-of-3 guardian verification, mainnet `t1` destination (probe address, nothing sent) | live + unit tests | `npx tsx scripts/phase4.ts` |
+| Guardian payload for withdrawals (`user-ethereum-zcash-…`), absent from Unit's docs | live | `scripts/probe-withdraw-sig.ts` |
+| Tampered protocol address, destination, own-account, <2 signatures, wrong network all rejected | 6 unit tests | `npm test` |
+| Return destination rules: transparent only; shielded, unified, TEX, wrong network, bad checksum refused | unit tests | `npm test` |
+| Return planning: 0.07 ZEC minimum, fee, exact net and residual, leftover-stranding warning, over-balance, fee-eats-amount | unit tests | `npm test` |
+| Below-minimum residual shown with four recovery options, each labelled by evidence | unit tests + `/return` replay | `/return` |
+| Shielding labels: "you marked", "transparent output spent" and "wallet confirmed" are distinct; the last needs wallet evidence | unit tests | `npm test` |
+| Spot-send journal against real HL: journal-first, lost response, blocked second send, storage wiped, recovered from the ledger by signed nonce, funds moved once | tx | `npx tsx scripts/phase4.ts`, step B |
+| Concurrent clicks send once; rejection is final; timeout blocks; provider 503 keeps the record blocking; override recorded and delayed | unit tests | `npm test` |
+| Sender pays a 1.0 USDC fee when sending to a new account (activation payer) | live ledger | step B, and the 500 USDC funding entry |
+| USDC reconciliation of the trading account: 0.000000 unexplained | live | `scripts/account-balances.ts` |
+| `/return` page builds and renders; replay scenarios derive their labelled states | build + unit test | `npm run build` |
+
+## Not tested, and why
+
+| What | Why |
+|---|---|
+| A real testnet return to Zcash | Unit's testnet rejects every Zcash destination for withdrawals (HTTP 400), and the XZEC book is empty. Not possible today. |
+| Sending the Unit token to a real Unit protocol address | The send path is only exercised against a throwaway account. No mainnet transfer was made, by design. |
+| HL USDC bridge withdrawal as a fallback | Tried at 5, 10, 50 USDC on testnet: "Error withdrawing from bridge". It is marked attempt failed and must not be advertised. |
+| Below-minimum residual with a real balance | There is no real XZEC balance, so the residual case uses fixtures and unit tests. |
+| Unit withdrawal confirmations (2,000 or 5,000) | Needs a real mainnet withdrawal. |
+| Wallet-confirmed shielding | No wallet integration. The state exists but only a replay can reach it. |
+| Real browser clearing of localStorage and closing tabs | Wipe and reload are simulated in unit tests and in the Node script, not in a browser. |
+| Two real browser tabs racing | The in-tab lock is tested; the cross-tab Web Lock path is not run in a real browser. |
+| ~0.9958 PURR from the Phase 3 spot tests | Fills imply it is held; the spot balance shows none. Cause not found (about 4.6 testnet USDC). |
+| Phase 4 gate "every balance accounted for" | Met for USDC; not met for the PURR remainder above. |
+
+## Notes
+- `package-lock.json` is regenerated: `npm ci` failed against the committed lock.
+- The receiver account's key is in the gitignored `.env.local`; it holds 1 testnet USDC.

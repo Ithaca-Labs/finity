@@ -25,3 +25,11 @@ Levels: **live** = observed from live API; **tx** = transaction demonstrated; **
 | Unit testnet `/gen` returns `tm…` but `/operations` lists the same mapping as `textest1…`; both decode to the same pubkey hash | live + unit test | Testnet uses TEX too. We pay exactly what `/gen` returns and reject the mapping if `/operations` lists a different key. Open: which encoding Unit expects us to pay on testnet |
 | Guardian signatures verify for a TEX address through its P2PKH form | unit test | `src/lib/bridge/unit.test.ts` |
 | Testnet XZEC tokenId resolves to token 1526 for balance reads | live | `src/lib/hl/xzec.ts` |
+| Unit withdrawal address generation, mainnet `t1…` destination: 200 with a Unit-derived HL address, 3/3 guardians verify | live | payload `user-ethereum-zcash-<dest>-<addr>`; probe address only, nothing sent |
+| Unit testnet withdrawal generation rejects `tm`, `textest`, `t1` and unified destinations (HTTP 400 `address failed verification`) | live | Real testnet return is not possible today |
+| Real testnet XZEC return | open | Blocked by the two rows above and by an empty XZEC book |
+| Spot send journal: unknown outcome recovered from HL ledger by signed nonce after storage wipe | tx | TEST_EVIDENCE.md Phase 4 B |
+| HL charges the SENDER 1.0 USDC when sending to a new account (activation fee payer) | live ledger | closes the activation-payer open item for the testnet funding path |
+| HL USDC bridge withdrawal (`withdraw3`) on testnet | attempt failed | "Error withdrawing from bridge" at 5, 10, 50 USDC |
+| Unit withdrawal confirmations: 5,000 (lifecycle page) versus 2,000 (overview) | open | Needs a real mainnet withdrawal |
+| Account reconciliation: USDC 0.000000 unexplained; ~0.9958 PURR from Phase 3 tests unlocated | live | TEST_EVIDENCE.md Phase 4 D |
