@@ -1,4 +1,4 @@
-# Evidence ledger (updated 7 Oct 2026)
+# Evidence ledger (updated 8 Oct 2026)
 
 Levels: **live** = observed from live API; **tx** = transaction demonstrated; **doc** = documented only; **open** = unresolved.
 
@@ -14,7 +14,12 @@ Levels: **live** = observed from live API; **tx** = transaction demonstrated; **
 | Testnet ZEC perp `isDelisted: true`, max leverage 3 | live | Testnet trading uses BTC/ETH |
 | HL testnet account: spot USDC arrives as spot; `userAbstraction = default`, so spot→perps transfer is required | live | See TEST_EVIDENCE.md |
 | Real testnet BTC open + reduce-only close with cloids | tx | See TEST_EVIDENCE.md |
-| Unit testnet withdrawal works | open | Not tested |
+| Unit `/gen/hyperliquid/zcash/zec/<t-addr>` returns an HL `0x…` address with 3 guardian signatures, on mainnet (`t1…`) and testnet (`tm…`) | live, 8 Oct | `scripts/probe-withdraw.ts`; captures in `src/lib/bridge/returns.test.ts` |
+| **Withdrawal payload is `nodeId:user-ethereum-zcash-<zcashDest>-<unitHlAddr>`** (`coinType = "ethereum"`, not `"zcash"`) | live + unit tests | 3/3 on both networks; `zcash`/`hyperliquid`/legacy payloads verify 0/3 |
+| The earlier testnet withdrawal HTTP 400s were caused by the destination, not an outage | live | Unit's own deposit address (`tm…` and `textest1…`) → `400 address failed verification`; a fresh `tm…` → 200. A mainnet `t1…` on testnet → 400 |
+| Unit testnet withdrawal actually delivers ZEC | open | Needs XZEC on HL first (blocked on a testnet deposit) |
+| Return minimum (0.07 ZEC) applies to withdrawals | open | Documented for deposits only; the app applies it to returns conservatively |
+| HL `userNonFundingLedgerUpdates` records each `spotSend` as `spotTransfer` with its `nonce` | live | Used to reconcile an unknown return send; a 1 USDC fee was charged on the first send to a new address |
 | Real Unit testnet deposit settles to XZEC | open | Needs Zcash testnet coins |
 | Activation fee payer for the new account | open | Spot balance arrived as exactly 500.0, no visible deduction; payer unconfirmed |
 | Zodl testnet / TEX handoff | open | Needs a human with the app |

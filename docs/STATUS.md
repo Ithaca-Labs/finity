@@ -89,3 +89,23 @@ Passed on replay fixtures and unit tests only. Open items:
 - [ ] Builder = a separate team builder account with ≥100 USDC perps value
 
 New constraints learned: HL minimum order value is 10 USDC (applies to conversions both ways, so small residuals cannot be converted); spot buy fees are taken in the base token; info API can lag the exchange by >1.5 s.
+
+# Phase 4 status (8 Oct 2026)
+
+| What | Evidence |
+|---|---|
+| Unit return route (`src/lib/bridge/returns.ts`): transparent P2PKH destination only, network check, guardian 2-of-3 on the withdrawal payload (`coinType "ethereum"`) | live mainnet + testnet captures, unit tests |
+| Testnet return address generation works for fresh `tm…` destinations (earlier 400s were from reusing Unit's own address) | live, `scripts/probe-withdraw.ts` |
+| Return plan: whole free balance, truncated to token decimals, 0.07 ZEC floor, net of live outbound fee; residual options (only tested routes called working) | unit tests |
+| Return send journaled before signing; unknown/pending blocks resend; ledger reconciliation by nonce; 10 min "not landed" wait | unit tests |
+| Return states incl. `delivered_transparent` ("open the wallet and shield") and `user_marked_shielded`; Unit failure → manual recovery | unit tests |
+| Balance accounting (user control / bridge op / residual / manual recovery / unaccounted) | unit tests; live read via recovery client |
+| `/return` screen; recovery client now lists Unit operations | `next build`; recovery read run live (0 ops, 399.89 perps + 93.13 spot USDC) |
+| `docs/RUNBOOK.md` | — |
+
+## Phase 4 gate: NOT passed for the real route (8 Oct)
+- [x] Every current test balance is accounted for (all `user_control`; no bridge ops, no residuals)
+- [x] Below-minimum residual case demonstrated (unit tests; no live XZEC to show it on-chain)
+- [ ] A real Unit return sent and delivered (blocked: no XZEC on HL because no testnet deposit settled)
+- [x] Storage clearing, tab closure (crash-pending), two tabs, stale reads and Unit/HL outages exercised in headless Chromium against live testnet APIs (9 Oct, `scripts/e2e-browser.mjs`, 21/21). Also closes the Phase 2/3 "not run in a browser" items for read paths and browser CORS
+- [x] Cleared-storage gap fixed: HL ledger pre-check before every return send

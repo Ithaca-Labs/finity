@@ -364,11 +364,13 @@ Dates below are planning targets from 3 October, not estimates of completed work
 
 **Target:** 7–8 October.
 
-- [ ] Implement the chosen testnet return lane or display its documented limitation.
-- [ ] Verify the return destination, spot-transfer token selector, net amount and route minimum.
-- [ ] Add "Delivered to wallet — shield in wallet" instructions and evidence-specific shielding statuses.
-- [ ] Demonstrate the below-minimum residual case. Provide a balance-controlled recovery plan; any alternate USDC withdrawal route must itself be tested before advertised as functional.
-- [ ] Test clearing local storage, tab closure, stale reads and provider failure at each money transition.
+**Status (8 Oct):** built and unit-tested; the real return is blocked behind the same missing testnet deposit. See `docs/STATUS.md` and `docs/RUNBOOK.md`.
+
+- [x] Implement the chosen testnet return lane or display its documented limitation. *(8 Oct: live Unit testnet lane; `/return` states that no real return has been sent)*
+- [x] Verify the return destination, spot-transfer token selector, net amount and route minimum. *(8 Oct: withdrawal guardian payload uses `coinType "ethereum"`, verified 3/3 live on both networks; earlier testnet 400s were from reusing Unit's own address)*
+- [x] Add "Delivered to wallet — shield in wallet" instructions and evidence-specific shielding statuses.
+- [x] Demonstrate the below-minimum residual case. Provide a balance-controlled recovery plan; any alternate USDC withdrawal route must itself be tested before advertised as functional. *(8 Oct: unit tests only; no USDC withdrawal route offered)*
+- [x] Test clearing local storage, tab closure, stale reads and provider failure at each money transition. *(9 Oct: unit tests per transition + 21 headless-browser checks on live testnet APIs; no signing in the browser)*
 
 **Gate:** every test balance is accounted for, either available under user control, in a recorded bridge operation, or in a known residual/manual-recovery state. A return simulator or fixture does not imply a working Unit return.
 

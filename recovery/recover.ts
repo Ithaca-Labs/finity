@@ -15,6 +15,13 @@ if (account && account.address.toLowerCase() !== user.toLowerCase()) throw new E
 const hl = createHl(net, account);
 
 console.log(`[${net}] balances for ${user}:`, JSON.stringify(await getBalances(hl, user), null, 1));
+// Unit operations (deposits and returns) for this account: shows funds that are inside the bridge.
+try {
+  const r = await fetch(`${net === "mainnet" ? "https://api.hyperunit.xyz" : "https://api.hyperunit-testnet.xyz"}/operations/${user}`);
+  const ops = ((await r.json()).operations ?? []) as any[];
+  console.log(`Unit operations: ${ops.length}`);
+  for (const o of ops) console.log(` ${o.sourceChain}->${o.destinationChain} ${o.sourceAmount ?? "?"} ${o.state} src=${o.sourceTxHash ?? "-"} dst=${o.destinationTxHash ?? "-"} to=${o.destinationAddress}`);
+} catch (e) { console.log("Unit operations unavailable (this does not mean there are none):", e instanceof Error ? e.message : e); }
 const open = await hl.info.openOrders({ user });
 console.log("open orders:", open.length);
 if (exiting) {
