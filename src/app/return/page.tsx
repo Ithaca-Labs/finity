@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { privateKeyToAccount } from "viem/accounts";
 import type { Network } from "@/lib/bridge/guardians";
-import { createHl, type Hl } from "@/lib/hl/client";
-import { persistentNonceManager } from "@/lib/hl/orders";
+import { createHl } from "@/lib/hl/client";
+import { useAccount } from "@/lib/account/use-account";
+import { AccountPanel } from "../account-panel";
 import { availableSpot, resolveSpot, type SpotMarket } from "@/lib/hl/spot";
 import { UNIT_ZEC_TOKEN_ID } from "@/lib/hl/xzec";
 import { UnitBridgeAdapter, type ZcashFees } from "@/lib/bridge/unit";
@@ -25,12 +25,14 @@ const mono: React.CSSProperties = { fontFamily: "var(--font-mono), monospace", f
 type Snap = { perps: any; spot: any[]; openOrders: any[]; weiDecimals: number; mid: number | null };
 
 export default function Return() {
-  const [key, setKey] = useState(""); // memory only
-  const [readAddr, setReadAddr] = useState("0x1f20B96A9fde5218ED05A212B2d23093100785c0");
-  const signer = useMemo(() => { try { return /^0x[0-9a-fA-F]{64}$/.test(key) ? privateKeyToAccount(key as `0x${string}`) : undefined; } catch { return undefined; } }, [key]);
-  const user = (signer?.address ?? readAddr) as `0x${string}`;
-  const valid = /^0x[0-9a-fA-F]{40}$/.test(user);
-  const hl: Hl = useMemo(() => createHl(NETWORK, signer, { nonceManager: persistentNonceManager(kv()) }), [signer]);
+  const acct = useAccount(NETWORK);
+  const c = acct.clients;
+  const signer = !!c;
+  const user = (c?.address ?? "0x0000000000000000000000000000000000000000") as `0x${string}`;
+  const valid = !!c;
+  // Returns move funds, so they are signed by the account key, never the trading key.
+  const readOnly = useMemo(() => createHl(NETWORK), []);
+  const hl = c?.owner ?? readOnly;
 
   const [mkt, setMkt] = useState<SpotMarket | null>(null);
   const [fees, setFees] = useState<ZcashFees | null>(null);
@@ -94,11 +96,7 @@ export default function Return() {
       </div>
       <h1>Return to Zcash</h1>
 
-      <section className="panel">
-        <p><label>Trading key (memory only)<br /><input type="password" autoComplete="off" style={{ width: "100%", ...mono }} value={key} onChange={(e) => setKey(e.target.value.trim())} placeholder="0x… (empty = read-only)" /></label></p>
-        {!signer && <p><label>Read-only address<br /><input style={{ width: "100%", ...mono }} value={readAddr} onChange={(e) => setReadAddr(e.target.value.trim())} /></label></p>}
-        <p className="mono">Account {user} {signer ? "(can sign)" : "(read-only)"}</p>
-      </section>
+      <AccountPanel acct={acct} />
       {err && <div className="note bad">{err}</div>}
 
       <section className="panel">

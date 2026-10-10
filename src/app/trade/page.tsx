@@ -1,12 +1,13 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { privateKeyToAccount } from "viem/accounts";
 import type { Network } from "@/lib/bridge/guardians";
-import { createHl, formatPerpPrice, formatSize, type Hl } from "@/lib/hl/client";
-import { OrderBlockedError, OrderLedger, notLandedAfter, persistentNonceManager, reconcileOrder, submitIoc, type OrderRecord } from "@/lib/hl/orders";
+import { createHl, formatPerpPrice, formatSize } from "@/lib/hl/client";
+import { OrderBlockedError, OrderLedger, notLandedAfter, reconcileOrder, submitIoc, type OrderRecord } from "@/lib/hl/orders";
 import { executeConversion, planConversion, resolveSpot, availableSpot, type ConversionPlan, type SpotMarket } from "@/lib/hl/spot";
 import { approveBuilder, BUILDER_FEE, builderForOrder, builderStatus, needsClassTransfer, readAccountMode, type BuilderStatus } from "@/lib/hl/account";
 import { UNIT_ZEC_TOKEN_ID } from "@/lib/hl/xzec";
+import { useAccount } from "@/lib/account/use-account";
+import { AccountPanel } from "../account-panel";
 
 const NETWORK: Network = "testnet"; // ZEC perp is delisted on testnet; BTC/ETH only
 const PERPS = ["BTC", "ETH"];
@@ -21,17 +22,15 @@ type Snapshot = {
 };
 
 export default function Trade() {
-  const [key, setKey] = useState(""); // dedicated testnet key, memory only: never persisted or logged
-  const [readAddr, setReadAddr] = useState("0x1f20B96A9fde5218ED05A212B2d23093100785c0");
-  const signer = useMemo(() => { try { return /^0x[0-9a-fA-F]{64}$/.test(key) ? privateKeyToAccount(key as `0x${string}`) : undefined; } catch { return undefined; } }, [key]);
-  // Server-held testnet key (/api/trade): lets the page trade without pasting a key.
-  const [serverAddr, setServerAddr] = useState<`0x${string}` | null>(null);
-  useEffect(() => { fetch("/api/trade").then((r) => (r.ok ? r.json() : null)).then((j) => j && setServerAddr(j.address)).catch(() => {}); }, []);
-  const viaServer = !signer && !!serverAddr;
-  const canTrade = !!signer || viaServer;
-  const user = (signer?.address ?? serverAddr ?? readAddr) as `0x${string}`;
-  const valid = /^0x[0-9a-fA-F]{40}$/.test(user);
-  const hl: Hl = useMemo(() => createHl(NETWORK, signer, { nonceManager: persistentNonceManager(kv()) }), [signer]);
+  const acct = useAccount(NETWORK);
+  const c = acct.clients;
+  const canTrade = !!c;
+  const user = (c?.address ?? "0x0000000000000000000000000000000000000000") as `0x${string}`;
+  const valid = !!c;
+  // Orders are signed by the trading key (agent); transfers and approvals by the account key.
+  const readOnly = useMemo(() => createHl(NETWORK), []);
+  const hl = c?.trader ?? readOnly;
+  const owner = c?.owner;
   const ledger = useMemo(() => new OrderLedger(kv(), NETWORK, user), [user]);
 
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -78,15 +77,11 @@ export default function Trade() {
   const feeRate = (snap?.takerRate ?? 0) + (builderAttach ? BUILDER_FEE.f / 1e5 : 0);
   const boundPx = m ? formatPerpPrice(mid * (side === "long" ? 1 + Number(slip) : 1 - Number(slip)), m.szDecimals) : "0";
   const levN = Math.max(1, Math.min(Number(lev) || 1, m?.maxLeverage ?? 1));
-  const orderProblem = !canTrade ? "Unlock with the trading key to place orders" : !m || m.isDelisted ? `${coin} not tradable on ${NETWORK}`
+  const orderProblem = !canTrade ? "Create your account first" : !m || m.isDelisted ? `${coin} not tradable on ${NETWORK}`
     : Number(size) <= 0 ? "Size rounds to 0" : notional < 10 ? "Hyperliquid minimum order value is 10 USDC" : blocking ? "Reconcile the unknown order first" : null;
 
   const placeOrder = () => act(async () => {
-    if (viaServer) {
-      await serverTrade({ action: "open", coin, side, usd: notional, leverage: levN, slippage: Number(slip) });
-      setReview(false);
-      return;
-    }
+    await acct.ensureTrading();
     await hl.exchange!.updateLeverage({ asset: assetIndex, isCross: true, leverage: levN });
     await submitIoc(hl.exchange!, ledger, NETWORK, user, {
       label: `${coin} ${side} open`, asset: assetIndex, isBuy: side === "long", size, px: boundPx, builder: builderAttach,
@@ -95,23 +90,13 @@ export default function Trade() {
   });
 
   const closePos = (p: any) => act(async () => {
-    if (viaServer) { await serverTrade({ action: "close", coin: p.coin }); return; }
+    await acct.ensureTrading();
     const idx = snap!.meta.findIndex((u) => u.name === p.coin);
     const szi = Number(p.szi);
     const px = formatPerpPrice(Number(snap!.mids[p.coin]) * (szi < 0 ? 1.05 : 0.95), snap!.meta[idx].szDecimals);
     // No builder on closes: a revoked or failed approval must never prevent exiting.
     await submitIoc(hl.exchange!, ledger, NETWORK, user, { label: `${p.coin} reduce-only close`, asset: idx, isBuy: szi < 0, size: String(Math.abs(szi)), px, reduceOnly: true });
   });
-
-  const [lastServer, setLastServer] = useState<string | null>(null);
-  async function serverTrade(body: Record<string, unknown>) {
-    const res = await fetch("/api/trade", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    const j = await res.json();
-    if (!res.ok) throw new Error(j.error ?? `Server signer failed (${res.status})`);
-    const o = j.outcome;
-    if (o.kind === "rejected" || o.kind === "unknown") throw new Error(`Order ${o.kind}: ${o.error} (cloid ${o.cloid})`);
-    setLastServer(o.kind === "filled" ? `${body.action} ${body.coin}: filled ${o.totalSz} @ ${o.avgPx}` : `${body.action} ${body.coin}: ${o.kind}`);
-  }
 
   const reconcile = (o: OrderRecord) => act(() => reconcileOrder(hl.info, ledger, user, o.cloid));
 
@@ -140,16 +125,8 @@ export default function Trade() {
       <div className="note warn">TESTNET PROTOTYPE: mock USDC only. The ZEC perp is delisted on testnet, so trading uses BTC/ETH.</div>
       <h1>Trade</h1>
 
-      <section className="panel">
-        <p><label>Trading key (dedicated testnet account; kept in this tab&apos;s memory only)<br />
-          <input type="password" autoComplete="off" style={{ width: "100%", ...mono }} value={key} onChange={(e) => setKey(e.target.value.trim())} placeholder="0x… (leave empty for read-only)" /></label></p>
-        {!signer && !serverAddr && <p><label>Read-only address<br /><input style={{ width: "100%", ...mono }} value={readAddr} onChange={(e) => setReadAddr(e.target.value.trim())} /></label></p>}
-        <p className="mono">Account {user} {signer ? "(can sign)" : viaServer ? "(server testnet signer)" : "(read-only)"}; mode: {snap?.mode ?? "…"}</p>
-        <p style={{ fontSize: 13 }}>If this site is unavailable, the recovery client can still read, cancel and reduce-only close: <code>recovery/recover.ts</code>.</p>
-      </section>
-
+      <AccountPanel acct={acct} />
       {err && <div className="note bad">{err}</div>}
-      {lastServer && !err && <div className="note ok">{lastServer}</div>}
       {blocking && (
         <div className="note bad">
           <b>Order outcome unknown:</b> {blocking.label} ({blocking.cloid}). New orders are paused until it is reconciled; closing stays available.
@@ -166,8 +143,8 @@ export default function Trade() {
         {needsClassTransfer(snap.mode as any) ? (<p>
           Account mode &quot;{snap.mode}&quot;: spot USDC is not perps margin. Move{" "}
           <input size={8} value={moveAmt} onChange={(e) => setMoveAmt(e.target.value.trim())} placeholder={String(spotUsdc)} /> USDC spot → perps{" "}
-          <button disabled={!signer || busy || !(Number(moveAmt) > 0 && Number(moveAmt) <= spotUsdc)}
-            onClick={() => confirm(`Move ${moveAmt} USDC from spot to perps?`) && act(() => hl.exchange!.usdClassTransfer({ amount: moveAmt, toPerp: true }))}>Move</button>
+          <button disabled={!canTrade || busy || !(Number(moveAmt) > 0 && Number(moveAmt) <= spotUsdc)}
+            onClick={() => confirm(`Move ${moveAmt} USDC from spot to perps?`) && act(() => owner!.exchange!.usdClassTransfer({ amount: moveAmt, toPerp: true }))}>Move</button>
         </p>) : <p>Account mode &quot;{snap.mode}&quot;: spot USDC already counts as margin; no transfer needed.</p>}
       </section>)}
 
@@ -185,7 +162,7 @@ export default function Trade() {
           <p>Best {plan.quote.bestPx}, limit {plan.quote.boundPx} ({Number(slip) * 100}% bound). Visible book fills ~{plan.quote.estFillSz} of {plan.size} at avg ~{plan.quote.estAvgPx.toFixed(4)} (≈{plan.quote.estQuote.toFixed(2)} USDC).
             {plan.quote.partialExpected && <b> Expect a partial fill; the rest stays as {plan.market.base.name}.</b>}</p>
           <p style={{ fontSize: 13 }}>IOC: whatever does not fill inside the limit is cancelled, not retried at a worse price. Balances are re-read after the fill.</p>
-          <button disabled={!signer || busy || !!blocking} onClick={() => act(async () => { await executeConversion(hl, ledger, NETWORK, user, plan); setPlan(null); })}>Confirm conversion</button>
+          <button disabled={!canTrade || busy || !!blocking} onClick={() => act(async () => { await acct.ensureTrading(); await executeConversion(hl, ledger, NETWORK, user, plan); setPlan(null); })}>Confirm conversion</button>
         </div>)}
       </section>
 
@@ -196,8 +173,8 @@ export default function Trade() {
           : (<p>
             {snap.builder.kind === "unreadable" ? `Could not read approval (${snap.builder.error}). ` : `Not approved (current max ${snap.builder.maxF / 1000}%). `}
             Orders work without it. Approving lets {snap.builder.builder} charge up to {BUILDER_FEE.rate} of notional on orders from this app. Signed by this account&apos;s own key; HL allows at most 10 active approvals.{" "}
-            <button disabled={!signer || busy} onClick={() => confirm(`Approve builder fee up to ${BUILDER_FEE.rate}?`) && act(async () => {
-              const r = await approveBuilder(hl, BUILDER!); // this branch only renders when BUILDER is set
+            <button disabled={!canTrade || busy} onClick={() => confirm(`Approve builder fee up to ${BUILDER_FEE.rate}?`) && act(async () => {
+              const r = await approveBuilder(owner!, BUILDER!); // this branch only renders when BUILDER is set
               if (!r.ok) throw new Error(r.limitReached ? `You already have the maximum of 10 builder approvals: ${r.error}. Trading and closing still work without it.` : `Approval failed: ${r.error}. Trading and closing still work.`);
             })}>Approve {BUILDER_FEE.rate}</button>
           </p>)}
@@ -229,7 +206,7 @@ export default function Trade() {
         ))}
         {snap.openOrders.map((o) => (
           <p key={o.oid}>Open {o.coin} {o.side === "B" ? "buy" : "sell"} {o.sz} @ {o.limitPx}{" "}
-            <button disabled={!signer || busy} onClick={() => act(() => hl.exchange!.cancel({ cancels: [{ a: snap.meta.findIndex((u) => u.name === o.coin), o: o.oid }] }))}>Cancel</button></p>
+            <button disabled={!canTrade || busy} onClick={() => act(() => hl.exchange!.cancel({ cancels: [{ a: snap.meta.findIndex((u) => u.name === o.coin), o: o.oid }] }))}>Cancel</button></p>
         ))}
       </section>)}
 

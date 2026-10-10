@@ -20,7 +20,7 @@ async function quote() {
   const open = (await hl.info.openOrders({ user: account.address })).filter((o) => o.coin === mkt.pair);
   if (open.length) await hl.exchange!.cancel({ cancels: open.map((o) => ({ a: mkt.asset, o: o.oid })) });
 
-  const bal = (await hl.info.spotClearinghouseState({ user: account.address })).balances;
+  const bal = (await hl.info.spotClearinghouseState({ user: account.address })).balances as any[];
   const usdc = availableSpot(bal, 0), xzec = availableSpot(bal, mkt.base.index);
   const orders = [];
   const bidPx = mid * (1 - SPREAD), askPx = mid * (1 + SPREAD);

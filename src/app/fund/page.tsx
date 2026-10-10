@@ -8,6 +8,8 @@ import { ReplayBridgeAdapter, REPLAY_SCENARIOS, type ReplayScenario } from "@/li
 import { buildZip321, formatZecAmount, zecToZatoshis } from "@/lib/zcash/address";
 import { loadFunding, saveFunding } from "@/lib/store/funding-store";
 import { unitZecBalance } from "@/lib/hl/xzec";
+import { useAccount } from "@/lib/account/use-account";
+import { AccountPanel } from "../account-panel";
 
 const NETWORK: Network = "testnet"; // mainnet funding is disabled in this prototype
 type Lane = "unit-live" | ReplayScenario;
@@ -17,7 +19,8 @@ const zec = (z: bigint) => formatZecAmount(z) + " ZEC";
 
 export default function Fund() {
   const [lane, setLane] = useState<Lane>("unit-live");
-  const [hl, setHl] = useState("0x1f20B96A9fde5218ED05A212B2d23093100785c0");
+  const acct = useAccount(NETWORK);
+  const hl = acct.clients?.address ?? "";
   const [recoveryOk, setRecoveryOk] = useState(false);
   const [dep, setDep] = useState<VerifiedDeposit | null>(null);
   const [mapNote, setMapNote] = useState<string>("");
@@ -97,6 +100,8 @@ export default function Fund() {
       {isReplay && <div className="note bad"><b>REPLAY FIXTURE LANE ({lane})</b>: operations and balances on this screen are simulated. Nothing here is settlement evidence.</div>}
       <h1>Fund your trading account</h1>
 
+      <AccountPanel acct={acct} />
+
       <section className="panel">
         <label>Lane{" "}
           <select value={lane} onChange={(e) => setLane(e.target.value as Lane)}>
@@ -104,11 +109,9 @@ export default function Fund() {
             {REPLAY_SCENARIOS.map((s) => <option key={s} value={s}>Replay: {s}</option>)}
           </select>
         </label>
-        <p><label>Hyperliquid testnet trading account<br />
-          <input className="mono" style={{ width: "100%" }} value={hl} onChange={(e) => setHl(e.target.value.trim())} /></label></p>
         <label><input type="checkbox" checked={recoveryOk} onChange={(e) => setRecoveryOk(e.target.checked)} />{" "}
           I have confirmed I can control this account with the recovery client (<code>recovery/recover.ts</code>) without this site.</label>
-        <p><button disabled={!validHl} onClick={generate}>Get verified deposit address</button></p>
+        <p><button disabled={!validHl || !acct.account?.backedUpAt} onClick={generate}>Get verified deposit address</button></p>
       </section>
 
       {err && <div className="note bad">Error: {err}</div>}
