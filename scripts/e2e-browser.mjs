@@ -13,7 +13,8 @@ const waitText = (pg, t, ms = 20000) => pg.getByText(t).first().waitFor({ timeou
 await p.goto(B + "/return");
 ok("return: Unit fees fetched from browser (CORS)", await waitText(p, /Bridge fee/));
 ok("return: balances accounted", await waitText(p, "All accounted for"));
-const dest = p.locator("input").nth(2);
+await p.getByRole("button", { name: "Continue" }).click();
+const dest = p.getByLabel("Zcash receive address");
 await dest.fill("textest1thdh90ttywp4tjf9ljc7q5u8sa564ggp9jt7yf");
 ok("return: TEX destination refused", await waitText(p, /tex is not accepted/, 3000));
 await dest.fill(TM); await p.getByRole("checkbox").check();
@@ -63,7 +64,7 @@ await p.goto(B + "/fund");
 await p.getByRole("button", { name: /deposit address/ }).click();
 ok("fund: live deposit address 3/3 from browser", await waitText(p, /3\/3 guardians verified/));
 await p.reload();
-ok("fund: record survives reload (status shown)", await waitText(p, /Bridge records/));
+ok("fund: record survives reload (status shown)", await waitText(p, /View current deposit status/));
 await p.evaluate(() => localStorage.clear());
 await p.goto(B + "/fund"); await p.getByText("Developer options").click(); await p.locator("select").selectOption("provider_error");
 await p.getByRole("button", { name: /deposit address/ }).click();

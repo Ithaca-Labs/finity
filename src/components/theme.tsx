@@ -1,5 +1,6 @@
 "use client";
 import { useSyncExternalStore } from "react";
+import { motion } from "motion/react";
 
 type Theme = "light" | "dark";
 const KEY = "finity-theme";
@@ -21,7 +22,7 @@ function subscribe(onChange: () => void) {
   return () => { observer.disconnect(); media.removeEventListener("change", onMedia); };
 }
 
-function useTheme(): Theme {
+export function useTheme(): Theme {
   return useSyncExternalStore(subscribe, () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light"), () => "light");
 }
 
@@ -34,13 +35,15 @@ function setTheme(theme: Theme) {
 export function ThemeToggle() {
   const dark = useTheme() === "dark";
   return (
-    <button type="button" className="theme-toggle" data-dark={dark || undefined}
-      onClick={() => setTheme(dark ? "light" : "dark")} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}>
-      <svg viewBox="0 0 40 28" aria-hidden fill="none" stroke="currentColor" strokeLinecap="round">
-        <path className="lid" strokeWidth="2.6" d={dark ? "M3 13 C12 20 28 20 37 13" : "M3 14 C12 3 28 3 37 14"} />
+    <button type="button" className="icon-btn" onClick={() => setTheme(dark ? "light" : "dark")} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}>
+      <svg viewBox="0 0 40 28" width="28" aria-hidden fill="none" stroke="currentColor" strokeLinecap="round">
+        <motion.path strokeWidth="2.6" initial={false} animate={{ d: dark ? "M3 13 C12 20 28 20 37 13" : "M3 14 C12 3 28 3 37 14" }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }} />
         <path d="M3 14 C12 24 28 24 37 14" strokeWidth="2" />
-        <circle className="pupil" cx="20" cy="14" r="4.2" fill="currentColor" stroke="none" />
-        <g className="lashes" strokeWidth="1.8"><path d="M11 19 l-2 5" /><path d="M20 21 l0 5" /><path d="M29 19 l2 5" /></g>
+        <motion.circle cx="20" cy="14" r="4.2" fill="currentColor" stroke="none" animate={{ opacity: dark ? 0 : 1, scale: dark ? 0.4 : 1 }} transition={{ duration: 0.3 }} />
+        <motion.g animate={{ opacity: dark ? 1 : 0 }} transition={{ duration: 0.3 }} strokeWidth="1.8">
+          <path d="M11 19 l-2 5" /><path d="M20 21 l0 5" /><path d="M29 19 l2 5" />
+        </motion.g>
       </svg>
     </button>
   );
