@@ -1,19 +1,20 @@
 "use client";
-// One account for the whole wallet session. The trading key lives only in React state in the wallet layout:
-// it survives moving between Fund, Trade and Return, but is never written to storage or sent anywhere.
+// One finity account for the whole wallet session: the browser-held account from lib/account,
+// read once in the wallet layout and shared by every screen.
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
+import type { Network } from "@/lib/bridge/guardians";
+import { useAccount as useLocalAccount } from "@/lib/account/use-account";
 
-export const DEMO_ADDRESS = "0x1f20B96A9fde5218ED05A212B2d23093100785c0";
+export const NETWORK: Network = "testnet";
+const ZERO = "0x0000000000000000000000000000000000000000" as const;
 
 type Account = {
-  key: string;
-  setKey: (k: string) => void;
-  readAddr: string;
-  setReadAddr: (a: string) => void;
-  signer: PrivateKeyAccount | undefined;
+  acct: ReturnType<typeof useLocalAccount>;
+  /** The account (owner) address, or the zero address before one exists. */
   user: `0x${string}`;
+  /** True once an account exists in this browser and can sign. */
   valid: boolean;
+  backedUp: boolean;
   sheet: boolean;
   setSheet: (open: boolean) => void;
 };
@@ -21,13 +22,17 @@ type Account = {
 const Ctx = createContext<Account | null>(null);
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-  const [key, setKey] = useState(""); // memory only: never persisted or logged
-  const [readAddr, setReadAddr] = useState(DEMO_ADDRESS);
+  const acct = useLocalAccount(NETWORK);
   const [sheet, setSheet] = useState(false);
-  const signer = useMemo(() => { try { return /^0x[0-9a-fA-F]{64}$/.test(key) ? privateKeyToAccount(key as `0x${string}`) : undefined; } catch { return undefined; } }, [key]);
-  const user = (signer?.address ?? readAddr) as `0x${string}`;
-  const valid = /^0x[0-9a-fA-F]{40}$/.test(user);
-  const value = useMemo(() => ({ key, setKey, readAddr, setReadAddr, signer, user, valid, sheet, setSheet }), [key, readAddr, signer, user, valid, sheet]);
+  const c = acct.clients;
+  const value = useMemo<Account>(() => ({
+    acct,
+    user: (c?.address ?? ZERO) as `0x${string}`,
+    valid: !!c,
+    backedUp: !!acct.account?.backedUpAt,
+    sheet,
+    setSheet,
+  }), [acct, c, sheet]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

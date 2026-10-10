@@ -9,7 +9,7 @@ import {
 import { DrawOn, LogoMark, SketchPath, Star } from "@/components/sketch";
 import { ThemeToggle } from "@/components/theme";
 import { brushRing, lemniscate, lemniscatePoint, sparkle } from "@/lib/sketch";
-import { AccountProvider, DEMO_ADDRESS, short, useAccount } from "./account";
+import { AccountProvider, short, useAccount } from "./account";
 import { EASE, Icon, Sheet } from "./ui";
 
 const TABS = [
@@ -154,15 +154,15 @@ function Avatar({ address }: { address: string }) {
 function Card({ children }: { children: ReactNode }) {
   const path = usePathname();
   const key = routeKey(path);
-  const { user, signer, setSheet } = useAccount();
+  const { user, valid, backedUp, acct, setSheet } = useAccount();
   return (
     <div className="w-card">
       <header className="w-top">
         <button type="button" className="acct" onClick={() => setSheet(true)} aria-label="Account">
           <Avatar address={user} />
           <span className="acct-text">
-            <b>{signer ? "Trading account" : "Watching"}</b>
-            <small><i className={signer ? "dot good" : "dot"} />{short(user)}</small>
+            <b>{!acct.loaded ? "…" : valid ? "finity account" : "No account yet"}</b>
+            <small><i className={valid && backedUp ? "dot good" : "dot"} />{valid ? short(user) : "Tap to create"}</small>
           </span>
           <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 10l5 5 5-5" /></svg>
         </button>
@@ -196,39 +196,59 @@ function Card({ children }: { children: ReactNode }) {
 }
 
 function AccountSheet() {
-  const { key, setKey, readAddr, setReadAddr, signer, user, sheet, setSheet } = useAccount();
-  const [draft, setDraft] = useState("");
+  const { acct, valid, user, backedUp, sheet, setSheet } = useAccount();
   const [copied, setCopied] = useState(false);
-  const badKey = draft.length > 0 && !/^0x[0-9a-fA-F]{64}$/.test(draft);
   return (
-    <Sheet open={sheet} onClose={() => setSheet(false)} title={signer ? "Your trading account" : "Unlock finity"}>
-      {signer ? (
+    <Sheet open={sheet} onClose={() => setSheet(false)} title={valid ? "Your finity account" : "Create your account"}>
+      {valid ? (
         <div className="stack-sm">
           <div className="addr"><code>{user}</code>
             <button type="button" className="icon-btn" aria-label="Copy address" onClick={() => { navigator.clipboard?.writeText(user); setCopied(true); setTimeout(() => setCopied(false), 1400); }}>
               <Icon name={copied ? "check" : "copy"} />
             </button>
           </div>
-          <p className="small muted">Your key is held in this tab&apos;s memory only. Locking forgets it; nothing was ever saved.</p>
-          <button type="button" className="btn btn-ghost btn-block" onClick={() => { setKey(""); setDraft(""); setSheet(false); }}><Icon name="lock" />Lock</button>
+          <BackupCard />
+          <p className="small muted">Two keys live in this browser: the account key owns your funds and signs transfers; a trading key can place and cancel orders but can never withdraw. finity never sees either.</p>
+          {backedUp && <button type="button" className="text-link" onClick={acct.downloadBackup}>Download backup again</button>}
         </div>
-      ) : (
-        <div className="stack-sm">
-          <p className="small muted">Paste the key of your dedicated testnet trading account to sign orders and sends. It stays in this tab&apos;s memory, never saved or sent anywhere.</p>
-          <label className="field">
-            <span className="field-label">Trading key</span>
-            <input type="password" autoComplete="off" value={draft} onChange={(e) => setDraft(e.target.value.trim())} placeholder="0x…" />
-          </label>
-          {badKey && <p className="small" style={{ color: "var(--bad)" }}>A key is 0x followed by 64 hex characters.</p>}
-          <button type="button" className="btn btn-block" disabled={!/^0x[0-9a-fA-F]{64}$/.test(draft)} onClick={() => { setKey(draft); setDraft(""); setSheet(false); }}>Unlock</button>
-          <div className="or"><span>or just watch an address</span></div>
-          <label className="field">
-            <span className="field-label">Hyperliquid address</span>
-            <input value={readAddr} onChange={(e) => setReadAddr(e.target.value.trim())} spellCheck={false} placeholder={DEMO_ADDRESS} />
-          </label>
-          {key && <p className="small muted">A key is loaded.</p>}
-        </div>
-      )}
+      ) : <CreateAccount />}
     </Sheet>
+  );
+}
+
+/** First run: create a fresh account in this browser, or restore one from a backup file. */
+export function CreateAccount() {
+  const { acct } = useAccount();
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <div className="stack-sm">
+      <p className="small muted">finity creates a fresh Hyperliquid account for you right here. Its keys never leave your device, and finity can&apos;t move your funds.</p>
+      <button type="button" className="btn btn-lg btn-block" onClick={acct.create}>Create my account</button>
+      <label className="btn btn-ghost btn-block file-btn">
+        Restore from a backup
+        <input type="file" accept="application/json" onChange={async (e) => {
+          setErr(null);
+          const f = e.target.files?.[0];
+          if (f) try { acct.restore(await f.text()); } catch (x) { setErr(x instanceof Error ? x.message : String(x)); }
+        }} />
+      </label>
+      {err && <p className="small" style={{ color: "var(--bad)" }}>{err}</p>}
+    </div>
+  );
+}
+
+/** The backup prompt: required before depositing, because the account lives only in this browser. */
+export function BackupCard() {
+  const { acct, backedUp } = useAccount();
+  if (backedUp) return <p className="small muted"><Icon name="check" /> Backed up {new Date(acct.account!.backedUpAt!).toLocaleString()}.</p>;
+  return (
+    <div className="callout warn">
+      <span className="callout-mark">!</span>
+      <div>
+        <b>Back up this account before depositing</b>
+        <span>It lives only in this browser. Clearing site data without a backup loses access to the funds.</span>
+        <div className="btn-row"><button type="button" className="btn btn-sm" onClick={acct.downloadBackup}>Download backup</button></div>
+      </div>
+    </div>
   );
 }

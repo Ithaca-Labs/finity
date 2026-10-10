@@ -569,3 +569,10 @@ button.token-row:hover { background: var(--surface-2); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; }
 }
+
+.file-btn { position: relative; overflow: hidden; cursor: pointer; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.onboard { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--ink); border-radius: 20px; background: color-mix(in srgb, var(--ink) 5%, var(--card)); }
+.onboard h3 { font: 26px/1 var(--serif); letter-spacing: -0.02em; }
+

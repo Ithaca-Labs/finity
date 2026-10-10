@@ -13,6 +13,7 @@ import { unitZecBalance } from "@/lib/hl/xzec";
 import { brushRect } from "@/lib/sketch";
 import { DoneMark, DrawOn } from "@/components/sketch";
 import { short, useAccount } from "@/components/wallet/account";
+import { BackupCard, CreateAccount } from "@/components/wallet/shell";
 import { Callout, EASE, FlowHead, Icon, StepView, Tracker, type StepState } from "@/components/wallet/ui";
 
 const NETWORK: Network = "testnet"; // mainnet funding is disabled in this prototype
@@ -25,10 +26,9 @@ type Step = (typeof FLOW)[number];
 const TITLES: Record<Step, string> = { to: "Deposit ZEC", amount: "How much?", pay: "Scan to pay", track: "Deposit status" };
 
 export default function Fund() {
-  const { user } = useAccount();
+  const { user, valid, backedUp } = useAccount();
   const [lane, setLane] = useState<Lane>("unit-live");
-  const [hl, setHl] = useState<string>(user);
-  useEffect(() => { setHl(user); }, [user]);
+  const hl = valid ? user : "";
   const [recoveryOk, setRecoveryOk] = useState(false);
   const [dep, setDep] = useState<VerifiedDeposit | null>(null);
   const [mapNote, setMapNote] = useState<string>("");
@@ -107,7 +107,6 @@ export default function Fund() {
   const [dir, setDir] = useState(1);
   const go = (s: Step) => { setDir(FLOW.indexOf(s) >= FLOW.indexOf(step) ? 1 : -1); setStep(s); };
   const [busy, setBusy] = useState(false);
-  const [editTo, setEditTo] = useState(false);
   const [copied, setCopied] = useState(false);
   const autoTracked = useRef(false);
   useEffect(() => { autoTracked.current = false; setStep("to"); }, [lane, hl]);
@@ -138,28 +137,25 @@ export default function Fund() {
             <div className="hero-ic"><Icon name="fund" /></div>
             <p className="flow-lede">Send ZEC from your shielded Zcash wallet. It lands in your trading account in about two hours.</p>
 
+            {!valid ? <CreateAccount /> : (<>
             <div className="to-card">
               <span className="field-label">Lands in</span>
-              {editTo ? (
-                <input value={hl} onChange={(e) => setHl(e.target.value.trim())} placeholder="0x…" spellCheck={false} autoFocus aria-label="Hyperliquid account address" />
-              ) : (
-                <div className="to-row">
-                  <span className="to-ic"><Icon name="trade" /></span>
-                  <span><b>Hyperliquid trading account</b><small className="mono">{short(hl)}</small></span>
-                  <button type="button" className="link-sm" onClick={() => setEditTo(true)}>Change</button>
-                </div>
-              )}
-              {hl && !validHl && <small style={{ color: "var(--bad)" }}>That doesn&apos;t look like a Hyperliquid address.</small>}
+              <div className="to-row">
+                <span className="to-ic"><Icon name="trade" /></span>
+                <span><b>Your finity trading account</b><small className="mono">{short(hl)}</small></span>
+              </div>
             </div>
+            <BackupCard />
 
             <label className="check">
               <input type="checkbox" checked={recoveryOk} onChange={(e) => setRecoveryOk(e.target.checked)} />
               <span>I can reach this account without finity.<small>I&apos;ve checked the recovery client (<code>recovery/recover.ts</code>) can read and control it if this site disappears.</small></span>
             </label>
 
-            <button type="button" className="btn btn-lg btn-block" disabled={!validHl || busy} onClick={getAddress}>
+            <button type="button" className="btn btn-lg btn-block" disabled={!validHl || !backedUp || busy} onClick={getAddress}>
               {busy ? <span className="spinner" /> : null}{busy ? "Checking with the bridge…" : "Get my deposit address"}
             </button>
+            </>)}
             {rec && <button type="button" className="text-link" onClick={() => go("track")}>View current deposit status</button>}
 
             <details className="more">

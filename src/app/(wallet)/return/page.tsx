@@ -3,8 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import type { Network } from "@/lib/bridge/guardians";
-import { createHl, type Hl } from "@/lib/hl/client";
-import { persistentNonceManager } from "@/lib/hl/orders";
+import { createHl } from "@/lib/hl/client";
 import { availableSpot, resolveSpot, type SpotMarket } from "@/lib/hl/spot";
 import { UNIT_ZEC_TOKEN_ID } from "@/lib/hl/xzec";
 import { UnitBridgeAdapter, type ZcashFees } from "@/lib/bridge/unit";
@@ -31,8 +30,12 @@ type Step = (typeof FLOW)[number];
 const TITLES: Record<Step, string> = { amount: "Send ZEC home", to: "Where to?", send: "Review", track: "Return status" };
 
 export default function Return() {
-  const { signer, user, valid, setSheet } = useAccount();
-  const hl: Hl = useMemo(() => createHl(NETWORK, signer, { nonceManager: persistentNonceManager(kv()) }), [signer]);
+  const { acct, user, valid, setSheet } = useAccount();
+  const c = acct.clients;
+  const signer = !!c;
+  // Returns move funds, so they are signed by the account key, never the trading key.
+  const readOnly = useMemo(() => createHl(NETWORK), []);
+  const hl = c?.owner ?? readOnly;
 
   const [mkt, setMkt] = useState<SpotMarket | null>(null);
   const [fees, setFees] = useState<ZcashFees | null>(null);
@@ -180,7 +183,7 @@ export default function Return() {
             <span className="badge good center"><i />{rec.route.verification.verifiedCount}/3 guardians verified</span>
             {view.state === "recoverable_error" && <Callout tone="bad" title="The last send didn't go through">{view.explanation}</Callout>}
             {view.maySend && plan?.ok && mkt ? (
-              !signer ? <button type="button" className="btn btn-lg btn-block" onClick={() => setSheet(true)}><Icon name="lock" />Unlock to send</button> : (
+              !signer ? <button type="button" className="btn btn-lg btn-block" onClick={() => setSheet(true)}><Icon name="lock" />Create account to send</button> : (
                 <button type="button" className="btn btn-lg btn-block" disabled={busy} onClick={() => confirm(`Send ${plan.sendAmount} ${mkt.base.name} to Unit ${rec.route.unitHlAddress} for ${rec.route.destination}? Estimated net ${zec(plan.estNetZat)}. This cannot be undone.`)
                   && act(() => submitReturnSend({ spotSend: (p) => hl.exchange!.spotSend(p), userNonFundingLedgerUpdates: (p) => hl.info.userNonFundingLedgerUpdates(p) }, rec, persist, { token: mkt.tokenSelector, amount: plan.sendAmount }))}>
                   {busy && <span className="spinner" />}Send {plan.sendAmount} {mkt.base.name} home

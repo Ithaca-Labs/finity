@@ -12,6 +12,7 @@ import { deriveFunding } from "@/lib/bridge/funding";
 import { deriveReturn } from "@/lib/bridge/returns";
 import { loadFunding, loadReturn } from "@/lib/store/funding-store";
 import { useAccount } from "@/components/wallet/account";
+import { BackupCard, CreateAccount } from "@/components/wallet/shell";
 import { EASE, Empty, Icon, Rise, Ticker, TokenIcon, TokenRow } from "@/components/wallet/ui";
 
 const NETWORK: Network = "testnet";
@@ -27,7 +28,7 @@ const ACTIONS = [
 ] as const;
 
 export default function WalletHome() {
-  const { user, valid, signer, setSheet } = useAccount();
+  const { user, valid, backedUp, acct } = useAccount();
   const hl = useMemo(() => createHl(NETWORK), []);
   const [snap, setSnap] = useState<Snap | null>(null);
   const [mkt, setMkt] = useState<SpotMarket | null>(null);
@@ -90,15 +91,13 @@ export default function WalletHome() {
         ))}
       </Rise>
 
-      {!signer && (
-        <Rise i={2}>
-          <button type="button" className="unlock-banner" onClick={() => setSheet(true)}>
-            <Icon name="lock" />
-            <span><b>You&apos;re watching this account</b><small>Unlock with your trading key to swap, trade and send.</small></span>
-            <span className="chev">›</span>
-          </button>
+      {acct.loaded && !valid && (
+        <Rise i={2} className="onboard">
+          <h3>Start your round trip</h3>
+          <CreateAccount />
         </Rise>
       )}
+      {valid && !backedUp && <Rise i={2}><BackupCard /></Rise>}
 
       {err && <Rise i={2}><p className="small" style={{ color: "var(--bad)" }}>Couldn&apos;t refresh: {err}. Showing the last known balances.</p></Rise>}
 

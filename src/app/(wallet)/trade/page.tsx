@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import type { Network } from "@/lib/bridge/guardians";
-import { createHl, formatPerpPrice, formatSize, type Hl } from "@/lib/hl/client";
-import { OrderBlockedError, OrderLedger, notLandedAfter, persistentNonceManager, reconcileOrder, submitIoc, type OrderRecord } from "@/lib/hl/orders";
+import { createHl, formatPerpPrice, formatSize } from "@/lib/hl/client";
+import { OrderBlockedError, OrderLedger, notLandedAfter, reconcileOrder, submitIoc, type OrderRecord } from "@/lib/hl/orders";
 import { executeConversion, planConversion, resolveSpot, availableSpot, type ConversionPlan, type SpotMarket } from "@/lib/hl/spot";
 import { approveBuilder, BUILDER_FEE, builderForOrder, builderStatus, needsClassTransfer, readAccountMode, type BuilderStatus } from "@/lib/hl/account";
 import { UNIT_ZEC_TOKEN_ID } from "@/lib/hl/xzec";
@@ -25,8 +25,13 @@ type Tab = "swap" | "trade" | "activity";
 const TABS: { id: Tab; label: string }[] = [{ id: "swap", label: "Swap" }, { id: "trade", label: "Trade" }, { id: "activity", label: "Activity" }];
 
 export default function Trade() {
-  const { signer, user, valid, setSheet } = useAccount();
-  const hl: Hl = useMemo(() => createHl(NETWORK, signer, { nonceManager: persistentNonceManager(kv()) }), [signer]);
+  const { acct, user, valid, setSheet } = useAccount();
+  const c = acct.clients;
+  const canTrade = !!c;
+  // Orders are signed by the trading key (agent); transfers and approvals by the account key.
+  const readOnly = useMemo(() => createHl(NETWORK), []);
+  const hl = c?.trader ?? readOnly;
+  const owner = c?.owner;
   const ledger = useMemo(() => new OrderLedger(kv(), NETWORK, user), [user]);
 
   const [snap, setSnap] = useState<Snapshot | null>(null);
@@ -73,10 +78,11 @@ export default function Trade() {
   const feeRate = (snap?.takerRate ?? 0) + (builderAttach ? BUILDER_FEE.f / 1e5 : 0);
   const boundPx = m ? formatPerpPrice(mid * (side === "long" ? 1 + Number(slip) : 1 - Number(slip)), m.szDecimals) : "0";
   const levN = Math.max(1, Math.min(Number(lev) || 1, m?.maxLeverage ?? 1));
-  const orderProblem = !signer ? "Unlock with the trading key to place orders" : !m || m.isDelisted ? `${coin} not tradable on ${NETWORK}`
+  const orderProblem = !canTrade ? "Create your account first" : !m || m.isDelisted ? `${coin} not tradable on ${NETWORK}`
     : Number(size) <= 0 ? "Size rounds to 0" : notional < 10 ? "Hyperliquid minimum order value is 10 USDC" : blocking ? "Reconcile the unknown order first" : null;
 
   const placeOrder = () => act(async () => {
+    await acct.ensureTrading();
     await hl.exchange!.updateLeverage({ asset: assetIndex, isCross: true, leverage: levN });
     await submitIoc(hl.exchange!, ledger, NETWORK, user, {
       label: `${coin} ${side} open`, asset: assetIndex, isBuy: side === "long", size, px: boundPx, builder: builderAttach,
@@ -85,6 +91,7 @@ export default function Trade() {
   });
 
   const closePos = (p: any) => act(async () => {
+    await acct.ensureTrading();
     const idx = snap!.meta.findIndex((u) => u.name === p.coin);
     const szi = Number(p.szi);
     const px = formatPerpPrice(Number(snap!.mids[p.coin]) * (szi < 0 ? 1.05 : 0.95), snap!.meta[idx].szDecimals);
@@ -186,12 +193,12 @@ export default function Trade() {
             </AnimatePresence>
             {!plan ? (
               <button type="button" className="btn btn-lg btn-block" disabled={!unitMkt || busy} onClick={makePlan}>Get a quote</button>
-            ) : !signer ? (
-              <button type="button" className="btn btn-lg btn-block" onClick={() => setSheet(true)}><Icon name="lock" />Unlock to swap</button>
+            ) : !canTrade ? (
+              <button type="button" className="btn btn-lg btn-block" onClick={() => setSheet(true)}><Icon name="lock" />Create account to swap</button>
             ) : (
               <div className="btn-row">
                 <button type="button" className="btn btn-ghost" onClick={() => setPlan(null)}>Cancel</button>
-                <button type="button" className="btn btn-lg grow" disabled={busy || !!blocking} onClick={() => act(async () => { await executeConversion(hl, ledger, NETWORK, user, plan); setPlan(null); })}>
+                <button type="button" className="btn btn-lg grow" disabled={busy || !!blocking} onClick={() => act(async () => { await acct.ensureTrading(); await executeConversion(hl, ledger, NETWORK, user, plan); setPlan(null); })}>
                   {busy && <span className="spinner" />}Confirm swap
                 </button>
               </div>
@@ -230,9 +237,9 @@ export default function Trade() {
             <AnimatePresence mode="wait" initial={false}>
               {!review || orderProblem ? (
                 <motion.div key="cta" className="stack-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  {!signer ? <button type="button" className="btn btn-lg btn-block" onClick={() => setSheet(true)}><Icon name="lock" />Unlock to trade</button>
+                  {!canTrade ? <button type="button" className="btn btn-lg btn-block" onClick={() => setSheet(true)}><Icon name="lock" />Create account to trade</button>
                     : <button type="button" className={`btn btn-lg btn-block ${side === "long" ? "btn-long" : "btn-short"}`} disabled={!!orderProblem || busy} onClick={() => setReview(true)}>Review {side} {coin}</button>}
-                  {orderProblem && signer && <p className="small muted center">{orderProblem}</p>}
+                  {orderProblem && canTrade && <p className="small muted center">{orderProblem}</p>}
                 </motion.div>
               ) : (
                 <motion.div key="review" className="review" initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: EASE }}>
@@ -264,8 +271,8 @@ export default function Trade() {
                 <span>Your swap balance and trading margin are separate. {spotUsdc} USDC can move over.</span>
                 <div className="btn-row">
                   <input className="input-sm" value={moveAmt} onChange={(e) => setMoveAmt(e.target.value.trim())} placeholder={String(spotUsdc)} aria-label="USDC to move" />
-                  <button type="button" className="btn btn-sm" disabled={!signer || busy || !(Number(moveAmt) > 0 && Number(moveAmt) <= spotUsdc)}
-                    onClick={() => confirm(`Move ${moveAmt} USDC from spot to perps?`) && act(() => hl.exchange!.usdClassTransfer({ amount: moveAmt, toPerp: true }))}>Move</button>
+                  <button type="button" className="btn btn-sm" disabled={!canTrade || busy || !(Number(moveAmt) > 0 && Number(moveAmt) <= spotUsdc)}
+                    onClick={() => confirm(`Move ${moveAmt} USDC from spot to perps?`) && act(() => owner!.exchange!.usdClassTransfer({ amount: moveAmt, toPerp: true }))}>Move</button>
                 </div>
               </Callout>
             )}
@@ -281,7 +288,7 @@ export default function Trade() {
                       <div className="token-main"><b>{p.coin} {Number(p.szi) < 0 ? "Short" : "Long"} {p.leverage.value}x</b><small>{Math.abs(Number(p.szi))} @ {p.entryPx} · liq {p.liquidationPx ?? "n/a"}</small></div>
                       <div className="token-amt">
                         <b className={Number(p.unrealizedPnl) < 0 ? "down" : "up"}>{Number(p.unrealizedPnl) >= 0 ? "+" : ""}{p.unrealizedPnl}</b>
-                        <button type="button" className="btn btn-sm btn-danger" disabled={!signer || busy} onClick={() => confirm(`Reduce-only close ${p.szi} ${p.coin}?`) && closePos(p)}>Close</button>
+                        <button type="button" className="btn btn-sm btn-danger" disabled={!canTrade || busy} onClick={() => confirm(`Reduce-only close ${p.szi} ${p.coin}?`) && closePos(p)}>Close</button>
                       </div>
                     </div>
                   ))}
@@ -289,7 +296,7 @@ export default function Trade() {
                     <div className="token-row" key={o.oid}>
                       <TokenIcon kind={o.coin === "ETH" ? "eth" : "btc"} />
                       <div className="token-main"><b>{o.coin} {o.side === "B" ? "buy" : "sell"} order</b><small>{o.sz} @ {o.limitPx}</small></div>
-                      <button type="button" className="btn btn-sm btn-ghost" disabled={!signer || busy} onClick={() => act(() => hl.exchange!.cancel({ cancels: [{ a: snap.meta.findIndex((u) => u.name === o.coin), o: o.oid }] }))}>Cancel</button>
+                      <button type="button" className="btn btn-sm btn-ghost" disabled={!canTrade || busy} onClick={() => act(() => hl.exchange!.cancel({ cancels: [{ a: snap.meta.findIndex((u) => u.name === o.coin), o: o.oid }] }))}>Cancel</button>
                     </div>
                   ))}
                 </div>
@@ -303,8 +310,8 @@ export default function Trade() {
                 : snap.builder.kind === "unreadable" ? `Couldn't read approval (${snap.builder.error}). Trading works without it.`
                 : `Optional, up to ${BUILDER_FEE.rate}. Trading works without it.`}</small></span>
               {snap && (snap.builder.kind === "not_approved" || snap.builder.kind === "unreadable") && (
-                <button type="button" className="btn btn-sm btn-ghost" disabled={!signer || busy} onClick={() => confirm(`Approve builder fee up to ${BUILDER_FEE.rate}?`) && act(async () => {
-                  const r = await approveBuilder(hl, BUILDER!); // this branch only renders when BUILDER is set
+                <button type="button" className="btn btn-sm btn-ghost" disabled={!canTrade || busy} onClick={() => confirm(`Approve builder fee up to ${BUILDER_FEE.rate}?`) && act(async () => {
+                  const r = await approveBuilder(owner!, BUILDER!); // this branch only renders when BUILDER is set
                   if (!r.ok) throw new Error(r.limitReached ? `You already have the maximum of 10 builder approvals: ${r.error}. Trading and closing still work without it.` : `Approval failed: ${r.error}. Trading and closing still work.`);
                 })}>Approve</button>
               )}
