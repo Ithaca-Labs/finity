@@ -13,9 +13,7 @@ const PERPS = ["BTC", "ETH"];
 const BUILDER = process.env.NEXT_PUBLIC_BUILDER_ADDRESS as `0x${string}` | undefined;
 const kv = () => { try { return window.localStorage; } catch { return undefined; } };
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
-const box: React.CSSProperties = { border: "1px solid #ccc", borderRadius: 8, padding: 12, margin: "12px 0" };
-const banner = (bg: string): React.CSSProperties => ({ background: bg, padding: 8, borderRadius: 6, margin: "8px 0" });
-const mono: React.CSSProperties = { fontFamily: "monospace", fontSize: 13 };
+const mono: React.CSSProperties = { fontFamily: "var(--font-mono), monospace", fontSize: 13 };
 
 type Snapshot = {
   perps: any; spot: any[]; mode: string; openOrders: any[]; fills: any[]; mids: Record<string, string>;
@@ -117,21 +115,21 @@ export default function Trade() {
   const spotUsdc = snap ? availableSpot(snap.spot, 0) : 0;
 
   return (
-    <main style={{ maxWidth: 760, margin: "0 auto", padding: 16 }}>
-      <div style={banner("#fde68a")}>TESTNET PROTOTYPE: mock USDC only. The ZEC perp is delisted on testnet, so trading uses BTC/ETH.</div>
+    <main>
+      <div className="note warn">TESTNET PROTOTYPE: mock USDC only. The ZEC perp is delisted on testnet, so trading uses BTC/ETH.</div>
       <h1>Trade</h1>
 
-      <section style={box}>
+      <section className="panel">
         <p><label>Trading key (dedicated testnet account; kept in this tab&apos;s memory only)<br />
           <input type="password" autoComplete="off" style={{ width: "100%", ...mono }} value={key} onChange={(e) => setKey(e.target.value.trim())} placeholder="0x… (leave empty for read-only)" /></label></p>
         {!signer && <p><label>Read-only address<br /><input style={{ width: "100%", ...mono }} value={readAddr} onChange={(e) => setReadAddr(e.target.value.trim())} /></label></p>}
-        <p style={mono}>Account {user} {signer ? "(can sign)" : "(read-only)"}; mode: {snap?.mode ?? "…"}</p>
+        <p className="mono">Account {user} {signer ? "(can sign)" : "(read-only)"}; mode: {snap?.mode ?? "…"}</p>
         <p style={{ fontSize: 13 }}>If this site is unavailable, the recovery client can still read, cancel and reduce-only close: <code>recovery/recover.ts</code>.</p>
       </section>
 
-      {err && <div style={banner("#fecaca")}>{err}</div>}
+      {err && <div className="note bad">{err}</div>}
       {blocking && (
-        <div style={banner("#fecaca")}>
+        <div className="note bad">
           <b>Order outcome unknown:</b> {blocking.label} ({blocking.cloid}). New orders are paused until it is reconciled; closing stays available.
           {" "}{blocking.error && <i>{blocking.error}. </i>}
           Earliest &quot;not landed&quot; verdict: {new Date(notLandedAfter(blocking)).toLocaleTimeString()}.{" "}
@@ -139,7 +137,7 @@ export default function Trade() {
         </div>
       )}
 
-      {snap && (<section style={box}>
+      {snap && (<section className="panel">
         <h2>Balances</h2>
         <p>Perps account value {snap.perps.marginSummary.accountValue} USDC, withdrawable {snap.perps.withdrawable}</p>
         <p>Spot: {snap.spot.map((b) => `${b.coin} ${b.total}${Number(b.hold) ? ` (hold ${b.hold})` : ""}`).join(", ") || "none"}</p>
@@ -151,16 +149,16 @@ export default function Trade() {
         </p>) : <p>Account mode &quot;{snap.mode}&quot;: spot USDC already counts as margin; no transfer needed.</p>}
       </section>)}
 
-      <section style={box}>
+      <section className="panel">
         <h2>Convert Unit ZEC ⇄ USDC</h2>
-        {unitMkt && <p style={mono}>{unitMkt.base.name} token {unitMkt.base.tokenId} (resolved by ID), market {unitMkt.pair}, available {unitBal}</p>}
+        {unitMkt && <p className="mono">{unitMkt.base.name} token {unitMkt.base.tokenId} (resolved by ID), market {unitMkt.pair}, available {unitBal}</p>}
         <select value={convDir} onChange={(e) => { setConvDir(e.target.value as any); setPlan(null); }}>
           <option value="to_usdc">Sell {unitMkt?.base.name ?? "Unit ZEC"} for USDC</option>
           <option value="to_unit">Buy {unitMkt?.base.name ?? "Unit ZEC"} with USDC (for return)</option>
         </select>{" "}
         <input size={8} value={convAmt} onChange={(e) => { setConvAmt(e.target.value.trim()); setPlan(null); }} /> {unitMkt?.base.name}{" "}
         <button disabled={!unitMkt || busy} onClick={makePlan}>Quote</button>
-        {planMsg && <div style={banner("#fde68a")}>{planMsg}</div>}
+        {planMsg && <div className="note warn">{planMsg}</div>}
         {plan && (<div>
           <p>Best {plan.quote.bestPx}, limit {plan.quote.boundPx} ({Number(slip) * 100}% bound). Visible book fills ~{plan.quote.estFillSz} of {plan.size} at avg ~{plan.quote.estAvgPx.toFixed(4)} (≈{plan.quote.estQuote.toFixed(2)} USDC).
             {plan.quote.partialExpected && <b> Expect a partial fill; the rest stays as {plan.market.base.name}.</b>}</p>
@@ -169,7 +167,7 @@ export default function Trade() {
         </div>)}
       </section>
 
-      <section style={box}>
+      <section className="panel">
         <h2>Builder fee</h2>
         {!snap ? "…" : snap.builder.kind === "not_configured" ? <p>No builder configured (NEXT_PUBLIC_BUILDER_ADDRESS); orders carry no builder fee.</p>
           : snap.builder.kind === "approved" ? <p>Approved up to {snap.builder.maxF / 1000}% for {snap.builder.builder}. New orders add {BUILDER_FEE.rate}.</p>
@@ -183,7 +181,7 @@ export default function Trade() {
           </p>)}
       </section>
 
-      <section style={box}>
+      <section className="panel">
         <h2>New position</h2>
         <select value={coin} onChange={(e) => { setCoin(e.target.value); setReview(false); }}>{PERPS.map((c) => <option key={c}>{c}</option>)}</select>{" "}
         <select value={side} onChange={(e) => { setSide(e.target.value as any); setReview(false); }}><option value="long">Long</option><option value="short">Short</option></select>{" "}
@@ -192,7 +190,7 @@ export default function Trade() {
         <label>Slippage <input size={4} value={slip} onChange={(e) => setSlip(e.target.value.trim())} /></label>{" "}
         <button disabled={!!orderProblem || busy} onClick={() => setReview(true)}>Review</button>
         {orderProblem && <p style={{ fontSize: 13 }}>{orderProblem}</p>}
-        {review && !orderProblem && (<div style={banner("#e0f2fe")}>
+        {review && !orderProblem && (<div className="note info">
           <b>Review:</b> {side} {size} {coin} (≈{notional.toFixed(2)} USDC at mid {mid}), IOC limit {boundPx}.<br />
           Leverage {levN}x cross (sets {coin} leverage before the order) → margin ≈ {(notional / levN).toFixed(2)} USDC.<br />
           Est. fee ≈ {(notional * feeRate).toFixed(4)} USDC (taker {(snap!.takerRate * 100).toFixed(4)}%{builderAttach ? ` + builder ${BUILDER_FEE.rate}` : ""}). A partial or no fill is possible.<br />
@@ -200,7 +198,7 @@ export default function Trade() {
         </div>)}
       </section>
 
-      {snap && (<section style={box}>
+      {snap && (<section className="panel">
         <h2>Positions and orders</h2>
         {snap.perps.assetPositions.length === 0 && <p>No open positions.</p>}
         {snap.perps.assetPositions.map(({ position: p }: any) => (
@@ -213,10 +211,10 @@ export default function Trade() {
         ))}
       </section>)}
 
-      <section style={box}>
+      <section className="panel">
         <h2>Order journal (this browser) and fill evidence</h2>
         {orders.slice(0, 10).map((o) => (
-          <details key={o.cloid} style={mono}>
+          <details key={o.cloid} className="mono">
             <summary>{o.createdAt.slice(11, 19)} {o.label}: <b>{o.state}</b> {o.filledSz ? `filled ${o.filledSz}/${o.size} @ ${o.avgPx}` : `size ${o.size}`} [{o.evidence ?? "no exchange evidence"}]</summary>
             <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(o, null, 2)}</pre>
             {(o.state === "unknown" || o.state === "pending") && <button disabled={busy} onClick={() => reconcile(o)}>Reconcile</button>}
@@ -224,7 +222,7 @@ export default function Trade() {
         ))}
         <h3>Recent fills (Hyperliquid)</h3>
         {snap?.fills.map((f) => (
-          <div key={f.tid} style={mono}>{new Date(f.time).toLocaleTimeString()} {f.coin} {f.dir} {f.sz} @ {f.px} fee {f.fee}{f.builderFee ? ` builder ${f.builderFee}` : ""} {f.cloid ?? ""}</div>
+          <div key={f.tid} className="mono">{new Date(f.time).toLocaleTimeString()} {f.coin} {f.dir} {f.sz} @ {f.px} fee {f.fee}{f.builderFee ? ` builder ${f.builderFee}` : ""} {f.cloid ?? ""}</div>
         ))}
       </section>
     </main>

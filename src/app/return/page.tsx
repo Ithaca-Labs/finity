@@ -20,9 +20,7 @@ const NETWORK: Network = "testnet"; // mainnet return is disabled in this protot
 const kv = () => { try { return window.localStorage; } catch { return undefined; } };
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const zec = (z: bigint) => formatZecAmount(z) + " ZEC";
-const box: React.CSSProperties = { border: "1px solid #ccc", borderRadius: 8, padding: 12, margin: "12px 0" };
-const banner = (bg: string): React.CSSProperties => ({ background: bg, padding: 8, borderRadius: 6, margin: "8px 0" });
-const mono: React.CSSProperties = { fontFamily: "monospace", fontSize: 13 };
+const mono: React.CSSProperties = { fontFamily: "var(--font-mono), monospace", fontSize: 13 };
 
 type Snap = { perps: any; spot: any[]; openOrders: any[]; weiDecimals: number; mid: number | null };
 
@@ -88,22 +86,22 @@ export default function Return() {
   const lines = snap ? accountBalances({ perpsAccountValue: snap.perps.marginSummary.accountValue, spot: snap.spot, unitTokenIndex: mkt?.base.index ?? null, funding, ret: rec && view ? { rec, view } : null }) : [];
 
   return (
-    <main style={{ maxWidth: 760, margin: "0 auto", padding: 16 }}>
-      <div style={banner("#fde68a")}>TESTNET PROTOTYPE: mainnet return is disabled.</div>
-      <div style={banner("#fecaca")}>
+    <main>
+      <div className="note warn">TESTNET PROTOTYPE: mainnet return is disabled.</div>
+      <div className="note bad">
         <b>Testnet return lane, honest status (8 Oct):</b> Unit testnet generates and signs return addresses for fresh <code>tm…</code> destinations (verified 3/3 against pinned keys).
         No XZEC has reached this account (no testnet ZEC deposit yet), so <b>no real return has been sent or delivered</b>. The send step below is live code, never exercised with funds.
       </div>
       <h1>Return to Zcash</h1>
 
-      <section style={box}>
+      <section className="panel">
         <p><label>Trading key (memory only)<br /><input type="password" autoComplete="off" style={{ width: "100%", ...mono }} value={key} onChange={(e) => setKey(e.target.value.trim())} placeholder="0x… (empty = read-only)" /></label></p>
         {!signer && <p><label>Read-only address<br /><input style={{ width: "100%", ...mono }} value={readAddr} onChange={(e) => setReadAddr(e.target.value.trim())} /></label></p>}
-        <p style={mono}>Account {user} {signer ? "(can sign)" : "(read-only)"}</p>
+        <p className="mono">Account {user} {signer ? "(can sign)" : "(read-only)"}</p>
       </section>
-      {err && <div style={banner("#fecaca")}>{err}</div>}
+      {err && <div className="note bad">{err}</div>}
 
-      <section style={box}>
+      <section className="panel">
         <h2>1. Close exposure</h2>
         {!snap ? "…" : exposure.length === 0 && snap.openOrders.length === 0 ? <p>No open positions or orders.</p> : (<>
           <p><b>Remaining exposure:</b> {exposure.map((p: any) => `${p.position.coin} ${p.position.szi}`).join(", ") || "none"}; open orders {snap.openOrders.length}.</p>
@@ -112,23 +110,23 @@ export default function Return() {
         <p>Then buy Unit ZEC with USDC on <a href="/trade">Trade</a> (“Buy … for return”): a price-bounded IOC with HL&apos;s 10 USDC order minimum. Only the filled amount below counts.</p>
       </section>
 
-      <section style={box}>
+      <section className="panel">
         <h2>2. What can return</h2>
-        {mkt && <p style={mono}>{mkt.base.name} {mkt.base.tokenId} (by ID) → spotSend selector {mkt.tokenSelector}</p>}
+        {mkt && <p className="mono">{mkt.base.name} {mkt.base.tokenId} (by ID) → spotSend selector {mkt.tokenSelector}</p>}
         <p>Free {mkt?.base.name ?? "Unit ZEC"}: {avail}{hold ? ` (${hold} on hold)` : ""}</p>
         {fees && <p>Unit outbound fee now {zec(fees.withdrawalFeeZat)}, Unit ETA {fees.withdrawalEta} (fetched {fees.fetchedAt}). HL may also charge a 1 USDC activation fee if the Unit address is new.</p>}
         {plan && (plan.ok
           ? <p>Sendable: <b>{plan.sendAmount}</b>; estimated net in your wallet ≈ {zec(plan.estNetZat)} (before Zcash network fees).</p>
-          : (<div style={banner("#fde68a")}><b>{plan.reason}</b>
+          : (<div className="note warn"><b>{plan.reason}</b>
             {plan.kind !== "fee_exceeds" && <ul>{residualOptions({ residualZat: plan.residualZat, usdcAvailable: usdcSpot, zecPx: snap?.mid ?? null }).map((o) => <li key={o}>{o}</li>)}</ul>}</div>))}
       </section>
 
-      <section style={box}>
+      <section className="panel">
         <h2>3. Destination</h2>
-        {rec ? <p style={mono}>Route: {rec.route.destination} via Unit {rec.route.unitHlAddress}, guardians {rec.route.verification.verifiedCount}/3 (pinned {rec.network} keys)</p> : (<>
+        {rec ? <p className="mono">Route: {rec.route.destination} via Unit {rec.route.unitHlAddress}, guardians {rec.route.verification.verifiedCount}/3 (pinned {rec.network} keys)</p> : (<>
           <label>Fresh transparent receive address from your Zcash wallet ({NETWORK === "testnet" ? "tm…" : "t1…"})<br />
             <input style={{ width: "100%", ...mono }} value={dest} onChange={(e) => setDest(e.target.value)} /></label>
-          {destCheck && !destCheck.ok && <div style={banner("#fecaca")}>{destCheck.reason}</div>}
+          {destCheck && !destCheck.ok && <div className="note bad">{destCheck.reason}</div>}
           <p><label><input type="checkbox" checked={freshAck} onChange={(e) => setFreshAck(e.target.checked)} /> I generated this address just now in my own wallet and have not used it before. The payout to it is public on Zcash.</label></p>
           <button disabled={busy || !destCheck?.ok || !freshAck} onClick={() => act(async () => {
             const route = await generateReturnRoute(NETWORK, dest);
@@ -138,30 +136,30 @@ export default function Return() {
       </section>
 
       {rec && view && (
-        <section style={box}>
+        <section className="panel">
           <h2>4. Send and follow: {view.state.replace(/_/g, " ")}</h2>
           <p>{view.explanation}</p>
-          {view.stale && <div style={banner("#fde68a")}>Last Unit poll failed ({rec.lastPollError?.message}). Showing last known state.</div>}
+          {view.stale && <div className="note warn">Last Unit poll failed ({rec.lastPollError?.message}). Showing last known state.</div>}
           {view.maySend && plan?.ok && mkt && (
             <button disabled={!signer || busy} onClick={() => confirm(`Send ${plan.sendAmount} ${mkt.base.name} to Unit ${rec.route.unitHlAddress} for ${rec.route.destination}? Estimated net ${zec(plan.estNetZat)}. This cannot be undone.`)
               && act(() => submitReturnSend({ spotSend: (p) => hl.exchange!.spotSend(p), userNonFundingLedgerUpdates: (p) => hl.info.userNonFundingLedgerUpdates(p) }, rec, persist, { token: mkt.tokenSelector, amount: plan.sendAmount }))}>
               Send {plan.sendAmount} {mkt.base.name} to Unit
             </button>)}
           {view.state === "outcome_unknown" && <button disabled={busy} onClick={() => act(() => reconcileReturnSend(hl.info, rec, persist))}>Reconcile with Hyperliquid ledger</button>}
-          {view.state === "delivered_transparent" && (<div style={banner("#dcfce7")}>
+          {view.state === "delivered_transparent" && (<div className="note ok">
             <b>Delivered to your Zcash wallet — open the wallet and shield.</b> Zodl shows a prompt to shield transparent funds; this app cannot see your wallet.<br />
             <button onClick={() => persist(markShielding(rec, "user_marked_shielded"))}>I shielded it in my wallet</button> (recorded as “you marked this shielded”, not as wallet evidence)
           </div>)}
-          {rec.send && <details style={mono}><summary>Send record ({rec.send.evidence ?? "no exchange evidence"})</summary><pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(rec.send, null, 2)}</pre></details>}
-          {view.operations.map((o) => <details key={o.operationId} style={mono}><summary>Unit {o.operationId}: {o.state}</summary><pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(o, null, 2)}</pre></details>)}
+          {rec.send && <details className="mono"><summary>Send record ({rec.send.evidence ?? "no exchange evidence"})</summary><pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(rec.send, null, 2)}</pre></details>}
+          {view.operations.map((o) => <details key={o.operationId} className="mono"><summary>Unit {o.operationId}: {o.state}</summary><pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(o, null, 2)}</pre></details>)}
           {(view.state === "return_token_ready" || view.state === "recoverable_error") && !rec.send && <p><button onClick={() => { if (confirm("Forget this verified route? Nothing has been sent.")) { kv()?.removeItem(`return:v1:${NETWORK}:unit-live:${user.toLowerCase()}`); setRec(null); } }}>Use a different destination</button></p>}
         </section>
       )}
 
       {snap && (
-        <section style={box}>
+        <section className="panel">
           <h2>Where every balance is</h2>
-          <table style={{ ...mono, borderCollapse: "collapse", width: "100%" }}><tbody>
+          <table className="mono"><tbody>
             {lines.map((l, i) => <tr key={i}><td>{l.bucket}</td><td>{l.asset}</td><td>{l.amount}</td><td>{l.note}</td></tr>)}
           </tbody></table>
           <p>{fullyAccounted(lines) ? "Every balance is accounted for." : <b>Some funds are in an unknown state: reconcile before doing anything else.</b>}</p>

@@ -14,8 +14,6 @@ type Lane = "unit-live" | ReplayScenario;
 const kv = () => { try { return window.localStorage; } catch { return undefined; } };
 const zec = (z: bigint) => formatZecAmount(z) + " ZEC";
 
-const box: React.CSSProperties = { border: "1px solid #ccc", borderRadius: 8, padding: 12, margin: "12px 0" };
-const banner = (bg: string): React.CSSProperties => ({ background: bg, padding: 8, borderRadius: 6, margin: "8px 0" });
 
 export default function Fund() {
   const [lane, setLane] = useState<Lane>("unit-live");
@@ -94,12 +92,12 @@ export default function Fund() {
   }, [rec?.hlAddress, rec?.source, isReplay, persist]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <main style={{ maxWidth: 680, margin: "0 auto", padding: 16 }}>
-      <div style={banner("#fde68a")}>TESTNET PROTOTYPE: no real funds. Mainnet funding is disabled.</div>
-      {isReplay && <div style={banner("#fecaca")}><b>REPLAY FIXTURE LANE ({lane})</b>: operations and balances on this screen are simulated. Nothing here is settlement evidence.</div>}
+    <main>
+      <div className="note warn">TESTNET PROTOTYPE: no real funds. Mainnet funding is disabled.</div>
+      {isReplay && <div className="note bad"><b>REPLAY FIXTURE LANE ({lane})</b>: operations and balances on this screen are simulated. Nothing here is settlement evidence.</div>}
       <h1>Fund your trading account</h1>
 
-      <section style={box}>
+      <section className="panel">
         <label>Lane{" "}
           <select value={lane} onChange={(e) => setLane(e.target.value as Lane)}>
             <option value="unit-live">Unit testnet (live API)</option>
@@ -107,18 +105,18 @@ export default function Fund() {
           </select>
         </label>
         <p><label>Hyperliquid testnet trading account<br />
-          <input style={{ width: "100%", fontFamily: "monospace" }} value={hl} onChange={(e) => setHl(e.target.value.trim())} /></label></p>
+          <input className="mono" style={{ width: "100%" }} value={hl} onChange={(e) => setHl(e.target.value.trim())} /></label></p>
         <label><input type="checkbox" checked={recoveryOk} onChange={(e) => setRecoveryOk(e.target.checked)} />{" "}
           I have confirmed I can control this account with the recovery client (<code>recovery/recover.ts</code>) without this site.</label>
         <p><button disabled={!validHl} onClick={generate}>Get verified deposit address</button></p>
       </section>
 
-      {err && <div style={banner("#fecaca")}>Error: {err}</div>}
+      {err && <div className="note bad">Error: {err}</div>}
 
       {dep && fees && (
-        <section style={box}>
+        <section className="panel">
           <h2>Deposit address</h2>
-          <p style={{ fontFamily: "monospace", wordBreak: "break-all" }}>{dep.payAddress}</p>
+          <p className="mono" style={{ wordBreak: "break-all", color: "var(--zec)" }}>{dep.payAddress}</p>
           <ul>
             <li>Type: {dep.payKind === "tex" ? "TEX (your wallet will unshield to a one-time transparent address first, per ZIP 320)" : "transparent P2PKH"}; network {dep.network}</li>
             <li>Guardians: {dep.verification.verifiedCount} of 3 signatures valid against pinned {dep.network} keys (2 required)</li>
@@ -129,7 +127,7 @@ export default function Fund() {
           </ul>
           {view?.mayShowPaymentRequest ? (<>
             <label>Amount to send (ZEC) <input value={amount} onChange={(e) => { setAmount(e.target.value.trim()); setConsent(false); }} /></label>
-            {check && !check.ok && <div style={banner("#fecaca")}>{check.reason}</div>}
+            {check && !check.ok && <div className="note bad">{check.reason}</div>}
             {check?.ok && <p>Estimated after inbound fee: {zec(check.estNetZat)}, before conversion spread and trading fees.</p>}
             <label><input type="checkbox" checked={consent} disabled={!check?.ok} onChange={(e) => setConsent(e.target.checked)} />{" "}
               I understand the ~2 hour wait, the fees, that the bridge leg is publicly visible, and that Unit (not this app) holds the backing ZEC.</label>
@@ -144,10 +142,10 @@ export default function Fund() {
       )}
 
       {view && rec && (
-        <section style={box}>
+        <section className="panel">
           <h2>Status: {view.state.replace(/_/g, " ")}</h2>
           <p>{view.explanation}</p>
-          {view.stale && <div style={banner("#fde68a")}>Last poll failed ({rec.lastPollError?.message}) at {rec.lastPollError?.at}. Showing last known state; nothing has been lost.</div>}
+          {view.stale && <div className="note warn">Last poll failed ({rec.lastPollError?.message}) at {rec.lastPollError?.at}. Showing last known state; nothing has been lost.</div>}
           <p>Unit ZEC balance on Hyperliquid: {balance ? `${balance.total} (${balance.label})` : "not read yet"}</p>
           {view.operations.map((o) => (
             <details key={o.operationId + o.sourceTxHash} style={{ fontSize: 13 }}>
