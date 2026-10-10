@@ -60,7 +60,7 @@ Run: `npx tsx scripts/phase4.ts` (and `scripts/phase4-withdraw.ts`, `scripts/acc
 ### A. Unit withdrawal address generation
 | Network | Destination encodings tried | Result |
 |---|---|---|
-| testnet | `tm…`, `textest1…`, `t1…` | HTTP 400 `address failed verification` for all three. Also 400 for a unified address. Real testnet return is not possible. |
+| testnet | `tm…`, `textest1…`, `t1…`, all derived from **Unit's own deposit address** | HTTP 400 `address failed verification`. **CORRECTED 11 Oct:** this was a flaw in my probe, not a Unit limitation. A protocol address cannot be a destination. A fresh random `tm…` destination returns 200 with a protocol address (`scripts/probe-withdraw-fresh.ts`). |
 | mainnet | `tm…`, `textest1…` | HTTP 400 (wrong network) |
 | mainnet | `t1…` (probe-only address, never funded) | HTTP 200, protocol address `0x4E6091f91c8174466337E09F79b37056B150c3a1`, **3 of 3 guardians verify** |
 

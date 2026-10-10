@@ -65,7 +65,7 @@ export async function generateWithdrawal(network: Network, destination: string, 
   const r = await fetch(`${UNIT_API[network]}/gen/hyperliquid/zcash/zec/${dest.address}`, { cache: "no-store" });
   const body = await r.json().catch(() => null);
   if (!r.ok) {
-    throw new Error(`Unit ${r.status}: ${JSON.stringify(body)}${network === "testnet" ? " (testnet withdrawal generation is unsupported for Zcash as observed 8 Oct 2026)" : ""}`);
+    throw new Error(`Unit ${r.status}: ${JSON.stringify(body)}${network === "testnet" ? " (Unit rejects its own protocol addresses as destinations; use a fresh address from your wallet)" : ""}`);
   }
   return verifyWithdrawalResponse(network, dest.address, ownHlAddress, body);
 }

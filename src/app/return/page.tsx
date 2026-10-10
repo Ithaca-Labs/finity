@@ -75,7 +75,7 @@ export default function Return() {
       {!isReplay && <div style={box}>
         <label>Trading account <input style={{ width: "100%", fontFamily: "monospace" }} value={hl} onChange={(e) => setHl(e.target.value.trim())} /></label>
         <p>Unit ZEC token balance: {live ? `${live.total} ${live.token}` : "not read yet"}. Return minimum: 0.07 ZEC. Withdrawal fee: {fees ? `${fmtZec(fees.withdrawalFeeZat)} ZEC` : "…"} (live, moves).</p>
-        <div style={banner("#fecaca")}><b>Testnet limitation (observed 8 Oct 2026):</b> Unit&apos;s testnet rejects every Zcash destination for withdrawals (&quot;address failed verification&quot;), and the XZEC order book is empty. A real testnet return cannot be demonstrated. Mainnet generation does verify (3 of 3 guardians) but no mainnet transfer was made.</div>
+        <div style={banner("#fde68a")}><b>Testnet limitation:</b> a real testnet return needs an XZEC balance, which needs a settled Zcash testnet deposit, and the XZEC order book is empty. Withdrawal address generation itself works on testnet for a fresh transparent address.</div>
       </div>}
 
       <div style={box}>

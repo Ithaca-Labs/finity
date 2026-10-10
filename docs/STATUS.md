@@ -115,7 +115,7 @@ New constraints learned: HL minimum order value is 10 USDC (applies to conversio
 
 | What | Why |
 |---|---|
-| A real testnet return to Zcash | Unit's testnet rejects every Zcash destination for withdrawals (HTTP 400), and the XZEC book is empty. Not possible today. |
+| A real testnet return to Zcash | Needs an XZEC balance, which needs a settled testnet deposit (no Zcash testnet coins) and a buyer for it (the XZEC book is empty). CORRECTION 11 Oct: an earlier note here said Unit's testnet rejects every destination. That was wrong; it rejected only Unit's own deposit address, which my probe had reused. A fresh `tm…` destination returns 200 (`scripts/probe-withdraw-fresh.ts`). |
 | Sending the Unit token to a real Unit protocol address | The send path is only exercised against a throwaway account. No mainnet transfer was made, by design. |
 | HL USDC bridge withdrawal as a fallback | Tried at 5, 10, 50 USDC on testnet: "Error withdrawing from bridge". It is marked attempt failed and must not be advertised. |
 | Below-minimum residual with a real balance | There is no real XZEC balance, so the residual case uses fixtures and unit tests. |
