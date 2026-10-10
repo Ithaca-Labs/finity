@@ -24,7 +24,12 @@ export default function Trade() {
   const [key, setKey] = useState(""); // dedicated testnet key, memory only: never persisted or logged
   const [readAddr, setReadAddr] = useState("0x1f20B96A9fde5218ED05A212B2d23093100785c0");
   const signer = useMemo(() => { try { return /^0x[0-9a-fA-F]{64}$/.test(key) ? privateKeyToAccount(key as `0x${string}`) : undefined; } catch { return undefined; } }, [key]);
-  const user = (signer?.address ?? readAddr) as `0x${string}`;
+  // Server-held testnet key (/api/trade): lets the page trade without pasting a key.
+  const [serverAddr, setServerAddr] = useState<`0x${string}` | null>(null);
+  useEffect(() => { fetch("/api/trade").then((r) => (r.ok ? r.json() : null)).then((j) => j && setServerAddr(j.address)).catch(() => {}); }, []);
+  const viaServer = !signer && !!serverAddr;
+  const canTrade = !!signer || viaServer;
+  const user = (signer?.address ?? serverAddr ?? readAddr) as `0x${string}`;
   const valid = /^0x[0-9a-fA-F]{40}$/.test(user);
   const hl: Hl = useMemo(() => createHl(NETWORK, signer, { nonceManager: persistentNonceManager(kv()) }), [signer]);
   const ledger = useMemo(() => new OrderLedger(kv(), NETWORK, user), [user]);
@@ -73,10 +78,15 @@ export default function Trade() {
   const feeRate = (snap?.takerRate ?? 0) + (builderAttach ? BUILDER_FEE.f / 1e5 : 0);
   const boundPx = m ? formatPerpPrice(mid * (side === "long" ? 1 + Number(slip) : 1 - Number(slip)), m.szDecimals) : "0";
   const levN = Math.max(1, Math.min(Number(lev) || 1, m?.maxLeverage ?? 1));
-  const orderProblem = !signer ? "Unlock with the trading key to place orders" : !m || m.isDelisted ? `${coin} not tradable on ${NETWORK}`
+  const orderProblem = !canTrade ? "Unlock with the trading key to place orders" : !m || m.isDelisted ? `${coin} not tradable on ${NETWORK}`
     : Number(size) <= 0 ? "Size rounds to 0" : notional < 10 ? "Hyperliquid minimum order value is 10 USDC" : blocking ? "Reconcile the unknown order first" : null;
 
   const placeOrder = () => act(async () => {
+    if (viaServer) {
+      await serverTrade({ action: "open", coin, side, usd: notional, leverage: levN, slippage: Number(slip) });
+      setReview(false);
+      return;
+    }
     await hl.exchange!.updateLeverage({ asset: assetIndex, isCross: true, leverage: levN });
     await submitIoc(hl.exchange!, ledger, NETWORK, user, {
       label: `${coin} ${side} open`, asset: assetIndex, isBuy: side === "long", size, px: boundPx, builder: builderAttach,
@@ -85,12 +95,23 @@ export default function Trade() {
   });
 
   const closePos = (p: any) => act(async () => {
+    if (viaServer) { await serverTrade({ action: "close", coin: p.coin }); return; }
     const idx = snap!.meta.findIndex((u) => u.name === p.coin);
     const szi = Number(p.szi);
     const px = formatPerpPrice(Number(snap!.mids[p.coin]) * (szi < 0 ? 1.05 : 0.95), snap!.meta[idx].szDecimals);
     // No builder on closes: a revoked or failed approval must never prevent exiting.
     await submitIoc(hl.exchange!, ledger, NETWORK, user, { label: `${p.coin} reduce-only close`, asset: idx, isBuy: szi < 0, size: String(Math.abs(szi)), px, reduceOnly: true });
   });
+
+  const [lastServer, setLastServer] = useState<string | null>(null);
+  async function serverTrade(body: Record<string, unknown>) {
+    const res = await fetch("/api/trade", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error ?? `Server signer failed (${res.status})`);
+    const o = j.outcome;
+    if (o.kind === "rejected" || o.kind === "unknown") throw new Error(`Order ${o.kind}: ${o.error} (cloid ${o.cloid})`);
+    setLastServer(o.kind === "filled" ? `${body.action} ${body.coin}: filled ${o.totalSz} @ ${o.avgPx}` : `${body.action} ${body.coin}: ${o.kind}`);
+  }
 
   const reconcile = (o: OrderRecord) => act(() => reconcileOrder(hl.info, ledger, user, o.cloid));
 
@@ -122,12 +143,13 @@ export default function Trade() {
       <section className="panel">
         <p><label>Trading key (dedicated testnet account; kept in this tab&apos;s memory only)<br />
           <input type="password" autoComplete="off" style={{ width: "100%", ...mono }} value={key} onChange={(e) => setKey(e.target.value.trim())} placeholder="0x… (leave empty for read-only)" /></label></p>
-        {!signer && <p><label>Read-only address<br /><input style={{ width: "100%", ...mono }} value={readAddr} onChange={(e) => setReadAddr(e.target.value.trim())} /></label></p>}
-        <p className="mono">Account {user} {signer ? "(can sign)" : "(read-only)"}; mode: {snap?.mode ?? "…"}</p>
+        {!signer && !serverAddr && <p><label>Read-only address<br /><input style={{ width: "100%", ...mono }} value={readAddr} onChange={(e) => setReadAddr(e.target.value.trim())} /></label></p>}
+        <p className="mono">Account {user} {signer ? "(can sign)" : viaServer ? "(server testnet signer)" : "(read-only)"}; mode: {snap?.mode ?? "…"}</p>
         <p style={{ fontSize: 13 }}>If this site is unavailable, the recovery client can still read, cancel and reduce-only close: <code>recovery/recover.ts</code>.</p>
       </section>
 
       {err && <div className="note bad">{err}</div>}
+      {lastServer && !err && <div className="note ok">{lastServer}</div>}
       {blocking && (
         <div className="note bad">
           <b>Order outcome unknown:</b> {blocking.label} ({blocking.cloid}). New orders are paused until it is reconciled; closing stays available.
@@ -203,7 +225,7 @@ export default function Trade() {
         {snap.perps.assetPositions.length === 0 && <p>No open positions.</p>}
         {snap.perps.assetPositions.map(({ position: p }: any) => (
           <p key={p.coin}>{p.coin} {p.szi} @ {p.entryPx}, {p.leverage.value}x {p.leverage.type}, uPnL {p.unrealizedPnl}, liq {p.liquidationPx ?? "n/a"}{" "}
-            <button disabled={!signer || busy} onClick={() => confirm(`Reduce-only close ${p.szi} ${p.coin}?`) && closePos(p)}>Close (reduce-only)</button></p>
+            <button disabled={!canTrade || busy} onClick={() => confirm(`Reduce-only close ${p.szi} ${p.coin}?`) && closePos(p)}>Close (reduce-only)</button></p>
         ))}
         {snap.openOrders.map((o) => (
           <p key={o.oid}>Open {o.coin} {o.side === "B" ? "buy" : "sell"} {o.sz} @ {o.limitPx}{" "}

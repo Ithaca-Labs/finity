@@ -41,7 +41,8 @@ export function formatPerpPrice(px: number, szDecimals: number): string {
 
 export function formatSize(sz: number, szDecimals: number): string {
   const f = 10 ** szDecimals;
-  return (Math.floor(sz * f) / f).toFixed(szDecimals);
+  // Epsilon guards float error (0.0003 * 1e5 = 29.999...) so exact sizes don't floor down a tick.
+  return (Math.floor(sz * f + 1e-9) / f).toFixed(szDecimals);
 }
 
 /** 16-byte client order id as 0x + 32 hex, used to reconcile unknown outcomes. */
