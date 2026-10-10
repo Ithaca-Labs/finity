@@ -1,24 +1,28 @@
 import type { ReactNode } from "react";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { SketchDefs } from "@/components/brand";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
+import { themeScript } from "@/components/theme";
 import "./globals.css";
 
-const body = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-body" });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
+const sans = Geist({ subsets: ["latin"], variable: "--font-sans" });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], variable: "--font-serif" });
 
-export const metadata = { title: "finity (testnet prototype)" };
+export const metadata = {
+  title: "finity · Trade from shielded ZEC",
+  description: "Fund a fresh Hyperliquid account from your shielded Zcash wallet, trade, and come back. Testnet prototype.",
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${body.variable} ${mono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body>
-        <header className="shell-bar">
-          <a href="/" className="brand">finity<span>.</span></a>
-          <nav className="shell-nav">
-            <a href="/fund">Fund</a><a href="/trade">Trade</a><a href="/return">Return</a>
-          </nav>
-          <span className="net-chip">testnet · no real funds</span>
-        </header>
+        <SketchDefs />
+        <SiteHeader />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );
