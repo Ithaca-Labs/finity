@@ -7,11 +7,12 @@ import QRCode from "qrcode";
 import { motion } from "motion/react";
 import { brushRect } from "@/lib/sketch";
 import { creditDemoZec } from "@/lib/central/demo-zec";
+import { buildZip321, zecToZatoshis } from "@/lib/zcash/address";
 import { DoneMark, DrawOn, LogoMark, Star } from "@/components/sketch";
 import { EASE, FlowHead, Icon, StepView, Tracker, type StepState } from "@/components/wallet/ui";
 
-/** finity's shielded deposit address (demo). */
-const DEPOSIT_ADDRESS = "u1finity7qz9h4kx2m8w5d3rjv6ytn0pl4sfe8ca2gk7xw3nd9mq5ur6ht0zv8lj2yp4cs7ea5wk3dn9fq6mx2vr8tg0hl5uj7zc3ys9ep4ka6wd2nq8fx5mt0rv3gl7hj9uc2zs6yk4ea8pw";
+/** finity's shielded vault: the team zingo testnet wallet (docs/STATUS.md). Must stay a real, parseable address or wallets reject the QR. */
+const DEPOSIT_ADDRESS = "utest10l2ehwun0ruswarh3cufm3lxsyhjwpxepskckhthsetnqz8kpkvc2tyee5d6k4e0qugup7g06qsf8uk35qen97th5fhzr23wcq343y8r";
 const FLOW = ["amount", "pay", "track"] as const;
 type Step = (typeof FLOW)[number];
 const TITLES: Record<Step, string> = { amount: "Deposit", pay: "Scan to pay", track: "On its way" };
@@ -64,12 +65,13 @@ export default function Fund() {
 
   const [amount, setAmount] = useState("0.5");
   const amt = Number(amount);
-  const ok = Number.isFinite(amt) && amt >= 0.01;
-  const uri = `zcash:${DEPOSIT_ADDRESS}?amount=${amount}&message=finity%20deposit`;
+  // ZIP-321: validated address/network and a canonical amount (≤8 decimals), else no QR.
+  const uri = (() => { try { return `${buildZip321(DEPOSIT_ADDRESS, "testnet", zecToZatoshis(amount))}&message=finity%20deposit`; } catch { return null; } })();
+  const ok = Number.isFinite(amt) && amt >= 0.01 && uri !== null;
 
   const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
-    if (step === "pay") QRCode.toDataURL(uri, { margin: 0, width: 400, errorCorrectionLevel: "H", color: { dark: "#0b1236", light: "#ffffff" } }).then(setQr).catch(() => setQr(null));
+    if (step === "pay" && uri) QRCode.toDataURL(uri, { margin: 0, width: 400, errorCorrectionLevel: "H", color: { dark: "#0b1236", light: "#ffffff" } }).then(setQr).catch(() => setQr(null));
   }, [step, uri]);
 
   const [copied, setCopied] = useState(false);
@@ -152,7 +154,7 @@ export default function Fund() {
               <button type="button" className="icon-btn" onClick={copy} aria-label="Copy address"><Icon name={copied ? "check" : "copy"} /></button>
             </div>
             <div className="btn-row">
-              <a className="btn btn-ghost" href={uri}>Open wallet</a>
+              <a className="btn btn-ghost" href={uri ?? undefined}>Open wallet</a>
               <button type="button" className="btn grow" onClick={start}>I&apos;ve sent it</button>
             </div>
             <p className="waiting"><i />Waiting for your payment</p>
