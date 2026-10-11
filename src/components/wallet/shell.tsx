@@ -10,7 +10,7 @@ import { DrawOn, LogoMark, SketchPath, Star } from "@/components/sketch";
 import { ThemeToggle } from "@/components/theme";
 import { brushRing, lemniscate, lemniscatePoint, sparkle } from "@/lib/sketch";
 import { AccountProvider, short, useAccount } from "./account";
-import { EASE, Icon, Sheet } from "./ui";
+import { ConfirmProvider, EASE, Icon, Sheet } from "./ui";
 import { TvChart } from "./chart";
 
 /** The market the trade screen is looking at, shown as a TradingView chart beside the wallet. */
@@ -190,6 +190,7 @@ function Card({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      <ConfirmProvider>
       <main className="w-body">
         <motion.div key={key} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE }}>
           {children}
@@ -209,6 +210,7 @@ function Card({ children }: { children: ReactNode }) {
       </nav>
 
       <AccountSheet />
+      </ConfirmProvider>
     </div>
   );
 }

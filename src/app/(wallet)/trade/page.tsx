@@ -10,7 +10,7 @@ import { approveBuilder, BUILDER_FEE, builderForOrder, builderStatus, needsClass
 import { UNIT_ZEC_TOKEN_ID } from "@/lib/hl/xzec";
 import { useAccount } from "@/components/wallet/account";
 import { useChartCoin } from "@/components/wallet/shell";
-import { Callout, EASE, Empty, Icon, Ticker, TokenIcon, TokenRow } from "@/components/wallet/ui";
+import { useConfirm, Callout, EASE, Empty, Icon, Ticker, TokenIcon, TokenRow } from "@/components/wallet/ui";
 
 const NETWORK: Network = "testnet"; // ZEC perp is delisted on testnet; BTC/ETH only
 const PERPS = ["BTC", "ETH"];
@@ -132,6 +132,7 @@ export default function Trade() {
 
   // ---- view ----
   const [tab, setTab] = useState<Tab>("trade");
+  const ask = useConfirm();
   const setChartCoin = useChartCoin();
   useEffect(() => { setChartCoin(tab === "swap" ? "ZEC" : coin); }, [tab, coin, setChartCoin]);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "swap" || t === "activity" || t === "trade") setTab(t); }, []);
@@ -287,7 +288,15 @@ export default function Trade() {
                 <div className="btn-row">
                   <input className="input-sm" value={moveAmt} onChange={(e) => setMoveAmt(e.target.value.trim())} placeholder={String(spotUsdc)} aria-label="USDC to move" />
                   <button type="button" className="btn btn-sm" disabled={!canTrade || busy || !(Number(moveAmt) > 0 && Number(moveAmt) <= spotUsdc)}
-                    onClick={() => confirm(`Move ${moveAmt} USDC from spot to perps?`) && act(() => owner!.exchange!.usdClassTransfer({ amount: moveAmt, toPerp: true }))}>Move</button>
+                    onClick={async () => {
+                      const yes = await ask({
+                        title: "Move USDC into trading",
+                        subject: <div className="confirm-amount"><TokenIcon kind="usdc" chain={false} /><b>{moveAmt}</b><span>USDC</span></div>,
+                        facts: [["From", "Swap balance"], ["To", "Trading margin"]],
+                        confirmLabel: `Move ${moveAmt} USDC`,
+                      });
+                      if (yes) act(() => owner!.exchange!.usdClassTransfer({ amount: moveAmt, toPerp: true }));
+                    }}>Move</button>
                 </div>
               </Callout>
             )}
@@ -303,7 +312,24 @@ export default function Trade() {
                       <div className="token-main"><b>{p.coin} {Number(p.szi) < 0 ? "Short" : "Long"} {p.leverage.value}x</b><small>{Math.abs(Number(p.szi))} @ {p.entryPx} · liq {p.liquidationPx ?? "n/a"}</small></div>
                       <div className="token-amt">
                         <b className={Number(p.unrealizedPnl) < 0 ? "down" : "up"}>{Number(p.unrealizedPnl) >= 0 ? "+" : ""}{p.unrealizedPnl}</b>
-                        <button type="button" className="btn btn-sm btn-danger" disabled={!canTrade || busy} onClick={() => confirm(`Reduce-only close ${p.szi} ${p.coin}?`) && closePos(p)}>Close</button>
+                        <button type="button" className="btn btn-sm btn-danger" disabled={!canTrade || busy} onClick={async () => {
+                          const pnl = Number(p.unrealizedPnl), long = Number(p.szi) > 0;
+                          const yes = await ask({
+                            title: "Close position",
+                            tone: "danger",
+                            subject: (
+                              <div className="confirm-pos">
+                                <TokenIcon kind={p.coin === "ETH" ? "eth" : "btc"} />
+                                <span><b>{p.coin} {long ? "Long" : "Short"} {p.leverage.value}x</b><small>{Math.abs(Number(p.szi))} {p.coin} @ {p.entryPx}</small></span>
+                                <b className={pnl < 0 ? "down" : "up"}>{pnl >= 0 ? "+" : "−"}${Math.abs(pnl).toFixed(2)}</b>
+                              </div>
+                            ),
+                            body: "Sells the whole position at market. Reduce-only, so it can never open a new position.",
+                            facts: [["Mark", `$${Number(snap!.mids[p.coin] ?? 0).toLocaleString()}`], ["Margin back", `$${Number(p.marginUsed).toFixed(2)}`]],
+                            confirmLabel: "Close position",
+                          });
+                          if (yes) closePos(p);
+                        }}>Close</button>
                       </div>
                     </div>
                   ))}
@@ -325,7 +351,7 @@ export default function Trade() {
                 : snap.builder.kind === "unreadable" ? `Couldn't read approval (${snap.builder.error}). Trading works without it.`
                 : `Optional, up to ${BUILDER_FEE.rate}. Trading works without it.`}</small></span>
               {snap && (snap.builder.kind === "not_approved" || snap.builder.kind === "unreadable") && (
-                <button type="button" className="btn btn-sm btn-ghost" disabled={!canTrade || busy} onClick={() => confirm(`Approve builder fee up to ${BUILDER_FEE.rate}?`) && act(async () => {
+                <button type="button" className="btn btn-sm btn-ghost" disabled={!canTrade || busy} onClick={async () => (await ask({ title: "Approve finity fee", body: `Lets finity add up to ${BUILDER_FEE.rate} to your orders. Trading works without it.`, confirmLabel: "Approve fee" })) && act(async () => {
                   const r = await approveBuilder(owner!, BUILDER!); // this branch only renders when BUILDER is set
                   if (!r.ok) throw new Error(r.limitReached ? `You already have the maximum of 10 builder approvals: ${r.error}. Trading and closing still work without it.` : `Approval failed: ${r.error}. Trading and closing still work.`);
                 })}>Approve</button>

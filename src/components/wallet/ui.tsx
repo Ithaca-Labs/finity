@@ -1,6 +1,6 @@
 "use client";
 // Wallet building blocks: animated numbers, step flows, sheets, trackers, token rows and icons.
-import { useEffect, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { Star } from "@/components/sketch";
 
@@ -142,4 +142,57 @@ export function Icon({ name }: { name: "home" | "fund" | "trade" | "return" | "s
     check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   };
   return <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{p[name]}</svg>;
+}
+
+/* ---------------- Confirm ---------------- */
+
+export type ConfirmOptions = {
+  title: string;
+  /** What is being confirmed, shown large at the top (e.g. a position or an amount). */
+  subject?: ReactNode;
+  body?: ReactNode;
+  facts?: [string, ReactNode][];
+  confirmLabel: string;
+  tone?: "danger";
+};
+
+const ConfirmCtx = createContext<(o: ConfirmOptions) => Promise<boolean>>(async () => false);
+/** Ask the user in-app; resolves true only when they press the action button. */
+export const useConfirm = () => useContext(ConfirmCtx);
+
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [opts, setOpts] = useState<ConfirmOptions | null>(null);
+  const resolver = useRef<((v: boolean) => void) | null>(null);
+  const actionRef = useRef<HTMLButtonElement>(null);
+  const ask = useCallback((o: ConfirmOptions) => new Promise<boolean>((res) => { resolver.current?.(false); resolver.current = res; setOpts(o); }), []);
+  const close = useCallback((v: boolean) => { resolver.current?.(v); resolver.current = null; setOpts(null); }, []);
+  useEffect(() => {
+    if (!opts) return;
+    const t = setTimeout(() => actionRef.current?.focus(), 120);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(false); };
+    window.addEventListener("keydown", onKey);
+    return () => { clearTimeout(t); window.removeEventListener("keydown", onKey); };
+  }, [opts, close]);
+  return (
+    <ConfirmCtx.Provider value={ask}>
+      {children}
+      <AnimatePresence>
+        {opts && (<>
+          <motion.div key="scrim" className="sheet-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.18 } }} onClick={() => close(false)} />
+          <motion.div key="confirm" className="sheet confirm" role="alertdialog" aria-modal="true" aria-label={opts.title}
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%", transition: { duration: 0.22, ease: EASE } }} transition={{ type: "spring", stiffness: 340, damping: 34 }}>
+            <div className="sheet-grip" />
+            <h3 className="confirm-title">{opts.title}</h3>
+            {opts.subject && <div className="confirm-subject">{opts.subject}</div>}
+            {opts.body && <p className="confirm-body">{opts.body}</p>}
+            {opts.facts && <div className="facts">{opts.facts.map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}</div>}
+            <div className="confirm-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => close(false)}>Keep it</button>
+              <button ref={actionRef} type="button" className={`btn grow${opts.tone === "danger" ? " btn-solid-danger" : ""}`} onClick={() => close(true)}>{opts.confirmLabel}</button>
+            </div>
+          </motion.div>
+        </>)}
+      </AnimatePresence>
+    </ConfirmCtx.Provider>
+  );
 }
