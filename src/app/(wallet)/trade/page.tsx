@@ -9,6 +9,7 @@ import { executeConversion, planConversion, resolveSpot, availableSpot, type Con
 import { approveBuilder, BUILDER_FEE, builderForOrder, builderStatus, needsClassTransfer, readAccountMode, type BuilderStatus } from "@/lib/hl/account";
 import { UNIT_ZEC_TOKEN_ID } from "@/lib/hl/xzec";
 import { useAccount } from "@/components/wallet/account";
+import { useChartCoin } from "@/components/wallet/shell";
 import { Callout, EASE, Empty, Icon, Ticker, TokenIcon, TokenRow } from "@/components/wallet/ui";
 
 const NETWORK: Network = "testnet"; // ZEC perp is delisted on testnet; BTC/ETH only
@@ -72,6 +73,14 @@ export default function Trade() {
   const m = snap?.meta.find((u) => u.name === coin);
   const assetIndex = snap?.meta.findIndex((u) => u.name === coin) ?? -1;
   const mid = Number(snap?.mids[coin] ?? 0);
+  // Real Hyperliquid mainnet mids, for reference: testnet prices drift far from the market.
+  const [realMids, setRealMids] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const load = () => fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "allMids" }) })
+      .then((r) => r.json()).then(setRealMids).catch(() => {});
+    load(); const id = setInterval(load, 5_000); return () => clearInterval(id);
+  }, []);
+  const realMid = Number(realMids[coin] ?? 0);
   const size = m && mid ? formatSize(Number(usd) / mid, m.szDecimals) : "0";
   const notional = Number(size) * mid;
   const builderAttach = snap ? builderForOrder(snap.builder) : undefined;
@@ -123,6 +132,8 @@ export default function Trade() {
 
   // ---- view ----
   const [tab, setTab] = useState<Tab>("trade");
+  const setChartCoin = useChartCoin();
+  useEffect(() => { setChartCoin(tab === "swap" ? "ZEC" : coin); }, [tab, coin, setChartCoin]);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "swap" || t === "activity" || t === "trade") setTab(t); }, []);
   const [flips, setFlips] = useState(0);
   const zecName = unitMkt?.base.name ?? "ZEC";
@@ -211,7 +222,11 @@ export default function Trade() {
               <div className="seg small-seg" role="group" aria-label="Market">
                 {PERPS.map((c) => <button key={c} type="button" aria-pressed={coin === c} onClick={() => { setCoin(c); setReview(false); }}>{c}</button>)}
               </div>
-              <div className="market-px"><span className="eyebrow">{coin}-PERP</span><b>$<Ticker value={mid} decimals={mid > 1000 ? 0 : 2} /></b></div>
+              <div className="market-px">
+                <span className="eyebrow">{coin}-PERP · mainnet</span>
+                <b>{realMid ? <>$<Ticker value={realMid} decimals={realMid > 1000 ? 0 : 2} /></> : <span className="skeleton" style={{ width: 90 }} />}</b>
+                <small className="muted">Testnet fills at ${mid ? mid.toLocaleString(undefined, { maximumFractionDigits: mid > 1000 ? 0 : 2 }) : "—"}</small>
+              </div>
             </div>
 
             <div className="seg side-seg" role="group" aria-label="Direction">

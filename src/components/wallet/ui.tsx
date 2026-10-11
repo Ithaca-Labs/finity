@@ -102,13 +102,16 @@ export function Tracker({ items }: { items: { s: StepState; title: string; sub?:
   );
 }
 
-export function TokenIcon({ kind }: { kind: "zec" | "usdc" | "perp" | "btc" | "eth" }) {
-  const glyph = { zec: "ⓩ", usdc: "$", perp: "↗", btc: "₿", eth: "Ξ" }[kind];
-  return <span className={`token-ic token-${kind}`} aria-hidden>{kind === "zec" ? <ZecGlyph /> : glyph}</span>;
-}
+const LOGO = { zec: "/tokens/zec.svg", usdc: "/tokens/usdc.svg", perp: "/tokens/hl.svg", btc: "/tokens/btc.svg", eth: "/tokens/eth.svg" } as const;
 
-function ZecGlyph() {
-  return <svg viewBox="0 0 24 24" width="18" aria-hidden><path d="M7 6.5h10L7.5 17.5H17M12 3.5v3M12 17.5v3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+/** Real token logos; tokens held on Hyperliquid carry a small Hyperliquid badge. */
+export function TokenIcon({ kind, chain = kind === "zec" || kind === "usdc" }: { kind: keyof typeof LOGO; chain?: boolean }) {
+  return (
+    <span className={`token-ic token-${kind}`} aria-hidden>
+      <img src={LOGO[kind]} alt="" />
+      {chain && <img className="token-chain" src="/tokens/hl.svg" alt="" />}
+    </span>
+  );
 }
 
 export function TokenRow({ icon, name, sub, amount, value, onClick }: { icon: ReactNode; name: ReactNode; sub?: ReactNode; amount?: ReactNode; value?: ReactNode; onClick?: () => void }) {

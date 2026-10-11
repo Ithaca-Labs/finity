@@ -1,300 +1,191 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// Deposit, hardcoded for the demo: shielded ZEC into finity, finity moves it into Ironwood, it lands ready to trade.
+// The Zcash side is scripted and credits demo XZEC for this session; trading on Hyperliquid stays live.
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { motion } from "motion/react";
-import type { Network } from "@/lib/bridge/guardians";
-import { UnitBridgeAdapter, checkFundingAmount, crossCheckMapping, type BridgeAdapter, type VerifiedDeposit, type ZcashFees } from "@/lib/bridge/unit";
-import { deriveFunding, mergeOperations, recordPollError, opPhase, type FundingRecord, type FundingState } from "@/lib/bridge/funding";
-import { ReplayBridgeAdapter, REPLAY_SCENARIOS, type ReplayScenario } from "@/lib/replay/unit-replay";
-import { buildZip321, formatZecAmount, zecToZatoshis } from "@/lib/zcash/address";
-import { loadFunding, saveFunding } from "@/lib/store/funding-store";
-import { unitZecBalance } from "@/lib/hl/xzec";
 import { brushRect } from "@/lib/sketch";
-import { DoneMark, DrawOn } from "@/components/sketch";
-import { short, useAccount } from "@/components/wallet/account";
-import { BackupCard, CreateAccount } from "@/components/wallet/shell";
-import { Callout, EASE, FlowHead, Icon, StepView, Tracker, type StepState } from "@/components/wallet/ui";
+import { creditDemoZec } from "@/lib/central/demo-zec";
+import { DoneMark, DrawOn, LogoMark, Star } from "@/components/sketch";
+import { EASE, FlowHead, Icon, StepView, Tracker, type StepState } from "@/components/wallet/ui";
 
-const NETWORK: Network = "testnet"; // mainnet funding is disabled in this prototype
-type Lane = "unit-live" | ReplayScenario;
-const kv = () => { try { return window.localStorage; } catch { return undefined; } };
-const zec = (z: bigint) => formatZecAmount(z) + " ZEC";
-
-const FLOW = ["to", "amount", "pay", "track"] as const;
+/** finity's shielded deposit address (demo). */
+const DEPOSIT_ADDRESS = "u1finity7qz9h4kx2m8w5d3rjv6ytn0pl4sfe8ca2gk7xw3nd9mq5ur6ht0zv8lj2yp4cs7ea5wk3dn9fq6mx2vr8tg0hl5uj7zc3ys9ep4ka6wd2nq8fx5mt0rv3gl7hj9uc2zs6yk4ea8pw";
+const FLOW = ["amount", "pay", "track"] as const;
 type Step = (typeof FLOW)[number];
-const TITLES: Record<Step, string> = { to: "Deposit ZEC", amount: "How much?", pay: "Scan to pay", track: "Deposit status" };
+const TITLES: Record<Step, string> = { amount: "Deposit", pay: "Scan to pay", track: "On its way" };
+
+/** The scripted journey, with how long each stage holds before the next (ms). */
+const STAGES = [
+  { title: "Payment received", sub: "Shielded ZEC reached finity. Sender and amount stay private.", ms: 2600 },
+  { title: "Moving into Ironwood", sub: "finity deposits your ZEC into Ironwood.", ms: 4200 },
+  { title: "Landing on Hyperliquid", sub: "XZEC is credited to your trading account.", ms: 2400 },
+] as const;
+
+/** Live ZEC price from Hyperliquid mainnet, for the dollar estimate. */
+function useZecPrice() {
+  const [px, setPx] = useState(0);
+  useEffect(() => {
+    fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "allMids" }) })
+      .then((r) => r.json()).then((m) => setPx(Number(m.ZEC) || 0)).catch(() => {});
+  }, []);
+  return px;
+}
+const usd = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+
+/** Zcash → Ironwood → Hyperliquid, with a star travelling along it. */
+function Route({ at, progress }: { at: number; progress: number }) {
+  // at: 0 = at Zcash, 1 = at Ironwood, 2 = at Hyperliquid
+  const pos = Math.min(2, at + progress) / 2;
+  return (
+    <div className="route">
+      <div className="route-track"><motion.i animate={{ width: `${pos * 100}%` }} transition={{ duration: 0.2, ease: "linear" }} /></div>
+      <motion.span className="route-star" animate={{ left: `${100 / 6 + pos * 200 / 3}%` }} transition={{ duration: 0.2, ease: "linear" }}><Star /></motion.span>
+      {[
+        { name: "Zcash", sub: "shielded", node: <img src="/tokens/zec.svg" alt="" /> },
+        { name: "Ironwood", sub: "finity", node: <span className="route-iron"><LogoMark detail={2} /></span> },
+        { name: "Hyperliquid", sub: "trading", node: <span className="route-hl"><img src="/tokens/hl.svg" alt="" /></span> },
+      ].map((n, i) => (
+        <div key={n.name} className={`route-node${i <= at ? " on" : ""}`}>
+          <span className="route-ic">{n.node}</span>
+          <b>{n.name}</b><small>{n.sub}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Fund() {
-  const { user, valid, backedUp } = useAccount();
-  const [lane, setLane] = useState<Lane>("unit-live");
-  const hl = valid ? user : "";
-  const [recoveryOk, setRecoveryOk] = useState(false);
-  const [dep, setDep] = useState<VerifiedDeposit | null>(null);
-  const [mapNote, setMapNote] = useState<string>("");
-  const [fees, setFees] = useState<ZcashFees | null>(null);
-  const [amount, setAmount] = useState("0.1");
-  const [consent, setConsent] = useState(false);
-  const [qr, setQr] = useState<string | null>(null);
-  const [rec, setRec] = useState<FundingRecord | null>(null);
-  const [balance, setBalance] = useState<{ total: number; label: string } | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const adapter = useRef<BridgeAdapter | null>(null);
-
-  const isReplay = lane !== "unit-live";
-  const validHl = /^0x[0-9a-fA-F]{40}$/.test(hl);
-
-  // New lane or account: fresh adapter, reload any persisted record for it.
-  useEffect(() => {
-    adapter.current = isReplay ? new ReplayBridgeAdapter(NETWORK, lane as ReplayScenario) : new UnitBridgeAdapter(NETWORK);
-    setDep(null); setQr(null); setConsent(false); setErr(null); setBalance(null);
-    setRec(validHl ? loadFunding(kv(), { network: NETWORK, hlAddress: hl, source: adapter.current.source }) : null);
-  }, [lane, hl, isReplay, validHl]);
-
-  const persist = useCallback((r: FundingRecord) => { setRec(r); saveFunding(kv(), r); }, []);
-
-  async function generate() {
-    setErr(null);
-    try {
-      const a = adapter.current!;
-      const [d, f] = await Promise.all([a.generateDeposit(hl as `0x${string}`), a.fees()]);
-      let note = "";
-      try { const { addresses } = await a.operations(hl as `0x${string}`); const c = crossCheckMapping(d, addresses); if (!c.ok) throw new Error(c.note); note = c.note; }
-      catch (e) { if (e instanceof Error && /differs/.test(e.message)) throw e; note = "Could not cross-check /operations right now"; }
-      setDep(d); setFees(f); setMapNote(note);
-      persist(rec ?? { network: NETWORK, hlAddress: hl, payAddress: d.payAddress, source: d.source, operations: {} });
-    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
-  }
-
-  const view = useMemo(() => (rec ? deriveFunding(rec, balance?.total ?? null) : null), [rec, balance]);
-  const amountZat = useMemo(() => { try { return zecToZatoshis(amount); } catch { return null; } }, [amount]);
-  const check = fees && amountZat !== null ? checkFundingAmount(amountZat, fees) : null;
-  const canShowQr = !!dep && recoveryOk && consent && check?.ok && view?.mayShowPaymentRequest;
-
-  useEffect(() => {
-    if (!canShowQr || !dep || amountZat === null) { setQr(null); return; }
-    QRCode.toDataURL(buildZip321(dep.payAddress, NETWORK, amountZat), { margin: 1, width: 240 }).then(setQr).catch((e) => setErr(String(e)));
-  }, [canShowQr, dep, amountZat]);
-
-  // Poll Unit and HL. Errors are recorded, never treated as "no deposit".
-  useEffect(() => {
-    if (!rec) return;
-    let stop = false;
-    const tick = async () => {
-      const a = adapter.current!;
-      try {
-        const { operations } = await a.operations(rec.hlAddress as `0x${string}`);
-        if (!stop) persist(mergeOperations(loadFunding(kv(), rec) ?? rec, operations));
-      } catch (e) { if (!stop) persist(recordPollError(loadFunding(kv(), rec) ?? rec, e instanceof Error ? e.message : String(e))); }
-      try {
-        if (a.source === "replay") {
-          const r = loadFunding(kv(), rec);
-          const done = r && Object.values(r.operations).some((o) => o.state === "done");
-          setBalance({ total: done ? 0.09418572 : 0, label: "replay (synthetic)" });
-        } else {
-          const b = await unitZecBalance(NETWORK, rec.hlAddress);
-          setBalance({ total: b.total, label: `${b.token} (token ${b.index}), live HL testnet` });
-        }
-      } catch { /* balance stays unknown (null) rather than zero */ }
-    };
-    tick();
-    const id = setInterval(tick, isReplay ? 2000 : 15000);
-    return () => { stop = true; clearInterval(id); };
-  }, [rec?.hlAddress, rec?.source, isReplay, persist]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ---- flow ----
-  const [step, setStep] = useState<Step>("to");
+  const [step, setStep] = useState<Step>("amount");
   const [dir, setDir] = useState(1);
   const go = (s: Step) => { setDir(FLOW.indexOf(s) >= FLOW.indexOf(step) ? 1 : -1); setStep(s); };
-  const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const autoTracked = useRef(false);
-  useEffect(() => { autoTracked.current = false; setStep("to"); }, [lane, hl]);
-  // Something is already in flight (or the bridge is unreachable): the only safe screen is status.
+  const px = useZecPrice();
+
+  const [amount, setAmount] = useState("0.5");
+  const amt = Number(amount);
+  const ok = Number.isFinite(amt) && amt >= 0.01;
+  const uri = `zcash:${DEPOSIT_ADDRESS}?amount=${amount}&message=finity%20deposit`;
+
+  const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
-    if (view && (!view.mayShowPaymentRequest || view.operations.length > 0) && !autoTracked.current) { autoTracked.current = true; setDir(1); setStep("track"); }
-  }, [view]);
+    if (step === "pay") QRCode.toDataURL(uri, { margin: 0, width: 400, errorCorrectionLevel: "H", color: { dark: "#0b1236", light: "#ffffff" } }).then(setQr).catch(() => setQr(null));
+  }, [step, uri]);
 
-  const getAddress = async () => { setBusy(true); await generate(); setBusy(false); };
-  useEffect(() => { if (dep && step === "to" && view?.mayShowPaymentRequest) { setDir(1); setStep("amount"); } }, [dep]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [copied, setCopied] = useState(false);
+  const copy = () => { navigator.clipboard?.writeText(DEPOSIT_ADDRESS); setCopied(true); setTimeout(() => setCopied(false), 1600); };
 
-  const copy = () => { navigator.clipboard?.writeText(dep!.payAddress); setCopied(true); setTimeout(() => setCopied(false), 1600); };
-  const uri = dep && amountZat !== null && canShowQr ? buildZip321(dep.payAddress, NETWORK, amountZat) : null;
-  const confs = view ? Math.max(0, ...view.operations.map((o) => o.sourceTxConfirmations ?? 0)) : 0;
-  const steps = view ? fundSteps(view.state, view.operations.length > 0 && view.operations.every((o) => opPhase(o) === "done")) : null;
-  const tone = view && ["below_minimum_stuck", "manual_recovery"].includes(view.state) ? "bad" : view?.state === "recoverable_error" ? "warn" : null;
-  const back = step === "amount" ? () => go("to") : step === "pay" ? () => go("amount") : step === "track" && view?.mayShowPaymentRequest ? () => go(dep ? "pay" : "to") : undefined;
+  // Walk the scripted stages once the user says they've paid.
+  const [stage, setStage] = useState(0);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (step !== "track" || stage >= STAGES.length) return;
+    const start = performance.now(), ms = STAGES[stage].ms;
+    const id = setInterval(() => {
+      const p = Math.min(1, (performance.now() - start) / ms);
+      setProgress(p);
+      if (p >= 1) { clearInterval(id); setStage((s) => s + 1); setProgress(0); }
+    }, 60);
+    return () => clearInterval(id);
+  }, [step, stage]);
+  const done = stage >= STAGES.length;
+
+  // Credit the deposit to this session's wallet exactly once.
+  const credited = useRef(false);
+  useEffect(() => { if (done && !credited.current) { credited.current = true; creditDemoZec(amt); } }, [done, amt]);
+
+  const states: StepState[] = STAGES.map((_, i) => (i < stage ? "done" : i === stage ? "active" : "todo"));
+  const back = step === "pay" ? () => go("amount") : undefined;
+  const start = () => { credited.current = false; setStage(0); setProgress(0); go("track"); };
 
   return (
     <div className="flow">
       <FlowHead title={TITLES[step]} step={FLOW.indexOf(step)} total={FLOW.length} onBack={back} />
-      {isReplay && <Callout tone="bad" title={`Simulation mode (${lane})`}>Everything here is simulated from a recorded fixture. Nothing is a real transfer.</Callout>}
-      {err && <Callout tone="bad" title="Something went wrong">{err}</Callout>}
 
       <StepView k={step} dir={dir}>
-        {step === "to" && (
+        {step === "amount" && (
           <div className="stack">
-            <div className="hero-ic"><Icon name="fund" /></div>
-            <p className="flow-lede">Send ZEC from your shielded Zcash wallet. It lands in your trading account in about two hours.</p>
-
-            {!valid ? <CreateAccount /> : (<>
-            <div className="to-card">
-              <span className="field-label">Lands in</span>
-              <div className="to-row">
-                <span className="to-ic"><Icon name="trade" /></span>
-                <span><b>Your finity trading account</b><small className="mono">{short(hl)}</small></span>
+            <div className="dep-asset">
+              <img src="/tokens/zec.svg" alt="" />
+              <span><b>Zcash</b><small>From your shielded wallet</small></span>
+              <span className="badge ink"><i />Shielded</span>
+            </div>
+            <div className="dep-amount">
+              <div className="amount-big">
+                <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} aria-label="Amount in ZEC" style={{ width: `${Math.max(2, amount.length + 0.5)}ch` }} />
+                <span>ZEC</span>
+              </div>
+              <p className="dep-usd">{px && ok ? `≈ ${usd(amt * px)}` : " "}</p>
+              <div className="chips">
+                {["0.1", "0.5", "1", "5"].map((v) => (
+                  <button key={v} type="button" className={`chip${amount === v ? " on" : ""}`} onClick={() => setAmount(v)}>{v}</button>
+                ))}
               </div>
             </div>
-            <BackupCard />
-
-            <label className="check">
-              <input type="checkbox" checked={recoveryOk} onChange={(e) => setRecoveryOk(e.target.checked)} />
-              <span>I can reach this account without finity.<small>I&apos;ve checked the recovery client (<code>recovery/recover.ts</code>) can read and control it if this site disappears.</small></span>
-            </label>
-
-            <button type="button" className="btn btn-lg btn-block" disabled={!validHl || !backedUp || busy} onClick={getAddress}>
-              {busy ? <span className="spinner" /> : null}{busy ? "Checking with the bridge…" : "Get my deposit address"}
-            </button>
-            </>)}
-            {rec && <button type="button" className="text-link" onClick={() => go("track")}>View current deposit status</button>}
-
-            <details className="more">
-              <summary>Developer options</summary>
-              <label className="field">
-                <span className="field-label">Data source</span>
-                <select value={lane} onChange={(e) => setLane(e.target.value as Lane)}>
-                  <option value="unit-live">Unit testnet (live)</option>
-                  {REPLAY_SCENARIOS.map((s) => <option key={s} value={s}>Simulation: {s}</option>)}
-                </select>
-              </label>
-            </details>
-          </div>
-        )}
-
-        {step === "amount" && dep && fees && (
-          <div className="stack">
-            <div className="amount-big">
-              <input inputMode="decimal" value={amount} onChange={(e) => { setAmount(e.target.value.trim()); setConsent(false); }} aria-label="Amount in ZEC" style={{ width: `${Math.max(2, amount.length + 0.5)}ch` }} />
-              <span>ZEC</span>
-            </div>
-            <div className="chips">
-              {["0.1", "0.25", "0.5", "1"].map((v) => (
-                <button key={v} type="button" className={`chip${amount === v ? " on" : ""}`} onClick={() => { setAmount(v); setConsent(false); }}>{v}</button>
-              ))}
-            </div>
-            <motion.p className="amount-note" key={String(check?.ok)} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              {check?.ok ? <>You&apos;ll receive about <b>{zec(check.estNetZat)}</b></> : check ? <span style={{ color: "var(--bad)" }}>{check.reason}</span> : null}
-            </motion.p>
+            <Route at={0} progress={0} />
             <div className="facts">
-              <div><span>Minimum</span><b>0.07 ZEC</b></div>
-              <div><span>Bridge fee</span><b>{zec(fees.depositFeeZat)}</b></div>
-              <div><span>Arrives in</span><b>{fees.depositEta}</b></div>
+              <div><span>You receive</span><b>{ok ? amount : "—"} XZEC</b></div>
+              <div><span>Arrives in</span><b>~2 minutes</b></div>
             </div>
-            <label className="check">
-              <input type="checkbox" checked={consent} disabled={!check?.ok} onChange={(e) => setConsent(e.target.checked)} />
-              <span>I understand how this works.<small>It takes about 2 hours, fees apply, the bridge step is publicly visible, and the Unit bridge (not finity) holds the backing ZEC.</small></span>
-            </label>
-            {!recoveryOk && <Callout tone="warn">Go back and confirm you can reach this account without finity first.</Callout>}
-            <button type="button" className="btn btn-lg btn-block" disabled={!canShowQr} onClick={() => go("pay")}>Continue</button>
-            <span className="badge good center"><i />{dep.verification.verifiedCount}/3 guardians verified</span>
+            <button type="button" className="btn btn-lg btn-block" disabled={!ok} onClick={() => go("pay")}>Continue</button>
           </div>
         )}
 
-        {step === "pay" && dep && fees && (
+        {step === "pay" && (
           <div className="stack">
             <div className="qr-stage">
               <svg viewBox="0 0 260 260" className="qr-frame" aria-hidden><DrawOn d={brushRect(8, 8, 244, 244, 26)} width={5} duration={1.2} /></svg>
-              {qr ? <motion.img src={qr} alt="ZIP-321 payment request" width={200} height={200} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35, duration: 0.5, ease: EASE }} />
-                : <div className="qr-wait">Confirm the amount to see your code.</div>}
+              {qr && (
+                <motion.div className="qr-box" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.5, ease: EASE }}>
+                  <img src={qr} alt="Zcash payment request" />
+                  <span className="qr-logo"><img src="/tokens/zec.svg" alt="" /></span>
+                </motion.div>
+              )}
             </div>
-            <p className="pay-amt">Send exactly <b>{amount} ZEC</b>, once.</p>
-            <div className="addr"><code>{dep.payAddress}</code>
+            <div className="pay-sum">
+              <b>{amount} ZEC</b>
+              {px > 0 && <small>≈ {usd(amt * px)}</small>}
+            </div>
+            <div className="addr addr-stack">
+              <span className="field-label">finity shielded address</span>
+              <code>{DEPOSIT_ADDRESS.slice(0, 22)}…{DEPOSIT_ADDRESS.slice(-12)}</code>
               <button type="button" className="icon-btn" onClick={copy} aria-label="Copy address"><Icon name={copied ? "check" : "copy"} /></button>
             </div>
             <div className="btn-row">
-              {uri && <a className="btn btn-ghost" href={uri}>Open in wallet</a>}
-              <button type="button" className="btn grow" onClick={() => go("track")}>I&apos;ve sent it</button>
+              <a className="btn btn-ghost" href={uri}>Open wallet</a>
+              <button type="button" className="btn grow" onClick={start}>I&apos;ve sent it</button>
             </div>
-            <span className="badge good center"><i />{dep.verification.verifiedCount}/3 guardians verified</span>
-            <details className="more">
-              <summary>How this address was checked</summary>
-              <ul>
-                <li>{dep.payKind === "tex" ? "TEX address: your wallet unshields to a one-time transparent address first (ZIP 320)." : "Transparent P2PKH address."} Network: {dep.network}.</li>
-                <li>{dep.verification.verifiedCount} of 3 guardian signatures valid against pinned {dep.network} keys (2 required).</li>
-                <li>Mapping cross-check: {mapNote}</li>
-                <li>Fee fetched {fees.fetchedAt}{fees.source === "replay" && " (replayed snapshot)"}; ETA covers 100 Zcash confirmations.</li>
-                <li>Deposits under 0.07 ZEC get stuck and are only reprocessed if Unit lowers its minimum.</li>
-                <li>ZEC arrives as a Hyperliquid spot token. Converting it to USDC is a separate step you confirm on Trade.</li>
-              </ul>
-            </details>
+            <p className="waiting"><i />Waiting for your payment</p>
           </div>
         )}
 
         {step === "track" && (
           <div className="stack">
-            {!view || !rec || !steps ? (
-              <Callout title="No deposit yet">Get a deposit address first.</Callout>
-            ) : view.state === "unit_token_received" ? (
+            {done ? (
               <div className="done">
                 <DoneMark className="done-mark" />
-                <h2>Your ZEC has arrived</h2>
-                <p>{balance ? `${balance.total} ZEC` : ""} is in your trading account, ready to swap and trade.</p>
-                <Link href="/trade?tab=swap" className="btn btn-lg btn-block">Swap to USDC →</Link>
+                <h2>{amount} XZEC arrived</h2>
+                <p>It&apos;s in your wallet{px ? ` (≈ ${usd(amt * px)})` : ""}, ready to swap and trade.</p>
+                <div className="btn-row" style={{ width: "100%" }}>
+                  <Link href="/wallet" className="btn btn-ghost">View wallet</Link>
+                  <Link href="/trade" className="btn grow">Start trading →</Link>
+                </div>
               </div>
             ) : (<>
-              <div className="status-head">
-                <h2>{FUND_TITLE[view.state]}</h2>
-                <p>{view.explanation}</p>
-              </div>
-              {tone && <Callout tone={tone} title={tone === "bad" ? "This deposit needs attention" : "Reconnecting"}>Keep this page&apos;s record. Nothing is lost; see the runbook if it doesn&apos;t clear.</Callout>}
-              {view.stale && <Callout tone="warn" title="Showing the last known status">The latest check failed ({rec.lastPollError?.message}). Nothing has been lost.</Callout>}
-              {!view.mayShowPaymentRequest && view.operations.length === 0 && <Callout tone="warn" title="Don't send again">The bridge can&apos;t be reached right now. If you already sent, it will appear here.</Callout>}
-              <Tracker items={[
-                { s: steps[0], title: "Payment sent", sub: steps[0] === "done" ? "We've spotted your Zcash transaction" : "Waiting to spot your Zcash transaction" },
-                { s: steps[1], title: "Confirming on Zcash", sub: <>{confs ? `${Math.min(confs, 100)} of 100 confirmations` : "100 confirmations, about 2 hours"}
-                  {steps[1] === "active" && confs > 0 && <span className="bar"><motion.i initial={{ width: 0 }} animate={{ width: `${Math.min(confs, 100)}%` }} transition={{ duration: 1, ease: EASE }} /></span>}</> },
-                { s: steps[2], title: "Ready to trade", sub: "ZEC lands in your Hyperliquid account" },
-              ]} />
+              <Route at={stage} progress={progress} />
+              <motion.div key={stage} className="status-head" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }}>
+                <h2>{STAGES[stage].title}</h2>
+                <p>{STAGES[stage].sub}</p>
+              </motion.div>
+              <Tracker items={STAGES.map((s, i) => ({ s: states[i], title: s.title }))} />
               <div className="facts">
-                <div><span>ZEC in your account</span><b>{balance ? balance.total : "—"}</b></div>
-                <div><span>Source</span><b>{rec.source === "replay" ? "Simulation" : "Live testnet"}</b></div>
+                <div><span>Amount</span><b>{amount} ZEC</b></div>
+                <div><span>Value</span><b>{px ? usd(amt * px) : "—"}</b></div>
               </div>
             </>)}
-            {rec && view && (
-              <details className="more">
-                <summary>Bridge records</summary>
-                <p className="small muted">Source: {rec.source === "replay" ? "simulation fixture, not a bridge transfer" : "live Unit testnet API"}. Last good check {rec.lastPollOk ?? "never"}.</p>
-                {view.operations.map((o) => (
-                  <div key={o.operationId + o.sourceTxHash}>
-                    <p className="small mono">{o.sourceTxHash ?? o.operationId}: {o.state} ({opPhase(o)})</p>
-                    <pre>{JSON.stringify(o, null, 2)}</pre>
-                  </div>
-                ))}
-              </details>
-            )}
           </div>
         )}
       </StepView>
     </div>
   );
-}
-
-const FUND_TITLE: Record<FundingState, string> = {
-  awaiting_deposit: "Waiting for your payment",
-  deposit_seen: "Payment spotted",
-  bridge_pending: "Confirming on Zcash",
-  unit_token_received: "Your ZEC has arrived",
-  below_minimum_stuck: "Deposit below the minimum",
-  recoverable_error: "Can't reach the bridge",
-  manual_recovery: "Needs attention",
-};
-
-function fundSteps(s: FundingState, bridgeDone: boolean): [StepState, StepState, StepState] {
-  switch (s) {
-    case "awaiting_deposit": case "recoverable_error": return ["active", "todo", "todo"];
-    case "deposit_seen": return ["done", "active", "todo"];
-    case "bridge_pending": return bridgeDone ? ["done", "done", "active"] : ["done", "active", "todo"];
-    case "unit_token_received": return ["done", "done", "done"];
-    default: return ["done", "bad", "todo"];
-  }
 }

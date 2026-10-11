@@ -12,6 +12,7 @@ import { deriveFunding } from "@/lib/bridge/funding";
 import { deriveReturn } from "@/lib/bridge/returns";
 import { loadFunding, loadReturn } from "@/lib/store/funding-store";
 import { useAccount } from "@/components/wallet/account";
+import { useDemoZec } from "@/lib/central/demo-zec";
 import { BackupCard, CreateAccount } from "@/components/wallet/shell";
 import { EASE, Empty, Icon, Rise, Ticker, TokenIcon, TokenRow } from "@/components/wallet/ui";
 
@@ -33,6 +34,7 @@ export default function WalletHome() {
   const [snap, setSnap] = useState<Snap | null>(null);
   const [mkt, setMkt] = useState<SpotMarket | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const demoZec = useDemoZec();
 
   useEffect(() => { resolveSpot(hl, UNIT_ZEC_TOKEN_ID[NETWORK]).then(setMkt).catch(() => {}); }, [hl]);
   const refresh = useCallback(async () => {
@@ -47,7 +49,8 @@ export default function WalletHome() {
   useEffect(() => { setSnap(null); refresh(); const id = setInterval(refresh, 12_000); return () => clearInterval(id); }, [refresh]);
 
   const zecPx = mkt && snap ? Number(snap.mids[mkt.pair]) || 0 : 0;
-  const zecBal = mkt && snap ? Number(snap.spot.find((b) => b.token === mkt.base.index)?.total ?? 0) : 0;
+  // Live XZEC plus what this session's (demo) deposits credited.
+  const zecBal = (mkt && snap ? Number(snap.spot.find((b) => b.token === mkt.base.index)?.total ?? 0) : 0) + demoZec;
   const usdcSpot = snap ? Number(snap.spot.find((b) => b.token === 0)?.total ?? 0) : 0;
   const perpsValue = snap ? Number(snap.perps.marginSummary.accountValue) : 0;
   const separate = snap ? needsClassTransfer(snap.mode as any) : true;
@@ -115,7 +118,7 @@ export default function WalletHome() {
         <div className="section-head"><h3>Tokens</h3></div>
         <div className="list">
           <TokenRow icon={<TokenIcon kind="zec" />} name="Zcash" sub={mkt ? `${mkt.base.name} · bridged by Unit` : "Bridged by Unit"}
-            amount={snap ? `${zecBal} ZEC` : <span className="skeleton" />} value={zecPx ? `$${(zecBal * zecPx).toFixed(2)}` : undefined} />
+            amount={snap || demoZec ? `${Number(zecBal.toFixed(8))} ZEC` : <span className="skeleton" />} value={zecPx ? `$${(zecBal * zecPx).toFixed(2)}` : undefined} />
           <TokenRow icon={<TokenIcon kind="usdc" />} name="USDC" sub={separate ? "Swap balance" : "Swap + trading balance"}
             amount={snap ? usdcSpot.toFixed(2) : <span className="skeleton" />} value={snap ? `$${usdcSpot.toFixed(2)}` : undefined} />
           <TokenRow icon={<TokenIcon kind="perp" />} name="Trading account" sub="Perps margin & PnL"

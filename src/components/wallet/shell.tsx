@@ -2,7 +2,7 @@
 // The wallet: a compact card (Phantom-style) beside a living stage that shows where your ZEC is on the loop.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   AnimatePresence, motion, useAnimationFrame, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform,
 } from "motion/react";
@@ -11,6 +11,11 @@ import { ThemeToggle } from "@/components/theme";
 import { brushRing, lemniscate, lemniscatePoint, sparkle } from "@/lib/sketch";
 import { AccountProvider, short, useAccount } from "./account";
 import { EASE, Icon, Sheet } from "./ui";
+import { TvChart } from "./chart";
+
+/** The market the trade screen is looking at, shown as a TradingView chart beside the wallet. */
+const ChartCoin = createContext<(coin: string) => void>(() => {});
+export const useChartCoin = () => useContext(ChartCoin);
 
 const TABS = [
   { href: "/wallet", label: "Home", icon: "home" },
@@ -22,18 +27,31 @@ const TABS = [
 /** Where the star rides on the loop for each screen: t runs 0→0.5 around Zcash, 0.5→1 around Hyperliquid. */
 const ROUTES: Record<string, { from: number; to: number; ms: number; kicker: string; title: string; body: string }> = {
   "/wallet": { from: 0, to: 1, ms: 14000, kicker: "Your round trip", title: "Out and back.", body: "Shielded ZEC crosses to a fresh Hyperliquid account, trades in the open, and comes home shielded." },
-  "/fund": { from: 0.25, to: 0.58, ms: 5200, kicker: "Step 1 · Fund · ~2 hours", title: "Cross the bridge.", body: "One payment from your shielded wallet. 100 Zcash confirmations later, it lands in your trading account." },
+  "/fund": { from: 0.25, to: 0.58, ms: 5200, kicker: "Step 1 · Fund · ~2 minutes", title: "Into Ironwood.", body: "Send shielded ZEC to finity. We move it into Ironwood and it lands in your trading account." },
   "/trade": { from: 0.58, to: 0.94, ms: 7000, kicker: "Step 2 · Trade · seconds", title: "Trade in the open.", body: "Swap and trade on Hyperliquid. Every order is reviewed before you sign it, and closing is never blocked." },
   "/return": { from: 0.94, to: 1.25, ms: 5200, kicker: "Step 3 · Return · ~2 hours", title: "Come home shielded.", body: "Send ZEC to a fresh address from your own wallet, then shield it with one tap." },
 };
 
 export function WalletShell({ children }: { children: ReactNode }) {
+  const trading = routeKey(usePathname()) === "/trade";
+  const [coin, setCoin] = useState("BTC");
   return (
     <AccountProvider>
-      <div className="w-app">
-        <Stage />
-        <Card>{children}</Card>
-      </div>
+      <ChartCoin.Provider value={setCoin}>
+        <div className={trading ? "w-app w-app-trade" : "w-app"}>
+          <Stage />
+          <AnimatePresence>
+          {trading && (
+            <motion.section key="chart" className="w-chart" initial={{ opacity: 0, scale: 0.97, x: 40 }} animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.98, x: 30, transition: { duration: 0.25, ease: EASE } }} transition={{ duration: 0.6, ease: EASE, delay: 0.25 }}>
+              <header className="w-chart-head"><b>{coin}</b><small>{coin === "ZEC" ? "ZEC/USDT spot" : `${coin}USDT perpetual`} · mainnet · TradingView</small></header>
+              <TvChart symbol={coin === "ZEC" ? "BINANCE:ZECUSDT" : `BINANCE:${coin}USDT.P`} />
+            </motion.section>
+          )}
+          </AnimatePresence>
+          <Card>{children}</Card>
+        </div>
+      </ChartCoin.Provider>
     </AccountProvider>
   );
 }
