@@ -10,6 +10,7 @@ import { approveBuilder, BUILDER_FEE, builderForOrder, builderStatus, needsClass
 import { UNIT_ZEC_TOKEN_ID } from "@/lib/hl/xzec";
 import { useAccount } from "@/components/wallet/account";
 import { useChartCoin } from "@/components/wallet/shell";
+import { useDemoUsdc, useDemoZec, swapDemoZec } from "@/lib/central/demo-zec";
 import { useConfirm, Callout, EASE, Empty, Icon, Ticker, TokenIcon, TokenRow } from "@/components/wallet/ui";
 
 const NETWORK: Network = "testnet"; // ZEC perp is delisted on testnet; BTC/ETH only
@@ -117,18 +118,29 @@ export default function Trade() {
   const [plan, setPlan] = useState<ConversionPlan | null>(null);
   const [planMsg, setPlanMsg] = useState<string | null>(null);
   useEffect(() => { resolveSpot(hl, UNIT_ZEC_TOKEN_ID[NETWORK]).then(setUnitMkt).catch((e) => setPlanMsg(msg(e))); }, [hl]);
-  const unitBal = unitMkt && snap ? availableSpot(snap.spot, unitMkt.base.index) : 0;
+  const liveUnitBal = unitMkt && snap ? availableSpot(snap.spot, unitMkt.base.index) : 0;
+  // XZEC from the demo deposit flow is settled in-session at the live ZEC price; real XZEC goes through Hyperliquid.
+  const demoZec = useDemoZec(), demoUsdc = useDemoUsdc();
+  const unitBal = Number((liveUnitBal + demoZec).toFixed(8));
+  const zecPx = Number(realMids.ZEC ?? 0);
+  const convN = Number(convAmt);
+  const demoSwap = convDir === "to_usdc" && convN > liveUnitBal && convN <= unitBal && demoZec > 0;
+  const estimate = zecPx && convN > 0 ? (convDir === "to_usdc" ? convN * zecPx : convN / zecPx) : 0;
+  const [demoQuote, setDemoQuote] = useState<{ amt: number; px: number } | null>(null);
+  const [swapped, setSwapped] = useState<string | null>(null);
   const makePlan = async () => {
-    setPlan(null); setPlanMsg(null);
+    setPlan(null); setPlanMsg(null); setDemoQuote(null); setSwapped(null);
     if (!unitMkt) return;
-    if (convDir === "to_usdc" && Number(convAmt) > unitBal) { setPlanMsg(`Only ${unitBal} ${unitMkt.base.name} available`); return; }
+    if (!(convN > 0)) { setPlanMsg("Enter an amount to swap"); return; }
+    if (convDir === "to_usdc" && convN > unitBal) { setPlanMsg(`You have ${unitBal} ${unitMkt.base.name}. Deposit more ZEC or lower the amount.`); return; }
+    if (demoSwap) { if (!zecPx) { setPlanMsg("Waiting for the ZEC price, try again in a moment"); return; } setDemoQuote({ amt: convN, px: zecPx }); return; }
     const r = await planConversion(hl, unitMkt, convDir, Number(convAmt), Number(slip));
     if (r.ok) setPlan(r.plan); else setPlanMsg(r.reason);
   };
 
   // ---- margin / builder ----
   const [moveAmt, setMoveAmt] = useState("");
-  const spotUsdc = snap ? availableSpot(snap.spot, 0) : 0;
+  const spotUsdc = (snap ? availableSpot(snap.spot, 0) : 0) + demoUsdc;
 
   // ---- view ----
   const [tab, setTab] = useState<Tab>("trade");
@@ -142,9 +154,9 @@ export default function Trade() {
   const zecPanel = (
     <div className="swap-panel">
       <div className="swap-top"><span>{convDir === "to_usdc" ? "You pay" : "You receive"}</span>
-        {convDir === "to_usdc" && <button type="button" className="link-sm" onClick={() => { setConvAmt(String(unitBal)); setPlan(null); }}>Max {unitBal}</button>}</div>
+        {convDir === "to_usdc" && <button type="button" className="link-sm" onClick={() => { setConvAmt(String(unitBal)); setPlan(null); setDemoQuote(null); }}>Max {unitBal}</button>}</div>
       <div className="swap-row">
-        <input inputMode="decimal" value={convAmt} onChange={(e) => { setConvAmt(e.target.value.trim()); setPlan(null); }} aria-label={`Amount of ${zecName}`} />
+        <input inputMode="decimal" value={convAmt} onChange={(e) => { setConvAmt(e.target.value.replace(/[^0-9.]/g, "")); setPlan(null); setDemoQuote(null); setPlanMsg(null); setSwapped(null); }} aria-label={`Amount of ${zecName}`} />
         <span className="token-pill"><TokenIcon kind="zec" />{zecName}</span>
       </div>
     </div>
@@ -153,7 +165,8 @@ export default function Trade() {
     <div className="swap-panel">
       <div className="swap-top"><span>{convDir === "to_usdc" ? "You receive" : "You pay"}</span><span className="muted">Balance {spotUsdc.toFixed(2)}</span></div>
       <div className="swap-row">
-        <span className="swap-est">{plan ? (convDir === "to_usdc" ? plan.quote.estQuote.toFixed(2) : `≈ ${plan.quote.estQuote.toFixed(2)}`) : "—"}</span>
+        <span className={`swap-est${plan || demoQuote ? "" : " muted"}`}>{plan ? (convDir === "to_usdc" ? plan.quote.estQuote.toFixed(2) : `≈ ${plan.quote.estQuote.toFixed(2)}`)
+          : demoQuote ? (demoQuote.amt * demoQuote.px).toFixed(2) : convDir === "to_usdc" && estimate ? `≈ ${estimate.toFixed(2)}` : "—"}</span>
         <span className="token-pill"><TokenIcon kind="usdc" />USDC</span>
       </div>
     </div>
@@ -189,7 +202,15 @@ export default function Trade() {
                 <Icon name="swap" />
               </motion.button>
             </div>
+            <p className="swap-rate">{zecPx ? <>1 {zecName} ≈ ${zecPx.toLocaleString(undefined, { maximumFractionDigits: 2 })}</> : " "}</p>
             {planMsg && <Callout tone="warn">{planMsg}</Callout>}
+            {swapped && <Callout tone="ok" title="Swapped">{swapped}</Callout>}
+            {demoQuote && (
+              <div className="facts">
+                <div><span>Price</span><b>${demoQuote.px.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b></div>
+                <div><span>You receive</span><b>{(demoQuote.amt * demoQuote.px).toFixed(2)} USDC</b></div>
+              </div>
+            )}
             <AnimatePresence>
               {plan && (
                 <motion.div className="stack-sm" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
@@ -203,8 +224,16 @@ export default function Trade() {
                 </motion.div>
               )}
             </AnimatePresence>
-            {!plan ? (
-              <button type="button" className="btn btn-lg btn-block" disabled={!unitMkt || busy} onClick={makePlan}>Get a quote</button>
+            {demoQuote ? (
+              <div className="btn-row">
+                <button type="button" className="btn btn-ghost" onClick={() => setDemoQuote(null)}>Cancel</button>
+                <button type="button" className="btn btn-lg grow" onClick={() => {
+                  try { swapDemoZec(demoQuote.amt, demoQuote.px); setSwapped(`${demoQuote.amt} ${zecName} → ${(demoQuote.amt * demoQuote.px).toFixed(2)} USDC`); setDemoQuote(null); }
+                  catch (e) { setPlanMsg(msg(e)); setDemoQuote(null); }
+                }}>Confirm swap</button>
+              </div>
+            ) : !plan ? (
+              <button type="button" className="btn btn-lg btn-block" disabled={!unitMkt || busy || !(convN > 0)} onClick={makePlan}>Get a quote</button>
             ) : !canTrade ? (
               <button type="button" className="btn btn-lg btn-block" onClick={() => setSheet(true)}><Icon name="lock" />Create account to swap</button>
             ) : (

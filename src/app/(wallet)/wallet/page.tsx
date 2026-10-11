@@ -12,7 +12,7 @@ import { deriveFunding } from "@/lib/bridge/funding";
 import { deriveReturn } from "@/lib/bridge/returns";
 import { loadFunding, loadReturn } from "@/lib/store/funding-store";
 import { useAccount } from "@/components/wallet/account";
-import { useDemoZec } from "@/lib/central/demo-zec";
+import { useDemoUsdc, useDemoZec } from "@/lib/central/demo-zec";
 import { BackupCard, CreateAccount } from "@/components/wallet/shell";
 import { EASE, Empty, Icon, Rise, Ticker, TokenIcon, TokenRow } from "@/components/wallet/ui";
 
@@ -34,7 +34,7 @@ export default function WalletHome() {
   const [snap, setSnap] = useState<Snap | null>(null);
   const [mkt, setMkt] = useState<SpotMarket | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const demoZec = useDemoZec();
+  const demoZec = useDemoZec(), demoUsdc = useDemoUsdc();
 
   useEffect(() => { resolveSpot(hl, UNIT_ZEC_TOKEN_ID[NETWORK]).then(setMkt).catch(() => {}); }, [hl]);
   const refresh = useCallback(async () => {
@@ -51,11 +51,12 @@ export default function WalletHome() {
   const zecPx = mkt && snap ? Number(snap.mids[mkt.pair]) || 0 : 0;
   // Live XZEC plus what this session's (demo) deposits credited.
   const zecBal = (mkt && snap ? Number(snap.spot.find((b) => b.token === mkt.base.index)?.total ?? 0) : 0) + demoZec;
-  const usdcSpot = snap ? Number(snap.spot.find((b) => b.token === 0)?.total ?? 0) : 0;
+  const usdcSpot = (snap ? Number(snap.spot.find((b) => b.token === 0)?.total ?? 0) : 0) + demoUsdc;
   const perpsValue = snap ? Number(snap.perps.marginSummary.accountValue) : 0;
   const separate = snap ? needsClassTransfer(snap.mode as any) : true;
   // In unified modes spot USDC already counts inside the perps account value.
-  const total = perpsValue + (separate ? usdcSpot : 0) + zecBal * zecPx;
+  // Demo USDC is never inside the HL account value, so count it on its own in unified mode.
+  const total = perpsValue + (separate ? usdcSpot : demoUsdc) + zecBal * zecPx;
   const pnl = snap ? snap.perps.assetPositions.reduce((s: number, p: any) => s + Number(p.position.unrealizedPnl), 0) : 0;
   const positions = snap?.perps.assetPositions ?? [];
 

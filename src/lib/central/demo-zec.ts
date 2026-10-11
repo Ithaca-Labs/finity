@@ -1,21 +1,24 @@
 "use client";
-// Demo XZEC credited by the hardcoded deposit flow. Lives for this browser session only.
+// Demo balances from the hardcoded deposit flow: XZEC credited by deposits, USDC from swapping it.
+// They live for this browser session only and never touch Hyperliquid.
 import { useSyncExternalStore } from "react";
 
-const KEY = "finity-demo-xzec";
-const EVENT = "finity-demo-xzec";
+const EVENT = "finity-demo-balance";
 const store = () => { try { return window.sessionStorage; } catch { return undefined; } };
+const read = (key: string) => Number(store()?.getItem(key) ?? 0) || 0;
+const write = (key: string, v: number) => { try { store()?.setItem(key, String(Math.max(0, Number(v.toFixed(8))))); } catch {} window.dispatchEvent(new Event(EVENT)); };
+const subscribe = (cb: () => void) => { window.addEventListener(EVENT, cb); return () => window.removeEventListener(EVENT, cb); };
 
-export function readDemoZec(): number { return Number(store()?.getItem(KEY) ?? 0) || 0; }
+const ZEC = "finity-demo-xzec", USDC = "finity-demo-usdc";
 
-export function creditDemoZec(amount: number) {
-  try { store()?.setItem(KEY, String(readDemoZec() + amount)); } catch {}
-  window.dispatchEvent(new Event(EVENT));
-}
+export const readDemoZec = () => read(ZEC);
+export const creditDemoZec = (amount: number) => write(ZEC, read(ZEC) + amount);
+export const useDemoZec = () => useSyncExternalStore(subscribe, readDemoZec, () => 0);
+export const useDemoUsdc = () => useSyncExternalStore(subscribe, () => read(USDC), () => 0);
 
-export function useDemoZec(): number {
-  return useSyncExternalStore(
-    (cb) => { window.addEventListener(EVENT, cb); return () => window.removeEventListener(EVENT, cb); },
-    readDemoZec, () => 0,
-  );
+/** Swap demo XZEC for demo USDC at the given price. */
+export function swapDemoZec(amount: number, px: number) {
+  if (amount > read(ZEC) + 1e-9) throw new Error(`Only ${read(ZEC)} demo XZEC available`);
+  write(ZEC, read(ZEC) - amount);
+  write(USDC, read(USDC) + amount * px);
 }

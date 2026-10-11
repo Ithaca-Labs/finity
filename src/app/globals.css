@@ -682,3 +682,5 @@ button.token-row:hover { background: var(--surface-2); }
 .confirm-actions { display: flex; gap: 10px; }
 .btn-solid-danger { border-color: var(--bad); background: var(--bad); color: #fff; }
 .btn-solid-danger:hover:not(:disabled) { border-color: var(--bad); background: var(--bad); color: #fff; filter: brightness(0.92); }
+.swap-rate { min-height: 16px; margin-top: -4px; color: var(--muted); font: 11.5px var(--mono-f); letter-spacing: 0.04em; text-align: center; font-variant-numeric: tabular-nums; }
+.swap-est.muted { color: var(--muted); }
