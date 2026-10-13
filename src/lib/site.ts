@@ -1,9 +1,8 @@
 // Site identity for metadata, sitemap, robots and structured data.
-// NEXT_PUBLIC_SITE_URL overrides; on Vercel the production domain is picked up automatically.
-const host = process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+const host = "https://finity.click";
 
 export const SITE = {
-  url: (host || "http://localhost:3000").replace(/\/$/, ""),
+  url: host,
   name: "finity",
   title: "finity · Trade on Hyperliquid from shielded ZEC",
   description: "Fund a Hyperliquid trading account from shielded Zcash, swap to USDC, trade perps, and send your ZEC home. Privacy kept end to end. Testnet prototype.",
